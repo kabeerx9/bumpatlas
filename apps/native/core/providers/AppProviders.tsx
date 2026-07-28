@@ -1,4 +1,4 @@
-import { env } from "@app-starter/env/native";
+import { env } from "@bumpatlas/env/native";
 import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router/react-navigation";

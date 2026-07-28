@@ -17,7 +17,7 @@ function TodayHintWidget(props, environment) {
   const lavender = "#EDE8FF";
   const muted = "#6B7280";
   const progressText = String(Math.round(props.progress)) + "%";
-  const deepLink = "app-starter://widgets";
+  const deepLink = "bumpatlas://widgets";
 
   if (environment.widgetFamily === "accessoryInline") {
     return jsx(Text, {

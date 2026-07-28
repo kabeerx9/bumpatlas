@@ -167,7 +167,7 @@ function Progress({ currentStep }: { currentStep: OnboardingStep }) {
 function IntroStep() {
   return (
     <View style={styles.step}>
-      <Header title="Welcome to App Starter" subtitle="Discover what's around you." />
+      <Header title="Welcome to BumpAtlas" subtitle="Discover what's around you." />
 
       <View style={styles.featureCard}>
         {FEATURES.map((feature) => (

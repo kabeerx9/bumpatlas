@@ -162,7 +162,7 @@ export function WidgetsPlaygroundScreen() {
   }
 
   function startActivity() {
-    const instance = CityWalkActivity.start(initialActivity, "app-starter://widgets");
+    const instance = CityWalkActivity.start(initialActivity, "bumpatlas://widgets");
     activityRef.current = instance;
     setActivityStep(0);
   }

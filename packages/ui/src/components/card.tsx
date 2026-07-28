@@ -1,4 +1,4 @@
-import { cn } from "@app-starter/ui/lib/utils";
+import { cn } from "@bumpatlas/ui/lib/utils";
 import * as React from "react";
 
 function Card({

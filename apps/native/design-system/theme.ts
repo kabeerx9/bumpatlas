@@ -10,7 +10,7 @@ export type AppColorSchemePreference = AppColorScheme | "system";
 export const defaultColorScheme: AppColorScheme = "light";
 export const defaultColorSchemePreference: AppColorSchemePreference = defaultColorScheme;
 
-const themePreferenceStorageKey = "app-starter-theme-preference";
+const themePreferenceStorageKey = "bumpatlas-theme-preference";
 const themePreferenceListeners = new Set<() => void>();
 
 let colorSchemePreference: AppColorSchemePreference = defaultColorSchemePreference;

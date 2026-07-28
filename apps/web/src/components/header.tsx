@@ -1,5 +1,5 @@
 import { SignInButton, useAuth } from "@clerk/react";
-import { Button } from "@app-starter/ui/components/button";
+import { Button } from "@bumpatlas/ui/components/button";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, LogIn } from "lucide-react";
 
@@ -12,7 +12,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-7xl flex-row items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link to="/" className="text-lg font-bold tracking-normal text-foreground">
-          App Starter
+          BumpAtlas
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">

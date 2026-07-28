@@ -185,7 +185,7 @@ export function LaunchHomeScreen() {
 
 function LogoMark() {
   return (
-    <View accessibilityLabel="App Starter logo" style={styles.logoBadge}>
+    <View accessibilityLabel="BumpAtlas logo" style={styles.logoBadge}>
       <View style={[styles.logoBuilding, styles.logoBuildingLeft]} />
       <View style={[styles.logoBuilding, styles.logoBuildingCenter]} />
       <View style={[styles.logoBuilding, styles.logoBuildingRight]} />

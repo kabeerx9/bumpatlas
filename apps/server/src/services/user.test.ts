@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { meResponseSchema } from "@app-starter/contracts/me";
+import { meResponseSchema } from "@bumpatlas/contracts/me";
 
 import { serializeUser } from "./user";
 

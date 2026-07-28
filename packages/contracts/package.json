@@ -1,5 +1,5 @@
 {
-  "name": "@app-starter/contracts",
+  "name": "@bumpatlas/contracts",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,8 +7,7 @@
     ".": "./src/index.ts",
     "./http": "./src/http.ts",
     "./me": "./src/me.ts",
-    "./account": "./src/account.ts",
-    "./example-projects": "./src/example-projects.ts"
+    "./account": "./src/account.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",
@@ -18,7 +17,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@app-starter/config": "workspace:*",
+    "@bumpatlas/config": "workspace:*",
     "tsx": "^4.20.5",
     "typescript": "catalog:"
   }

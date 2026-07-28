@@ -1,5 +1,5 @@
 import { getAuth, clerkClient } from "@clerk/fastify";
-import { meResponseSchema } from "@app-starter/contracts/me";
+import { meResponseSchema } from "@bumpatlas/contracts/me";
 import type { FastifyInstance } from "fastify";
 
 import { getOrCreateUserByClerkId, mapClerkApiUser, serializeUser } from "@/services/user";

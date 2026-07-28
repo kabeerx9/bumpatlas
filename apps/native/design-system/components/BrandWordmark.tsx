@@ -33,7 +33,7 @@ export function BrandWordmark({ size = "md", inverse = false, style }: BrandWord
   const color = inverse ? colors.text.inverse : colors.text.primary;
 
   return (
-    <View accessibilityLabel="App Starter" style={[styles.row, style]}>
+    <View accessibilityLabel="BumpAtlas" style={[styles.row, style]}>
       <Text style={[styles.text, { color, fontSize: values.fontSize }]}>App</Text>
       <View
         style={[

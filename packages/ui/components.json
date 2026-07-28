@@ -12,11 +12,11 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "@app-starter/ui/components",
-    "utils": "@app-starter/ui/lib/utils",
-    "hooks": "@app-starter/ui/hooks",
-    "lib": "@app-starter/ui/lib",
-    "ui": "@app-starter/ui/components"
+    "components": "@bumpatlas/ui/components",
+    "utils": "@bumpatlas/ui/lib/utils",
+    "hooks": "@bumpatlas/ui/hooks",
+    "lib": "@bumpatlas/ui/lib",
+    "ui": "@bumpatlas/ui/components"
   },
   "menuColor": "default",
   "menuAccent": "subtle",

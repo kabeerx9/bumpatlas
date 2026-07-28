@@ -1,10 +1,9 @@
-import { env } from "@app-starter/env/server";
+import { env } from "@bumpatlas/env/server";
 import { clerkPlugin } from "@clerk/fastify";
 import fastifyCors from "@fastify/cors";
 import Fastify from "fastify";
 
 import { registerAccountRoutes } from "@/routes/account";
-import { registerExampleProjectsRoutes } from "@/routes/example-projects";
 import { registerMeRoutes } from "@/routes/me";
 import { registerClerkWebhookRoutes } from "@/routes/webhooks/clerk";
 
@@ -33,7 +32,6 @@ export function buildApp() {
 
   fastify.register(registerMeRoutes);
   fastify.register(registerAccountRoutes);
-  fastify.register(registerExampleProjectsRoutes);
   fastify.register(registerClerkWebhookRoutes);
 
   return fastify;

@@ -1,4 +1,4 @@
-import { env } from "@app-starter/env/server";
+import { env } from "@bumpatlas/env/server";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "../prisma/generated/client";

@@ -77,7 +77,7 @@ export function ExpoUiShowcaseScreen() {
             </AppText>
             <AppText variant="heading">Expo UI</AppText>
             <AppText variant="body" tone="secondary">
-              Native SwiftUI and Jetpack Compose components inside the App Starter app.
+              Native SwiftUI and Jetpack Compose components inside the BumpAtlas app.
             </AppText>
           </View>
         </View>

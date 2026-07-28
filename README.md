@@ -9,7 +9,6 @@ A reusable TypeScript starter for web, native, and API projects.
 - Fastify API
 - Clerk authentication on web, native, and server
 - Clerk webhook user synchronization with JIT fallback
-- Reference authenticated CRUD flow (`ExampleProject`) on web and native
 - Prisma 7 and PostgreSQL
 - Shared shadcn/ui package
 - Shared, validated environment configuration
@@ -81,7 +80,7 @@ cp apps/web/.env.example apps/web/.env
 cp apps/native/.env.example apps/native/.env
 ```
 
-Then rename the root package, `@app-starter/*` workspace scope, Expo metadata,
+Then rename the root package, `@bumpatlas/*` workspace scope, Expo metadata,
 and visible branding yourself.
 
 Create a new PostgreSQL database and Clerk application for each project. Replace
@@ -193,7 +192,5 @@ packages/
 
 - Run `pnpm run doctor` and resolve required findings.
 - Replace the placeholder branding and dashboard.
-- Remove the reference feature when your product domain is ready. See
-  [docs/reference-feature.md](./docs/reference-feature.md).
 - Use separate Clerk, database, and deployment projects.
 - Never commit real `.env` files.

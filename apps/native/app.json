@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "App Starter",
-    "slug": "fullstack-monorepo-starter",
+    "name": "BumpAtlas",
+    "slug": "bumpatlas",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "app-starter",
+    "scheme": "bumpatlas",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.example.appstarter",
+      "bundleIdentifier": "com.kabeerx9.bumpatlas",
       "deploymentTarget": "17.0"
     },
     "android": {
@@ -20,7 +20,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.example.appstarter"
+      "package": "com.kabeerx9.bumpatlas"
     },
     "web": {
       "output": "static",
@@ -50,7 +50,7 @@
             {
               "name": "TodayHintWidget",
               "displayName": "Today Hint",
-              "description": "A quick App Starter recommendation for your Home Screen.",
+              "description": "A quick BumpAtlas recommendation for your Home Screen.",
               "ios": {
                 "supportedFamilies": [
                   "systemSmall",
@@ -95,10 +95,10 @@
               "appExtensions": [
                 {
                   "targetName": "ExpoWidgetsTarget",
-                  "bundleIdentifier": "com.example.appstarter.ExpoWidgetsTarget",
+                  "bundleIdentifier": "com.kabeerx9.bumpatlas.ExpoWidgetsTarget",
                   "entitlements": {
                     "com.apple.security.application-groups": [
-                      "group.com.example.appstarter"
+                      "group.com.kabeerx9.bumpatlas"
                     ]
                   }
                 }
