@@ -48,8 +48,6 @@ export function StageSetupScreen() {
       title="Finish setup"
       closeIcon={mode === "choose" ? "x" : "arrow-left"}
       onBack={() => (mode === "choose" ? router.back() : setMode("choose"))}
-      scroll={mode !== "choose"}
-      contentStyle={mode === "choose" ? styles.chooseBody : undefined}
     >
       {mode === "choose" ? (
         <View style={styles.chooseColumn}>
@@ -136,12 +134,7 @@ export function StageSetupScreen() {
 }
 
 const styles = StyleSheet.create({
-  chooseBody: {
-    flex: 1,
-    paddingHorizontal: spacing.page,
-    gap: spacing.md,
-  },
-  chooseColumn: { flex: 1, gap: spacing.md },
+  chooseColumn: { gap: spacing.md },
   hero: {
     borderRadius: 28,
     backgroundColor: colors.brand.peach,

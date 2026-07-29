@@ -2,9 +2,6 @@ import { useAuth, useSignUp } from "@clerk/expo";
 import { Link, useRouter } from "expo-router";
 import React from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   StyleSheet,
   TextInput,
   View,
@@ -110,16 +107,7 @@ export function SignUpScreen() {
   }
 
   return (
-    <SoftScreen scroll={false} edges={["top", "bottom"]}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.flex}
-        >
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scroll}
-          >
+    <SoftScreen edges={["top", "bottom"]} contentStyle={styles.scroll}>
             <BrandWordmark size="md" markOnly style={styles.logo} />
             <AppText variant="heading" align="center">
               Sign up
@@ -201,8 +189,6 @@ export function SignUpScreen() {
             </View>
 
             <View nativeID="clerk-captcha" />
-          </ScrollView>
-        </KeyboardAvoidingView>
     </SoftScreen>
   );
 }
@@ -211,8 +197,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
   scroll: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.page,
     paddingTop: spacing.xxl,
     paddingBottom: spacing.xl,
     gap: spacing.md,

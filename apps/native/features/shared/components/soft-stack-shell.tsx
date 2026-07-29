@@ -14,8 +14,11 @@ type SoftStackShellProps = {
   closeIcon?: "arrow-left" | "x";
   right?: ReactNode;
   footer?: ReactNode;
+  /** Default true. Use false only for composer / sticky-footer layouts. */
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
+  /** Center content vertically (empty / status screens). */
+  centered?: boolean;
 };
 
 /** Modal / stack screens: shared cream atmosphere + back header. */
@@ -28,6 +31,7 @@ export function SoftStackShell({
   footer,
   scroll = true,
   contentStyle,
+  centered = false,
 }: SoftStackShellProps) {
   const router = useRouter();
 
@@ -49,13 +53,27 @@ export function SoftStackShell({
 
         {scroll ? (
           <ScrollView
+            style={styles.scrollView}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={[styles.scroll, contentStyle]}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={[
+              styles.scrollContent,
+              centered && styles.centeredContent,
+              contentStyle,
+            ]}
           >
             {children}
           </ScrollView>
         ) : (
-          <View style={[styles.fill, contentStyle]}>{children}</View>
+          <View
+            style={[
+              styles.body,
+              centered && styles.centeredContent,
+              contentStyle,
+            ]}
+          >
+            {children}
+          </View>
         )}
 
         {footer ? <View style={styles.footer}>{footer}</View> : null}
@@ -81,15 +99,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  scroll: {
+  scrollView: { flex: 1 },
+  scrollContent: {
     paddingHorizontal: spacing.page,
     paddingBottom: spacing.xxl,
     gap: spacing.lg,
+    flexGrow: 0,
   },
-  fill: { flex: 1 },
+  body: {
+    flex: 1,
+    paddingHorizontal: spacing.page,
+  },
+  centeredContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    gap: spacing.lg,
+  },
   footer: {
     paddingHorizontal: spacing.page,
     paddingBottom: spacing.xl,
     paddingTop: spacing.md,
+    gap: spacing.sm,
   },
 });

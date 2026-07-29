@@ -45,13 +45,11 @@ export function ConnectPostDetailScreen() {
 
   if (!post) {
     return (
-      <SoftStackShell title="Thread" onBack={() => router.back()} scroll={false}>
-        <View style={styles.empty}>
-          <AppText weight="semibold">Post not found</AppText>
-          <Button size="lg" onPress={() => router.back()}>
-            Back to Connect
-          </Button>
-        </View>
+      <SoftStackShell title="Thread" onBack={() => router.back()} scroll={false} centered>
+        <AppText weight="semibold">Post not found</AppText>
+        <Button size="lg" onPress={() => router.back()}>
+          Back to Connect
+        </Button>
       </SoftStackShell>
     );
   }
@@ -71,7 +69,11 @@ export function ConnectPostDetailScreen() {
         </Pressable>
       }
     >
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.postCard}>
           <AppText variant="caption" style={styles.postMeta}>
             {post.author}
@@ -135,6 +137,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  flex: { flex: 1 },
   scroll: {
     paddingBottom: spacing.xl,
     gap: spacing.md,
@@ -169,12 +172,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     fontFamily: "Poppins_400Regular",
     color: colors.text.primary,
-  },
-  empty: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.md,
-    paddingHorizontal: spacing.page,
   },
 });

@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   cardLocked: { opacity: 0.72 },
   cardFresh: {
     borderWidth: 1,
-    borderColor: "rgba(229,155,138,0.55)",
+    borderColor: "rgba(106,143,168,0.45)",
   },
   icon: {
     width: 44,

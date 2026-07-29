@@ -26,20 +26,18 @@ export function RecapScreen() {
 
   if (!recapEligible) {
     return (
-      <SoftStackShell title="Weekly recap" closeIcon="x" onBack={() => router.back()} scroll={false}>
-        <View style={styles.ineligible}>
-          <Feather name="heart" size={28} color={colors.brand.peach} />
-          <AppText variant="heading" align="center">
-            Keep going gently
-          </AppText>
-          <AppText variant="body" tone="secondary" align="center">
-            Recaps unlock with ≥3 memories this week, or ≥2 story days + ≥1 wellness day. No streak
-            to protect.
-          </AppText>
-          <Button size="lg" onPress={() => router.push(appRoutes.capture)}>
-            Capture a moment
-          </Button>
-        </View>
+      <SoftStackShell title="Weekly recap" closeIcon="x" onBack={() => router.back()} centered>
+        <Feather name="heart" size={28} color={colors.brand.peach} />
+        <AppText variant="heading" align="center">
+          Keep going gently
+        </AppText>
+        <AppText variant="body" tone="secondary" align="center">
+          Recaps unlock with ≥3 memories this week, or ≥2 story days + ≥1 wellness day. No streak
+          to protect.
+        </AppText>
+        <Button size="lg" onPress={() => router.push(appRoutes.capture)}>
+          Capture a moment
+        </Button>
       </SoftStackShell>
     );
   }
@@ -186,7 +184,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   shareCardPremium: {
-    backgroundColor: "#C98978",
+    backgroundColor: colors.brand.terracotta,
   },
   cardArt: {
     ...StyleSheet.absoluteFill,
@@ -268,11 +266,4 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   premiumText: { color: colors.brand.peach },
-  ineligible: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.page,
-    gap: spacing.md,
-  },
 });

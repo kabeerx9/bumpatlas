@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { StyleSheet, TextInput, View } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
@@ -28,22 +28,20 @@ export function ConvertBirthScreen() {
       <SoftStackShell
         title="Baby is here"
         closeIcon="x"
+        centered
         onBack={() => router.replace(appRoutes.home)}
-        scroll={false}
       >
-        <View style={styles.success}>
-          <Feather name="check-circle" size={32} color={colors.brand.peach} />
-          <AppText variant="heading" align="center">
-            Welcome, {childName.trim()}
-          </AppText>
-          <AppText variant="body" tone="secondary" align="center">
-            Pregnancy memories moved under this child profile. Stage tips will update for
-            postpartum.
-          </AppText>
-          <Button size="lg" onPress={() => router.replace(appRoutes.home)}>
-            Go to Today
-          </Button>
-        </View>
+        <Feather name="check-circle" size={32} color={colors.brand.peach} />
+        <AppText variant="heading" align="center">
+          Welcome, {childName.trim()}
+        </AppText>
+        <AppText variant="body" tone="secondary" align="center">
+          Pregnancy memories moved under this child profile. Stage tips will update for
+          postpartum.
+        </AppText>
+        <Button size="lg" onPress={() => router.replace(appRoutes.home)}>
+          Go to Today
+        </Button>
       </SoftStackShell>
     );
   }
@@ -53,62 +51,58 @@ export function ConvertBirthScreen() {
       title="Baby is here"
       closeIcon="x"
       onBack={() => router.back()}
-      scroll={false}
       footer={
         <Button size="lg" disabled={!canSave} onPress={handleConvert}>
           Convert & continue
         </Button>
       }
     >
-      <View style={styles.body}>
-        <View style={styles.hero}>
-          <AppText variant="heading" tone="inverse">
-            Convert pregnancy journal
-          </AppText>
-          <AppText variant="bodySmall" style={styles.heroCopy}>
-            Enter birth details once. Your bump journal and memories stay private to the
-            household.
-          </AppText>
-        </View>
-
-        <View style={styles.field}>
-          <AppText variant="label" tone="secondary">
-            Baby&apos;s name
-          </AppText>
-          <TextInput
-            value={childName}
-            onChangeText={setChildName}
-            placeholder="What should we call them?"
-            placeholderTextColor={colors.text.muted}
-            style={styles.input}
-            autoCapitalize="words"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <AppText variant="label" tone="secondary">
-            Date of birth
-          </AppText>
-          <TextInput
-            value={birthDate}
-            onChangeText={setBirthDate}
-            placeholder="Jul 29, 2026"
-            placeholderTextColor={colors.text.muted}
-            style={styles.input}
-          />
-        </View>
-
-        <AppText variant="caption" tone="secondary">
-          Educational note: this does not replace hospital paperwork. It only updates your
-          BumpAtlas stage and journal.
+      <View style={styles.hero}>
+        <AppText variant="heading" tone="inverse">
+          Convert pregnancy journal
+        </AppText>
+        <AppText variant="bodySmall" style={styles.heroCopy}>
+          Enter birth details once. Your bump journal and memories stay private to the
+          household.
         </AppText>
       </View>
+
+      <View style={styles.field}>
+        <AppText variant="label" tone="secondary">
+          Baby&apos;s name
+        </AppText>
+        <TextInput
+          value={childName}
+          onChangeText={setChildName}
+          placeholder="What should we call them?"
+          placeholderTextColor={colors.text.muted}
+          style={styles.input}
+          autoCapitalize="words"
+        />
+      </View>
+
+      <View style={styles.field}>
+        <AppText variant="label" tone="secondary">
+          Date of birth
+        </AppText>
+        <TextInput
+          value={birthDate}
+          onChangeText={setBirthDate}
+          placeholder="Jul 29, 2026"
+          placeholderTextColor={colors.text.muted}
+          style={styles.input}
+        />
+      </View>
+
+      <AppText variant="caption" tone="secondary">
+        Educational note: this does not replace hospital paperwork. It only updates your
+        BumpAtlas stage and journal.
+      </AppText>
     </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  body: { flex: 1, gap: spacing.lg },
   hero: {
     borderRadius: 28,
     backgroundColor: colors.brand.peach,
@@ -125,11 +119,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text.primary,
     fontFamily: "Poppins_400Regular",
-  },
-  success: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.lg,
   },
 });

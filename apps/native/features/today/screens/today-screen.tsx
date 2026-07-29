@@ -95,6 +95,7 @@ export function TodayScreen() {
   return (
     <SoftScreen scroll={false} edges={["top"]}>
       <ScrollView
+        style={styles.flex}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
         refreshControl={
@@ -385,6 +386,7 @@ export function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   scroll: {
     paddingHorizontal: spacing.page,
     paddingBottom: 100,

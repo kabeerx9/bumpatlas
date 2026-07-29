@@ -214,8 +214,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   input: {
-    flex: 1,
     minHeight: 140,
+    maxHeight: 220,
     borderRadius: radius.xl,
     backgroundColor: "rgba(255,255,255,0.78)",
     padding: spacing.lg,

@@ -34,9 +34,8 @@ export function MilestoneDetailScreen() {
   const [linked, setLinked] = useState(false);
 
   return (
-    <SoftStackShell title="Milestone" onBack={() => router.back()} scroll={false}>
-      <View style={styles.body}>
-        <View style={styles.hero}>
+    <SoftStackShell title="Milestone" onBack={() => router.back()}>
+      <View style={styles.hero}>
           <AppText variant="caption" style={styles.eyebrow}>
             {STATUSES.find((s) => s.id === currentStatus)?.label ?? milestone.status}
           </AppText>
@@ -102,13 +101,11 @@ export function MilestoneDetailScreen() {
             ) : null}
           </>
         ) : null}
-      </View>
     </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  body: { flex: 1, gap: spacing.lg },
   hero: {
     borderRadius: 28,
     backgroundColor: colors.brand.peach,

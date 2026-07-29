@@ -30,7 +30,6 @@ export function InviteAcceptScreen() {
       title="Household invite"
       closeIcon="x"
       onBack={() => router.back()}
-      scroll={false}
       footer={
         <>
           <Button size="lg" disabled={accepted} onPress={handleAccept}>
@@ -42,7 +41,7 @@ export function InviteAcceptScreen() {
         </>
       }
     >
-      <View style={styles.body}>
+      <>
         <View style={styles.hero}>
           <View style={styles.avatar}>
             <Feather name="users" size={28} color={colors.text.inverse} />
@@ -103,16 +102,12 @@ export function InviteAcceptScreen() {
             </AppText>
           </View>
         ) : null}
-      </View>
+      </>
     </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  body: {
-    flex: 1,
-    gap: spacing.lg,
-  },
   hero: {
     borderRadius: 28,
     backgroundColor: colors.brand.peach,

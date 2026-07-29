@@ -3,10 +3,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   TextInput,
   View,
@@ -83,17 +80,12 @@ export function AccountScreen() {
   const deleting = deleteAccountMutation.isPending;
 
   return (
-    <SoftStackShell title="Account" onBack={() => router.back()} scroll={false}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.flex}
-      >
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <AppText variant="body" tone="secondary">
-            Update your profile or permanently delete your account and data.
-          </AppText>
+    <SoftStackShell title="Account" onBack={() => router.back()}>
+      <AppText variant="body" tone="secondary">
+        Update your profile or permanently delete your account and data.
+      </AppText>
 
-          <View style={styles.card}>
+      <View style={styles.card}>
             <AppText weight="semibold">Profile</AppText>
             <AppText variant="label" tone="secondary">
               First name
@@ -159,18 +151,11 @@ export function AccountScreen() {
               {deleting ? "Deleting..." : "Delete account"}
             </Button>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
     </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  scroll: {
-    paddingBottom: spacing.xxl,
-    gap: spacing.lg,
-  },
   card: {
     borderRadius: radius.xl,
     backgroundColor: colors.surface.card,

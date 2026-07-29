@@ -3,10 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   Share,
   StyleSheet,
   TextInput,
@@ -102,36 +99,32 @@ export function MemoryDetailScreen() {
 
   if (!memory) {
     return (
-      <SoftStackShell title="Memory" onBack={() => router.back()} scroll={false}>
-        <View style={styles.deletedWrap}>
-          <AppText variant="heading" align="center">
-            Moment not found
-          </AppText>
-          <Button size="lg" onPress={() => router.back()} style={styles.deletedCta}>
-            Back
-          </Button>
-        </View>
+      <SoftStackShell title="Memory" onBack={() => router.back()} centered>
+        <AppText variant="heading" align="center">
+          Moment not found
+        </AppText>
+        <Button size="lg" onPress={() => router.back()} style={styles.deletedCta}>
+          Back
+        </Button>
       </SoftStackShell>
     );
   }
 
   if (deleted) {
     return (
-      <SoftStackShell title="Memory" onBack={() => router.back()} scroll={false}>
-        <View style={styles.deletedWrap}>
-          <View style={styles.deletedMark}>
-            <Feather name="heart" size={26} color={colors.brand.peach} />
-          </View>
-          <AppText variant="heading" align="center">
-            Moment removed
-          </AppText>
-          <AppText variant="body" tone="secondary" align="center" style={styles.deletedCopy}>
-            Your story still has room for new pages whenever you’re ready.
-          </AppText>
-          <Button size="lg" onPress={() => router.back()} style={styles.deletedCta}>
-            Back to Journey
-          </Button>
+      <SoftStackShell title="Memory" onBack={() => router.back()} centered>
+        <View style={styles.deletedMark}>
+          <Feather name="heart" size={26} color={colors.brand.peach} />
         </View>
+        <AppText variant="heading" align="center">
+          Moment removed
+        </AppText>
+        <AppText variant="body" tone="secondary" align="center" style={styles.deletedCopy}>
+          Your story still has room for new pages whenever you’re ready.
+        </AppText>
+        <Button size="lg" onPress={() => router.back()} style={styles.deletedCta}>
+          Back to Journey
+        </Button>
       </SoftStackShell>
     );
   }
@@ -140,7 +133,6 @@ export function MemoryDetailScreen() {
     <SoftStackShell
       title={mode === "edit" ? "Edit moment" : "Memory"}
       onBack={() => router.back()}
-      scroll={false}
       right={
         mode === "view" ? (
           <Pressable
@@ -181,23 +173,14 @@ export function MemoryDetailScreen() {
         )
       }
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.flex}
-      >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.photo}>
-            <Feather name="image" size={28} color={colors.brand.peach} />
-            <AppText variant="caption" tone="secondary">
-              Photo stays private to household
-            </AppText>
-          </View>
+      <View style={styles.photo}>
+        <Feather name="image" size={28} color={colors.brand.peach} />
+        <AppText variant="caption" tone="secondary">
+          Photo stays private to household
+        </AppText>
+      </View>
 
-          <View style={styles.privacyChip}>
+      <View style={styles.privacyChip}>
             <Feather
               name={visibility === "private" ? "lock" : "home"}
               size={14}
@@ -289,14 +272,11 @@ export function MemoryDetailScreen() {
               </AppText>
             </View>
           ) : null}
-        </ScrollView>
-      </KeyboardAvoidingView>
     </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   iconBtn: {
     width: 44,
     height: 44,
@@ -311,10 +291,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.sm,
-  },
-  scroll: {
-    paddingBottom: spacing.xl,
-    gap: spacing.md,
   },
   photo: {
     height: 220,
@@ -402,12 +378,6 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     color: colors.status.error,
-  },
-  deletedWrap: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: spacing.md,
   },
   deletedMark: {
     width: 72,

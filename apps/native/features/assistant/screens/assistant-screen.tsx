@@ -210,7 +210,11 @@ export function AssistantScreen() {
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerStyle={styles.thread} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={styles.thread}
+          showsVerticalScrollIndicator={false}
+        >
           {thread.map((item, index) => (
             <View key={item.role === "assistant" ? item.id : `user-${index}`}>
               <View

@@ -38,7 +38,6 @@ export function InviteScreen() {
       title="Invite partner"
       closeIcon="x"
       onBack={() => router.back()}
-      scroll={false}
       footer={
         <>
           {sent ? (
@@ -62,7 +61,7 @@ export function InviteScreen() {
         </>
       }
     >
-      <View style={styles.body}>
+      <>
         <View style={styles.hero}>
           <AppText variant="caption" style={styles.heroEyebrow}>
             Free · 2 adults included
@@ -112,16 +111,12 @@ export function InviteScreen() {
             Invites expire after 7 days. You can revoke access anytime from Family.
           </AppText>
         </View>
-      </View>
+      </>
     </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  body: {
-    flex: 1,
-    gap: spacing.lg,
-  },
   hero: {
     borderRadius: 28,
     backgroundColor: colors.brand.peach,

@@ -37,20 +37,18 @@ export function PregnancyScreen() {
       <SoftStackShell
         title="Pregnancy journal"
         onBack={() => router.back()}
-        scroll={false}
+        centered
       >
-        <View style={styles.converted}>
-          <Feather name="heart" size={28} color={colors.brand.peach} />
-          <AppText variant="heading" align="center">
-            Converted to {pregnancyChildName}&apos;s story
-          </AppText>
-          <AppText variant="bodySmall" tone="secondary" align="center">
-            Pregnancy memories stay in Journey under the new child profile.
-          </AppText>
-          <Button size="lg" onPress={() => router.replace(appRoutes.journey)}>
-            Open Journey
-          </Button>
-        </View>
+        <Feather name="heart" size={28} color={colors.brand.peach} />
+        <AppText variant="heading" align="center">
+          Converted to {pregnancyChildName}&apos;s story
+        </AppText>
+        <AppText variant="bodySmall" tone="secondary" align="center">
+          Pregnancy memories stay in Journey under the new child profile.
+        </AppText>
+        <Button size="lg" onPress={() => router.replace(appRoutes.journey)}>
+          Open Journey
+        </Button>
       </SoftStackShell>
     );
   }
@@ -262,11 +260,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.peachSoft,
     padding: spacing.lg,
     gap: spacing.sm,
-  },
-  converted: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.md,
   },
 });

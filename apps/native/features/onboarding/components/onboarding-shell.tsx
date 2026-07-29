@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border.hairline,
-    backgroundColor: "rgba(247,241,236,0.92)",
+    backgroundColor: "rgba(243,245,247,0.94)",
     gap: spacing.sm,
   },
   secondaryBtn: {

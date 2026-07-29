@@ -8,7 +8,7 @@ import type {
 import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { spacing } from "@/design-system/tokens";
+import { colors, spacing } from "@/design-system/tokens";
 
 type SoftScreenProps = {
   children: ReactNode;
@@ -19,7 +19,7 @@ type SoftScreenProps = {
   scrollEventThrottle?: number;
 };
 
-/** Shared cream + peach atmosphere used across MVP tabs. */
+/** Shared mist + clay-blue atmosphere used across MVP tabs. */
 export function SoftScreen({
   children,
   scroll = true,
@@ -30,10 +30,12 @@ export function SoftScreen({
 }: SoftScreenProps) {
   const body = scroll ? (
     <ScrollView
+      style={styles.scrollView}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={[styles.scroll, contentStyle]}
       onScroll={onScroll}
       scrollEventThrottle={scrollEventThrottle}
+      keyboardShouldPersistTaps="handled"
     >
       {children}
     </ScrollView>
@@ -44,7 +46,7 @@ export function SoftScreen({
   return (
     <View style={styles.root}>
       <View style={styles.atmosphere} pointerEvents="none">
-        <View style={styles.blobPeach} />
+        <View style={styles.blobAccent} />
         <View style={styles.blobSoft} />
         <View style={styles.blobWash} />
       </View>
@@ -58,18 +60,18 @@ export function SoftScreen({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#F8EDE6",
+    backgroundColor: colors.surface.app,
   },
   atmosphere: {
     ...StyleSheet.absoluteFill,
     overflow: "hidden",
   },
-  blobPeach: {
+  blobAccent: {
     position: "absolute",
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: "rgba(229,155,138,0.26)",
+    backgroundColor: "rgba(106,143,168,0.22)",
     top: -110,
     right: -90,
   },
@@ -78,7 +80,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: "rgba(255,248,244,0.88)",
+    backgroundColor: "rgba(247,249,251,0.92)",
     top: 260,
     left: -100,
   },
@@ -87,15 +89,17 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 140,
-    backgroundColor: "rgba(243,199,188,0.3)",
+    backgroundColor: "rgba(197,216,228,0.32)",
     bottom: -90,
     right: -50,
   },
   safe: { flex: 1 },
   fill: { flex: 1 },
+  scrollView: { flex: 1 },
   scroll: {
     paddingHorizontal: spacing.page,
     paddingBottom: spacing.xxl,
     gap: spacing.lg,
+    flexGrow: 0,
   },
 });

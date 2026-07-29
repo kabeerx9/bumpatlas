@@ -108,9 +108,8 @@ export function CareScreen() {
   if (phase === "done" || phase === "skipped") {
     const skipped = phase === "skipped";
     return (
-      <SoftStackShell title="Care" closeIcon="x" onBack={goHome} scroll={false}>
-        <View style={styles.finishWrap}>
-          <View style={styles.finishMark}>
+      <SoftStackShell title="Care" closeIcon="x" onBack={goHome} centered>
+        <View style={styles.finishMark}>
             <Feather
               name={skipped ? "heart" : badgeAwarded ? "award" : "check"}
               size={28}
@@ -152,7 +151,6 @@ export function CareScreen() {
               </AppText>
             </Pressable>
           ) : null}
-        </View>
       </SoftStackShell>
     );
   }
@@ -472,12 +470,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     minHeight: 44,
     justifyContent: "center",
-  },
-  finishWrap: {
-    flex: 1,
-    justifyContent: "center",
-    gap: spacing.md,
-    alignItems: "center",
   },
   finishMark: {
     width: 72,

@@ -2,10 +2,7 @@ import { useSignIn } from "@clerk/expo";
 import { Link, useRouter } from "expo-router";
 import React from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   TextInput,
   View,
@@ -115,16 +112,7 @@ export function SignInScreen() {
   }
 
   return (
-    <SoftScreen scroll={false} edges={["top", "bottom"]}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.flex}
-        >
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scroll}
-          >
+    <SoftScreen edges={["top", "bottom"]} contentStyle={styles.scroll}>
             <BrandWordmark size="md" markOnly style={styles.logo} />
             <AppText variant="heading" align="center">
               Sign In
@@ -212,8 +200,6 @@ export function SignInScreen() {
                 </AppText>
               </Link>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
     </SoftScreen>
   );
 }
@@ -222,8 +208,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
   scroll: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.page,
     paddingTop: spacing.xxl,
     paddingBottom: spacing.xl,
     gap: spacing.md,

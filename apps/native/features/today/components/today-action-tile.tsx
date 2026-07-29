@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   emphasized: {
     borderWidth: 1.5,
     borderColor: colors.brand.peach,
-    backgroundColor: "rgba(255,248,244,0.95)",
+    backgroundColor: "rgba(247,249,251,0.95)",
   },
   pressed: {
     opacity: 0.92,

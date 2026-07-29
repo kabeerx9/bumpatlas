@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AppText, Atmosphere, BrandWordmark, Button, spacing } from "@/design-system";
+import { AppText, Atmosphere, BrandWordmark, Button, colors, spacing } from "@/design-system";
 import { IntroIllustration } from "@/features/onboarding/components/intro-illustration";
 
 type IntroStepProps = {
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     width: 22,
-    backgroundColor: "#E59B8A",
+    backgroundColor: colors.brand.peach,
   },
   footer: {
     paddingHorizontal: spacing.page,
