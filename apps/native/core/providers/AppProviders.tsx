@@ -11,6 +11,7 @@ import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { ClerkAuthSetup } from "@/components/clerk-auth-setup";
+import { MockUiProvider } from "@/features/mock/mock-ui-context";
 import { OnboardingProvider } from "@/features/onboarding/providers/onboarding-provider";
 import { useResetSessionOnAuthChange } from "@/hooks/useResetSessionOnAuthChange";
 import { NAV_THEME } from "@/lib/constants";
@@ -66,12 +67,14 @@ export function AppProviders({ children }: { children: ReactNode }) {
         <QueryClientProvider client={queryClient}>
           <SessionResetBoundary>
             <OnboardingProvider>
-              <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
-                <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
-                <FontGate>
-                  <GestureHandlerRootView style={styles.container}>{children}</GestureHandlerRootView>
-                </FontGate>
-              </ThemeProvider>
+              <MockUiProvider>
+                <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
+                  <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
+                  <FontGate>
+                    <GestureHandlerRootView style={styles.container}>{children}</GestureHandlerRootView>
+                  </FontGate>
+                </ThemeProvider>
+              </MockUiProvider>
             </OnboardingProvider>
           </SessionResetBoundary>
         </QueryClientProvider>

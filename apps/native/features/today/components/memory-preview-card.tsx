@@ -30,7 +30,7 @@ export function MemoryPreviewCard({ title, dateLabel, onPress }: MemoryPreviewCa
         </AppText>
         <View style={styles.linkRow}>
           <AppText variant="caption" weight="semibold" style={styles.link}>
-            Open journey
+            Open moment
           </AppText>
           <Feather name="arrow-up-right" size={14} color={colors.brand.peach} />
         </View>

@@ -14,6 +14,8 @@ type OnboardingShellProps = {
   onContinue: () => void;
   continueLabel?: string;
   showManageProfile?: boolean;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
 };
 
 export function OnboardingShell({
@@ -24,7 +26,9 @@ export function OnboardingShell({
   onBack,
   onContinue,
   continueLabel = "Save & Continue",
-  showManageProfile = true,
+  showManageProfile = false,
+  secondaryLabel,
+  onSecondary,
 }: OnboardingShellProps) {
   const progress = Math.min(100, Math.max(8, (stepIndex / totalSteps) * 100));
 
@@ -65,6 +69,13 @@ export function OnboardingShell({
         <View style={styles.body}>{children}</View>
 
         <View style={styles.footer}>
+          {secondaryLabel && onSecondary ? (
+            <Pressable onPress={onSecondary} hitSlop={12} style={styles.secondaryBtn}>
+              <AppText tone="secondary" align="center">
+                {secondaryLabel}
+              </AppText>
+            </Pressable>
+          ) : null}
           <Button disabled={!canContinue} onPress={onContinue} size="lg" style={styles.cta}>
             {continueLabel}
           </Button>
@@ -130,6 +141,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border.hairline,
     backgroundColor: "rgba(247,241,236,0.92)",
+    gap: spacing.sm,
+  },
+  secondaryBtn: {
+    paddingVertical: spacing.sm,
   },
   cta: {
     width: "100%",

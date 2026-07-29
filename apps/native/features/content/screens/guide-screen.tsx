@@ -1,79 +1,147 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, Button, Screen, Surface, colors, radius, spacing } from "@/design-system";
-import { mockGuides } from "@/features/mock/demo-data";
+import { AppText, Button, colors, spacing } from "@/design-system";
+import { SoftHeader } from "@/features/shared/components/soft-header";
+import { SoftPanel } from "@/features/shared/components/soft-panel";
+import { SoftScreen } from "@/features/shared/components/soft-screen";
+import { mockGuides, mockToday } from "@/features/mock/demo-data";
 import { appRoutes } from "@/navigation/routes";
 
 export function GuideScreen() {
   const router = useRouter();
 
   return (
-    <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <AppText variant="caption" tone="secondary" weight="semibold">
-          GUIDE
-        </AppText>
-        <AppText variant="heading">Learn what matters now</AppText>
-        <AppText variant="body" tone="secondary">
-          Short reviewed tips. Ask the assistant when you need a nudge — not a doctor.
-        </AppText>
+    <SoftScreen>
+      <SoftHeader
+        eyebrow="Guide"
+        title="Learn what matters now"
+        subtitle="Short reviewed tips for this stage. Ask the assistant for a nudge — not a diagnosis."
+      />
 
-        <Surface style={styles.aiCard}>
-          <View style={styles.aiHeader}>
-            <View style={styles.aiIcon}>
-              <Feather name="message-circle" size={16} color={colors.brand.terracotta} />
-            </View>
-            <AppText weight="semibold">Ask BumpAtlas</AppText>
+      <SoftPanel tinted style={styles.aiCard}>
+        <View style={styles.aiHeader}>
+          <View style={styles.aiIcon}>
+            <Feather name="message-circle" size={18} color={colors.brand.peach} />
           </View>
-          <AppText variant="bodySmall" tone="secondary">
-            Suggest a prompt, summarize your week, or find a tip. Educational only.
-          </AppText>
-          <Button variant="secondary" onPress={() => router.push(appRoutes.assistant)}>
-            Open assistant
-          </Button>
-        </Surface>
+          <View style={styles.aiCopy}>
+            <AppText weight="semibold" tone="inverse">
+              Ask BumpAtlas
+            </AppText>
+            <AppText variant="bodySmall" style={styles.aiMeta}>
+              Prompts, recaps, and reviewed tips. Educational only.
+            </AppText>
+          </View>
+        </View>
+        <Button
+          variant="ghost"
+          size="lg"
+          onPress={() => router.push(appRoutes.assistant)}
+          style={styles.aiCta}
+        >
+          Open assistant
+        </Button>
+      </SoftPanel>
 
-        {mockGuides.map((guide) => (
-          <Pressable key={guide.id}>
-            <Surface style={styles.guideCard}>
-              <AppText variant="caption" tone="secondary" weight="semibold">
-                {guide.category.toUpperCase()}
+      <Pressable onPress={() => router.push(appRoutes.guideArticle(mockToday.learnCard.id))}>
+        <SoftPanel>
+          <AppText variant="caption" style={styles.peachLabel}>
+            Featured for 12 weeks
+          </AppText>
+          <AppText weight="semibold">{mockToday.learnCard.title}</AppText>
+          <AppText variant="bodySmall" tone="secondary">
+            {mockToday.learnCard.detail}
+          </AppText>
+          <View style={styles.featuredLink}>
+            <AppText variant="caption" weight="semibold" style={styles.peachLabel}>
+              Read tip
+            </AppText>
+            <Feather name="arrow-up-right" size={14} color={colors.brand.peach} />
+          </View>
+        </SoftPanel>
+      </Pressable>
+
+      <AppText weight="semibold">Browse tips</AppText>
+
+      {mockGuides.map((guide) => (
+        <Pressable
+          key={guide.id}
+          onPress={() => router.push(appRoutes.guideArticle(guide.id))}
+        >
+          <SoftPanel style={styles.guideRow}>
+            <View style={styles.guideIcon}>
+              <Feather name="book-open" size={16} color={colors.brand.peach} />
+            </View>
+            <View style={styles.guideCopy}>
+              <AppText variant="caption" style={styles.peachLabel}>
+                {guide.category}
               </AppText>
               <AppText weight="semibold">{guide.title}</AppText>
-            </Surface>
-          </Pressable>
-        ))}
-      </ScrollView>
-    </Screen>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.text.muted} />
+          </SoftPanel>
+        </Pressable>
+      ))}
+    </SoftScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    gap: spacing.md,
-    paddingBottom: spacing.xxl,
-  },
   aiCard: {
-    gap: spacing.sm,
-    padding: spacing.cardPadding,
+    gap: spacing.md,
+    padding: spacing.xl,
   },
   aiHeader: {
     flexDirection: "row",
+    gap: spacing.md,
     alignItems: "center",
-    gap: spacing.sm,
   },
   aiIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.sm,
-    backgroundColor: colors.brand.sageSoft,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface.card,
     alignItems: "center",
     justifyContent: "center",
   },
-  guideCard: {
-    gap: spacing.xs,
-    padding: spacing.cardPadding,
+  aiCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  aiMeta: {
+    color: "rgba(255,255,255,0.82)",
+  },
+  aiCta: {
+    backgroundColor: colors.surface.card,
+    borderColor: colors.surface.card,
+  },
+  peachLabel: {
+    color: colors.brand.peach,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+  },
+  guideRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  guideIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.brand.peachSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  guideCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  featuredLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: spacing.xs,
   },
 });

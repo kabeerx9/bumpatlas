@@ -15,10 +15,10 @@ export default function MainTabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.brand.terracotta,
+        tabBarActiveTintColor: colors.brand.peach,
         tabBarInactiveTintColor: colors.text.muted,
         tabBarStyle: {
-          backgroundColor: colors.surface.card,
+          backgroundColor: "rgba(255,255,255,0.94)",
           borderTopColor: colors.border.hairline,
           height: 64,
           paddingTop: 6,

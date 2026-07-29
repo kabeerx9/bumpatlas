@@ -1,8 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, View } from "react-native";
+import { Animated, StyleSheet, View } from "react-native";
 
 import { AppText, Button, colors, shadows, spacing } from "@/design-system";
+import { useRespectReduceMotion } from "@/features/shared/hooks/use-respect-reduce-motion";
+import { ProgressRing } from "@/features/today/components/progress-ring";
 import { TodayHeroIllustration } from "@/features/today/components/today-hero-illustration";
 
 type CaptureHeroCardProps = {
@@ -21,15 +23,20 @@ export function CaptureHeroCard({
   onCapture,
 }: CaptureHeroCardProps) {
   const appear = useRef(new Animated.Value(0)).current;
+  const { reduceMotion } = useRespectReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion.current) {
+      appear.setValue(1);
+      return;
+    }
     Animated.spring(appear, {
       toValue: 1,
       friction: 8,
       tension: 40,
       useNativeDriver: true,
     }).start();
-  }, [appear]);
+  }, [appear, reduceMotion]);
 
   return (
     <Animated.View
@@ -52,15 +59,15 @@ export function CaptureHeroCard({
       <View style={styles.blobBottom} />
 
       <View style={styles.topRow}>
-        <View>
+        <View style={styles.topCopy}>
           <AppText variant="caption" style={styles.eyebrow}>
             Today with {babyName}
           </AppText>
           <AppText variant="caption" weight="semibold" style={styles.week}>
-            {activeDays}/{goal} calm days
+            Calm days this week
           </AppText>
         </View>
-        <TodayHeroIllustration />
+        <ProgressRing activeDays={activeDays} goal={goal} />
       </View>
 
       <AppText variant="heading" style={styles.prompt}>
@@ -69,6 +76,10 @@ export function CaptureHeroCard({
       <AppText variant="bodySmall" style={styles.support}>
         One photo or a short note. That’s enough.
       </AppText>
+
+      <View style={styles.illustrationRow}>
+        <TodayHeroIllustration />
+      </View>
 
       <Button
         size="lg"
@@ -116,9 +127,10 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     marginBottom: spacing.sm,
   },
+  topCopy: { flex: 1, paddingRight: spacing.md },
   eyebrow: {
     color: "rgba(255,255,255,0.78)",
     letterSpacing: 0.8,
@@ -131,11 +143,15 @@ const styles = StyleSheet.create({
   prompt: {
     color: colors.text.inverse,
     lineHeight: 36,
-    maxWidth: "88%",
+    maxWidth: "92%",
   },
   support: {
     color: "rgba(255,255,255,0.82)",
     marginBottom: spacing.sm,
+  },
+  illustrationRow: {
+    alignItems: "flex-end",
+    marginTop: -spacing.md,
   },
   cta: {
     marginTop: spacing.sm,

@@ -92,6 +92,8 @@ export function AppText({
   return (
     <NativeText
       numberOfLines={numberOfLines}
+      allowFontScaling
+      maxFontSizeMultiplier={1.35}
       style={[
         styles.base,
         variantStyle[variant],

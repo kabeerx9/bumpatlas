@@ -1,3 +1,4 @@
+import { Feather } from "@expo/vector-icons";
 import { useClerk, useUser } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -8,12 +9,12 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppText, Atmosphere, Button, colors, radius, spacing } from "@/design-system";
 import {
   useDeleteAccountMutation,
   useUpdateAccountMutation,
@@ -39,10 +40,7 @@ export function AccountScreen() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
-      return;
-    }
-
+    if (!user) return;
     setFirstName(user.firstName ?? "");
     setLastName(user.lastName ?? "");
   }, [user]);
@@ -50,7 +48,6 @@ export function AccountScreen() {
   async function handleSave() {
     setSaveError(null);
     setSaveSuccess(false);
-
     try {
       await updateAccountMutation.mutateAsync({ firstName, lastName });
       await user?.reload();
@@ -62,7 +59,6 @@ export function AccountScreen() {
 
   async function performDelete() {
     setDeleteError(null);
-
     try {
       await deleteAccountMutation.mutateAsync({ confirmation: "DELETE" });
       await signOut();
@@ -75,14 +71,10 @@ export function AccountScreen() {
   function handleDeletePress() {
     Alert.alert(
       "Delete account",
-      "This permanently deletes your Clerk identity and local account data.",
+      "This permanently deletes your identity and household data on our servers.",
       [
         { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => void performDelete(),
-        },
+        { text: "Delete", style: "destructive", onPress: () => void performDelete() },
       ],
     );
   }
@@ -92,181 +84,134 @@ export function AccountScreen() {
   const deleting = deleteAccountMutation.isPending;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.keyboardAvoiding}
-      >
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.container}
-          showsVerticalScrollIndicator={false}
+    <Atmosphere>
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
+            <Feather name="arrow-left" size={20} color={colors.brand.ink} />
+          </Pressable>
+          <AppText weight="semibold">Account</AppText>
+          <View style={styles.iconBtn} />
+        </View>
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.flex}
         >
-          <View style={styles.header}>
-            <Text style={styles.eyebrow}>Settings</Text>
-            <Text style={styles.title}>Account</Text>
-            <Text style={styles.subtitle}>Update your profile or delete your account.</Text>
-          </View>
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+            <AppText variant="body" tone="secondary">
+              Update your profile or permanently delete your account and data.
+            </AppText>
 
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Profile</Text>
-            <Text style={styles.sectionDescription}>
-              Changes are saved through the server and synced to Clerk.
-            </Text>
-            <Text style={styles.label}>First name</Text>
-            <TextInput
-              style={styles.input}
-              value={firstName}
-              onChangeText={setFirstName}
-              autoCapitalize="words"
-            />
-            <Text style={styles.label}>Last name</Text>
-            <TextInput
-              style={styles.input}
-              value={lastName}
-              onChangeText={setLastName}
-              autoCapitalize="words"
-            />
-            {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
-            {saveSuccess ? <Text style={styles.successText}>Profile updated.</Text> : null}
-            <Pressable
-              style={[styles.button, saving && styles.buttonDisabled]}
-              disabled={saving}
-              onPress={() => void handleSave()}
-            >
-              <Text style={styles.buttonText}>{saving ? "Saving..." : "Save changes"}</Text>
-            </Pressable>
-          </View>
+            <View style={styles.card}>
+              <AppText weight="semibold">Profile</AppText>
+              <AppText variant="label" tone="secondary">
+                First name
+              </AppText>
+              <TextInput
+                style={styles.input}
+                value={firstName}
+                onChangeText={setFirstName}
+                autoCapitalize="words"
+              />
+              <AppText variant="label" tone="secondary">
+                Last name
+              </AppText>
+              <TextInput
+                style={styles.input}
+                value={lastName}
+                onChangeText={setLastName}
+                autoCapitalize="words"
+              />
+              {saveError ? (
+                <AppText variant="bodySmall" style={styles.error}>
+                  {saveError}
+                </AppText>
+              ) : null}
+              {saveSuccess ? (
+                <AppText variant="bodySmall" style={styles.success}>
+                  Profile updated.
+                </AppText>
+              ) : null}
+              <Button disabled={saving} onPress={() => void handleSave()}>
+                {saving ? "Saving..." : "Save changes"}
+              </Button>
+            </View>
 
-          <View style={[styles.card, styles.dangerCard]}>
-            <Text style={styles.dangerTitle}>Delete account</Text>
-            <Text style={styles.sectionDescription}>
-              This permanently deletes your Clerk identity and local account data.
-            </Text>
-            <Text style={styles.label}>Type DELETE to confirm</Text>
-            <TextInput
-              style={styles.input}
-              value={deleteConfirmation}
-              onChangeText={setDeleteConfirmation}
-              placeholder="DELETE"
-              autoCapitalize="characters"
-            />
-            {deleteError ? <Text style={styles.errorText}>{deleteError}</Text> : null}
-            <Pressable
-              style={[styles.dangerButton, (!canDelete || deleting) && styles.buttonDisabled]}
-              disabled={!canDelete || deleting}
-              onPress={handleDeletePress}
-            >
-              <Text style={styles.dangerButtonText}>
+            <View style={[styles.card, styles.dangerCard]}>
+              <AppText weight="semibold" style={styles.dangerTitle}>
+                Delete account
+              </AppText>
+              <AppText variant="bodySmall" tone="secondary">
+                Removes your account, authored posts, AI history, and household membership. Export
+                first if you want a copy.
+              </AppText>
+              <AppText variant="label" tone="secondary">
+                Type DELETE to confirm
+              </AppText>
+              <TextInput
+                style={styles.input}
+                value={deleteConfirmation}
+                onChangeText={setDeleteConfirmation}
+                placeholder="DELETE"
+                autoCapitalize="characters"
+              />
+              {deleteError ? (
+                <AppText variant="bodySmall" style={styles.error}>
+                  {deleteError}
+                </AppText>
+              ) : null}
+              <Button
+                disabled={!canDelete || deleting}
+                onPress={handleDeletePress}
+                style={styles.dangerBtn}
+              >
                 {deleting ? "Deleting..." : "Delete account"}
-              </Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+              </Button>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </Atmosphere>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  keyboardAvoiding: {
-    flex: 1,
-  },
-  container: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    gap: 16,
-  },
+  safe: { flex: 1 },
+  flex: { flex: 1 },
   header: {
-    gap: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.page,
+    paddingVertical: spacing.md,
   },
-  eyebrow: {
-    color: "#2563eb",
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "700",
-  },
-  subtitle: {
-    fontSize: 16,
-    opacity: 0.7,
+  iconBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  scroll: {
+    paddingHorizontal: spacing.page,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
   },
   card: {
+    borderRadius: radius.xl,
+    backgroundColor: colors.surface.card,
+    padding: spacing.lg,
+    gap: spacing.sm,
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
-    backgroundColor: "#fff",
+    borderColor: colors.border.subtle,
   },
-  dangerCard: {
-    borderColor: "#dc2626",
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  sectionDescription: {
-    fontSize: 14,
-    opacity: 0.7,
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
+  dangerCard: { borderColor: colors.brand.terracotta },
   input: {
+    minHeight: 48,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
+    borderColor: colors.border.strong,
+    paddingHorizontal: spacing.lg,
+    fontFamily: "Poppins_400Regular",
+    color: colors.text.primary,
   },
-  button: {
-    marginTop: 8,
-    backgroundColor: "#111827",
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  dangerButton: {
-    marginTop: 8,
-    backgroundColor: "#dc2626",
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  dangerButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  dangerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#dc2626",
-  },
-  errorText: {
-    color: "#dc2626",
-    fontSize: 14,
-  },
-  successText: {
-    color: "#15803d",
-    fontSize: 14,
-  },
+  error: { color: colors.brand.terracotta },
+  success: { color: colors.brand.peach },
+  dangerTitle: { color: colors.brand.terracotta },
+  dangerBtn: { backgroundColor: colors.brand.terracotta },
 });
