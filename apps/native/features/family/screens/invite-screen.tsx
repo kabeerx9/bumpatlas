@@ -12,11 +12,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
 import { mockHousehold, mockInvitePreview } from "@/features/mock/demo-data";
+import { useMockUi } from "@/features/mock/mock-ui-context";
 
 const inviteLink = `https://bumpatlas.app/invite/${mockInvitePreview.token}`;
 
 export function InviteScreen() {
   const router = useRouter();
+  const { markPartnerJoined } = useMockUi();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
 
@@ -28,6 +30,7 @@ export function InviteScreen() {
 
   function handleSend() {
     setSent(true);
+    markPartnerJoined();
   }
 
   return (

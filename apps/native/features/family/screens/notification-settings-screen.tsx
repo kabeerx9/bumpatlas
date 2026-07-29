@@ -23,6 +23,8 @@ export function NotificationSettingsScreen() {
     quietStart,
     quietEnd,
     setQuietHours,
+    groupRelatedAlerts,
+    setGroupRelatedAlerts,
   } = useMockUi();
   const [prefs, setPrefs] = useState<Record<string, boolean>>(
     Object.fromEntries(mockNotificationCategories.map((c) => [c.id, c.defaultOn])),
@@ -44,7 +46,7 @@ export function NotificationSettingsScreen() {
     <View style={styles.root}>
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
+          <Pressable onPress={() => router.back()} style={styles.iconBtn} accessibilityLabel="Go back">
             <Feather name="arrow-left" size={20} color={colors.brand.ink} />
           </Pressable>
           <AppText weight="semibold">Notifications</AppText>
@@ -84,6 +86,23 @@ export function NotificationSettingsScreen() {
             </View>
             <View style={[styles.toggle, quietHoursEnabled && styles.toggleOn]}>
               <View style={[styles.knob, quietHoursEnabled && styles.knobOn]} />
+            </View>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setGroupRelatedAlerts(!groupRelatedAlerts)}
+            style={[styles.row, groupRelatedAlerts && styles.rowOn]}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: groupRelatedAlerts }}
+          >
+            <View style={styles.copy}>
+              <AppText weight="semibold">Group related alerts</AppText>
+              <AppText variant="bodySmall" tone="secondary">
+                Bundle partner + recap nudges instead of scattering separate pings.
+              </AppText>
+            </View>
+            <View style={[styles.toggle, groupRelatedAlerts && styles.toggleOn]}>
+              <View style={[styles.knob, groupRelatedAlerts && styles.knobOn]} />
             </View>
           </Pressable>
 

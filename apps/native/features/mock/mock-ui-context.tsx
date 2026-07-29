@@ -17,6 +17,22 @@ type WeekProgress = {
 
 type LoopCompletion = Record<LoopKey, boolean>;
 
+export type MemoryDraft = {
+  id: string;
+  body: string;
+  eventDate: string;
+  createdAtLabel: string;
+  hasPhoto: boolean;
+};
+
+export type OnboardingProfileInput = {
+  role: "expecting" | "parent" | "partner" | null;
+  dueDate?: string;
+  childName?: string;
+  childDob?: string;
+  householdName?: string;
+};
+
 type MockUiState = {
   isOffline: boolean;
   setOffline: (value: boolean) => void;
@@ -40,6 +56,10 @@ type MockUiState = {
   markConnectRulesSeen: () => void;
   pendingDraft: boolean;
   setPendingDraft: (value: boolean) => void;
+  drafts: MemoryDraft[];
+  saveDraft: (input: { body: string; eventDate: string; hasPhoto: boolean }) => void;
+  removeDraft: (id: string) => void;
+  clearDrafts: () => void;
   connectScenario: "active" | "warming";
   setConnectScenario: (value: "active" | "warming") => void;
   connectTodayMode: "group" | "alone";
@@ -100,6 +120,15 @@ type MockUiState = {
   setPremiumPreview: (value: boolean) => void;
   newlyEarnedBadgeId: string | null;
   clearNewlyEarnedBadge: () => void;
+  applyOnboardingProfile: (input: OnboardingProfileInput) => void;
+  groupRelatedAlerts: boolean;
+  setGroupRelatedAlerts: (value: boolean) => void;
+  accountAgeDays: number;
+  linksAllowed: boolean;
+  markPartnerJoined: () => void;
+  householdName: string;
+  childDisplayName: string;
+  dueDateOverride: string | null;
 };
 
 const MockUiContext = createContext<MockUiState | null>(null);
@@ -126,6 +155,7 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
   const [communityRulesAccepted, setCommunityRulesAccepted] = useState(false);
   const [connectRulesSeen, setConnectRulesSeen] = useState(false);
   const [pendingDraft, setPendingDraft] = useState(false);
+  const [drafts, setDrafts] = useState<MemoryDraft[]>([]);
   const [connectScenario, setConnectScenario] = useState<"active" | "warming">("active");
   const [connectTodayMode, setConnectTodayMode] = useState<"group" | "alone">("group");
   const [stageMode, setStageMode] = useState<StageMode>("postpartum");
@@ -159,11 +189,18 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
     m1: "OBSERVED",
     m2: "EMERGING",
     m3: "OBSERVED",
+    m4: "EMERGING",
+    m5: "NOT_OBSERVED",
   });
   const [moderationStatuses, setModerationStatuses] = useState<Record<string, string>>({});
   const [journalQuery, setJournalQuery] = useState("");
   const [isPremiumPreview, setPremiumPreview] = useState(false);
   const [newlyEarnedBadgeId, setNewlyEarnedBadgeId] = useState<string | null>(null);
+  const [groupRelatedAlerts, setGroupRelatedAlerts] = useState(true);
+  const [accountAgeDays] = useState(7);
+  const [householdName, setHouseholdName] = useState("The Rivera household");
+  const [childDisplayName, setChildDisplayName] = useState("Ava");
+  const [dueDateOverride, setDueDateOverride] = useState<string | null>(null);
 
   const earnBadge = useCallback((id: string) => {
     setEarnedBadgeIds((current) => {
@@ -186,7 +223,15 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
     setMemoryCount((count) => count + 1);
     setLoopCompletion((current) => {
       if (!current.capture) {
-        setStoryDaysThisWeek((days) => Math.min(WEEK_GOAL, days + 1));
+        setStoryDaysThisWeek((days) => {
+          const next = Math.min(WEEK_GOAL, days + 1);
+          if (next >= WEEK_GOAL) {
+            setEarnedBadgeIds((badges) =>
+              badges.includes("b2") ? badges : [...badges, "b2"],
+            );
+          }
+          return next;
+        });
       }
       return { ...current, capture: true };
     });
@@ -219,6 +264,66 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
   const markConnectDone = useCallback(() => {
     setLoopCompletion((current) => ({ ...current, connect: true }));
   }, []);
+
+  const saveDraft = useCallback(
+    (input: { body: string; eventDate: string; hasPhoto: boolean }) => {
+      const draft: MemoryDraft = {
+        id: `draft-${Date.now()}`,
+        body: input.body,
+        eventDate: input.eventDate,
+        hasPhoto: input.hasPhoto,
+        createdAtLabel: "Just now",
+      };
+      setDrafts((current) => [draft, ...current]);
+      setPendingDraft(true);
+    },
+    [],
+  );
+
+  const removeDraft = useCallback((id: string) => {
+    setDrafts((current) => {
+      const next = current.filter((draft) => draft.id !== id);
+      setPendingDraft(next.length > 0);
+      return next;
+    });
+  }, []);
+
+  const clearDrafts = useCallback(() => {
+    setDrafts([]);
+    setPendingDraft(false);
+  }, []);
+
+  const applyOnboardingProfile = useCallback(
+    (input: OnboardingProfileInput) => {
+      if (input.householdName?.trim()) setHouseholdName(input.householdName.trim());
+      if (input.childName?.trim()) setChildDisplayName(input.childName.trim());
+
+      if (input.role === "expecting") {
+        setStageMode("pregnancy");
+        if (input.dueDate?.trim()) setDueDateOverride(input.dueDate.trim());
+        earnBadge("b4");
+        setActiveGroupId(mockStageGroups[0]?.id ?? "g-preg");
+        return;
+      }
+
+      if (input.role === "parent") {
+        setStageMode("postpartum");
+        setActiveGroupId(mockStageGroups[1]?.id ?? "g-06");
+        return;
+      }
+
+      if (input.role === "partner") {
+        setStageMode("unknown");
+        setConnectTodayMode("alone");
+      }
+    },
+    [earnBadge],
+  );
+
+  const markPartnerJoined = useCallback(() => {
+    earnBadge("b3");
+    setConnectTodayMode("group");
+  }, [earnBadge]);
 
   const activeDays = recomputeActiveDays(storyDaysThisWeek, wellnessDaysThisWeek);
   const recapEligible =
@@ -262,6 +367,10 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       markConnectRulesSeen: () => setConnectRulesSeen(true),
       pendingDraft,
       setPendingDraft,
+      drafts,
+      saveDraft,
+      removeDraft,
+      clearDrafts,
       connectScenario,
       setConnectScenario,
       connectTodayMode,
@@ -349,15 +458,28 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       setPremiumPreview,
       newlyEarnedBadgeId,
       clearNewlyEarnedBadge: () => setNewlyEarnedBadgeId(null),
+      applyOnboardingProfile,
+      groupRelatedAlerts,
+      setGroupRelatedAlerts,
+      accountAgeDays,
+      linksAllowed: accountAgeDays >= 14,
+      markPartnerJoined,
+      householdName,
+      childDisplayName,
+      dueDateOverride,
     }),
     [
       activeDays,
       activeGroupId,
       aiHourlyUsed,
       aiMessagesUsed,
+      applyOnboardingProfile,
+      accountAgeDays,
       blockedAuthorIds,
       bookmarkedGuides,
       checklistDone,
+      childDisplayName,
+      clearDrafts,
       commentsUsedToday,
       communityRulesAccepted,
       completeCapture,
@@ -365,8 +487,12 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       connectRulesSeen,
       connectScenario,
       connectTodayMode,
+      drafts,
+      dueDateOverride,
       earnBadge,
       earnedBadgeIds,
+      groupRelatedAlerts,
+      householdName,
       inviteCtaDismissed,
       isOffline,
       isPremiumPreview,
@@ -375,6 +501,7 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       loopCompletion,
       markConnectDone,
       markLearnDone,
+      markPartnerJoined,
       mediaUploadsUsed,
       memoryCount,
       milestoneStatuses,
@@ -390,6 +517,8 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       quietHoursEnabled,
       quietStart,
       recapEligible,
+      removeDraft,
+      saveDraft,
       selectedMood,
       showEmptyJourney,
       stageMode,

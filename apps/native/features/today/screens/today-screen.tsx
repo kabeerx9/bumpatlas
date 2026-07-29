@@ -20,6 +20,7 @@ import {
   pregnancyWeekLabel,
 } from "@/features/pregnancy/lib/gestational-week";
 import { OfflineBanner } from "@/features/shared/components/offline-banner";
+import { DraftQueuePanel } from "@/features/shared/components/draft-queue-panel";
 import { SoftPanel } from "@/features/shared/components/soft-panel";
 import { useRespectReduceMotion } from "@/features/shared/hooks/use-respect-reduce-motion";
 import { ageBucketFromDob, ageBucketLabel, approximateAgeLabel } from "@/features/shared/lib/age-bucket";
@@ -50,6 +51,7 @@ export function TodayScreen() {
     wellnessDaysThisWeek,
     markLearnDone,
     isPremiumPreview,
+    childDisplayName,
   } = useMockUi();
 
   const connect = mockToday.connectCard;
@@ -102,7 +104,7 @@ export function TodayScreen() {
         >
           <Animated.View style={{ opacity: fade }}>
             <TodayProfileBar
-              displayName={mockProfile.displayName}
+              displayName={childDisplayName}
               stageLabel={
                 stageUnknown
                   ? "Finish setup"
@@ -148,15 +150,7 @@ export function TodayScreen() {
           ) : null}
 
           {pendingDraft ? (
-            <Pressable
-              style={styles.draftBanner}
-              onPress={() => router.push(appRoutes.capture)}
-            >
-              <Feather name="clock" size={16} color={colors.brand.peach} />
-              <AppText variant="bodySmall" style={styles.draftCopy}>
-                Memory draft saved locally · tap to finish
-              </AppText>
-            </Pressable>
+            <DraftQueuePanel onOpenDraft={() => router.push(appRoutes.capture)} />
           ) : null}
 
           {stageMode === "pregnancy" ? (
@@ -182,7 +176,7 @@ export function TodayScreen() {
           ) : null}
 
           <CaptureHeroCard
-            babyName={mockProfile.displayName}
+            babyName={childDisplayName}
             prompt={
               stageMode === "pregnancy" ? mockPregnancy.bumpPrompt : mockToday.memoryPrompt
             }

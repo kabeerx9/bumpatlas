@@ -1,11 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@clerk/expo";
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 
 import { SignOutButton } from "@/components/sign-out-button";
 import { AppText, Button, colors, spacing } from "@/design-system";
-import { mockHousehold, mockHouseholdMembers, mockProfile, mockRecaps } from "@/features/mock/demo-data";
+import { mockHouseholdMembers, mockRecaps } from "@/features/mock/demo-data";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftHeader } from "@/features/shared/components/soft-header";
 import { SoftPanel } from "@/features/shared/components/soft-panel";
@@ -26,6 +26,8 @@ export function FamilyScreen() {
     setStageMode,
     showEmptyJourney,
     setShowEmptyJourney,
+    householdName,
+    childDisplayName,
   } = useMockUi();
 
   function cycleStageMode() {
@@ -46,7 +48,7 @@ export function FamilyScreen() {
       <SoftHeader
         eyebrow="Family"
         title="Your household"
-        subtitle={`${mockHousehold.name} · caring for ${mockProfile.displayName}`}
+        subtitle={`${householdName} · caring for ${childDisplayName}`}
       />
 
       <SoftPanel>
@@ -145,7 +147,19 @@ export function FamilyScreen() {
         >
           View premium
         </Button>
-        <Button variant="ghost" onPress={() => router.push(appRoutes.paywall())}>
+        <Button
+          variant="ghost"
+          onPress={() =>
+            Alert.alert(
+              "Restore purchases",
+              "Checking App Store / Play purchases… (mock) No active premium found.",
+              [
+                { text: "Open paywall", onPress: () => router.push(appRoutes.paywall()) },
+                { text: "OK", style: "cancel" },
+              ],
+            )
+          }
+        >
           Restore purchases
         </Button>
       </SoftPanel>

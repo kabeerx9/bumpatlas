@@ -22,9 +22,11 @@ export function PregnancyScreen() {
     setSelectedMood,
     pregnancyConverted,
     pregnancyChildName,
+    dueDateOverride,
   } = useMockUi();
 
-  const computedWeek = gestationalWeekFromDueDate(mockPregnancy.dueDate);
+  const dueDate = dueDateOverride ?? mockPregnancy.dueDate;
+  const computedWeek = gestationalWeekFromDueDate(dueDate);
   const weekLabel = pregnancyWeekLabel(computedWeek);
   const trimester = trimesterFromWeek(computedWeek);
 
@@ -81,8 +83,7 @@ export function PregnancyScreen() {
               {weekLabel}
             </AppText>
             <AppText variant="bodySmall" style={styles.heroMeta}>
-              Due {mockPregnancy.dueDate} · week {computedWeek} computed from due date (40-week
-              model)
+              Due {dueDate} · week {computedWeek} computed from due date (40-week model)
             </AppText>
           </View>
 

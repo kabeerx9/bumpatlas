@@ -13,9 +13,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { mockToday } from "@/features/mock/demo-data";
+import { mockMemoryPrompts } from "@/features/mock/demo-data";
 import { mockPregnancy } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
+import { DraftQueuePanel } from "@/features/shared/components/draft-queue-panel";
 import { OfflineBanner } from "@/features/shared/components/offline-banner";
 import { appRoutes } from "@/navigation/routes";
 
@@ -28,7 +29,7 @@ export function CaptureScreen() {
   const {
     isOffline,
     setOffline,
-    setPendingDraft,
+    saveDraft,
     completeCapture,
     mediaUploadsUsed,
     mediaUploadsLimit,
@@ -43,11 +44,12 @@ export function CaptureScreen() {
   const [customDate, setCustomDate] = useState("");
   const [visibility, setVisibility] = useState<"household" | "private">("household");
   const [awardedBadge, setAwardedBadge] = useState<string | null>(null);
+  const [promptIndex, setPromptIndex] = useState(0);
 
   const mediaNearLimit = mediaUploadsUsed >= mediaUploadsLimit - 1;
   const mediaExhausted = mediaUploadsUsed >= mediaUploadsLimit;
-  const prompt =
-    stageMode === "pregnancy" ? mockPregnancy.bumpPrompt : mockToday.memoryPrompt;
+  const rotatingPrompt = mockMemoryPrompts[promptIndex % mockMemoryPrompts.length];
+  const prompt = stageMode === "pregnancy" ? mockPregnancy.bumpPrompt : rotatingPrompt;
 
   function pickPhoto() {
     if (mediaExhausted) return;
@@ -57,7 +59,11 @@ export function CaptureScreen() {
 
   function saveMoment() {
     if (isOffline) {
-      setPendingDraft(true);
+      saveDraft({
+        body: body.trim(),
+        eventDate: eventDate === "Pick a date…" ? customDate || "Custom date" : eventDate,
+        hasPhoto: photoState === "selected",
+      });
       setSavedLocally(true);
       return;
     }
@@ -104,6 +110,10 @@ export function CaptureScreen() {
             </View>
           ) : null}
 
+          <View style={styles.bannerWrap}>
+            <DraftQueuePanel />
+          </View>
+
           {savedLocally ? (
             <View style={styles.savedBanner}>
               <Feather name="check-circle" size={16} color={colors.brand.peach} />
@@ -136,6 +146,17 @@ export function CaptureScreen() {
               <AppText variant="heading" style={styles.prompt}>
                 {prompt}
               </AppText>
+              {stageMode !== "pregnancy" ? (
+                <Pressable
+                  onPress={() => setPromptIndex((i) => i + 1)}
+                  hitSlop={8}
+                  accessibilityLabel="Try another prompt"
+                >
+                  <AppText variant="caption" weight="semibold" style={styles.removePhoto}>
+                    Try another prompt
+                  </AppText>
+                </Pressable>
+              ) : null}
             </View>
 
             <AppText weight="semibold">When did this happen?</AppText>

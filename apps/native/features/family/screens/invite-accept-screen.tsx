@@ -6,17 +6,20 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
 import { mockInvitePreview } from "@/features/mock/demo-data";
+import { useMockUi } from "@/features/mock/mock-ui-context";
 import { appRoutes } from "@/navigation/routes";
 
 export function InviteAcceptScreen() {
   const router = useRouter();
   const { token } = useLocalSearchParams<{ token: string }>();
+  const { markPartnerJoined } = useMockUi();
   const [accepted, setAccepted] = useState(false);
 
   const invite = mockInvitePreview;
 
   function handleAccept() {
     setAccepted(true);
+    markPartnerJoined();
     setTimeout(() => {
       router.replace(appRoutes.family);
     }, 1200);

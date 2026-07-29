@@ -220,9 +220,19 @@ export const mockPregnancy = {
   },
   weekCards: [
     {
+      week: 8,
+      title: "Early energy shifts",
+      summary: "Rest when you can. Small meals often help more than skipping.",
+    },
+    {
       week: 12,
       title: "Energy dips are common",
       summary: "Short rests and protein snacks often help more than “pushing through.”",
+    },
+    {
+      week: 16,
+      title: "Movement feels different",
+      summary: "Note new flutters without scoring yourself against anyone else’s timeline.",
     },
     {
       week: 20,
@@ -230,14 +240,29 @@ export const mockPregnancy = {
       summary: "Write questions before the appointment so you leave with clarity.",
     },
     {
+      week: 24,
+      title: "Sleep positions soften",
+      summary: "Side-lying with a pillow between knees can ease hips.",
+    },
+    {
       week: 28,
       title: "Braxton Hicks vs rest cues",
       summary: "Practice contractions can feel tight. Rest, hydrate, and note patterns.",
     },
     {
+      week: 32,
+      title: "Packing without panic",
+      summary: "A soft list for you matters as much as baby’s first outfit.",
+    },
+    {
       week: 36,
       title: "Hospital bag soft list",
       summary: "Comfort items for you matter as much as baby’s first outfit.",
+    },
+    {
+      week: 39,
+      title: "Near-term quiet",
+      summary: "Fewer plans is still progress. Keep your clinician’s call thresholds handy.",
     },
   ],
   moodOptions: [
@@ -348,6 +373,22 @@ export const mockMilestoneDetails = [
     status: "Observed" as const,
     window: "Common during tummy time in early months",
     note: "Short lifts during supervised tummy time. Stop if baby seems tired or distressed.",
+    canLinkMemory: true,
+  },
+  {
+    id: "m4",
+    title: "Cooing sounds",
+    status: "Emerging" as const,
+    window: "Often around 1–4 months",
+    note: "Soft vowel sounds while calm or engaged. Not a speech milestone grade.",
+    canLinkMemory: true,
+  },
+  {
+    id: "m5",
+    title: "Hands to mouth",
+    status: "Not observed" as const,
+    window: "Common in early months",
+    note: "Bringing hands toward mouth during play or calm. Optional to note — never required.",
     canLinkMemory: true,
   },
 ];

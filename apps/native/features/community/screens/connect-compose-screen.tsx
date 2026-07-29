@@ -36,7 +36,7 @@ export function ConnectComposeScreen() {
     [postId],
   );
 
-  const { communityRulesAccepted, acceptCommunityRules, postsUsedToday, incrementPostCount, commentsUsedToday, incrementCommentCount, commentsDailyLimit } =
+  const { communityRulesAccepted, acceptCommunityRules, postsUsedToday, incrementPostCount, commentsUsedToday, incrementCommentCount, commentsDailyLimit, linksAllowed, accountAgeDays } =
     useMockUi();
 
   const [body, setBody] = useState("");
@@ -46,12 +46,15 @@ export function ConnectComposeScreen() {
   const effectiveRules = rulesAccepted || communityRulesAccepted;
   const atPostLimit = !isReply && postsUsedToday >= 10;
   const atCommentLimit = isReply && commentsUsedToday >= commentsDailyLimit;
+  const hasLink = /https?:\/\//i.test(trimmed);
+  const linkBlocked = hasLink && !linksAllowed;
   const canPost =
     trimmed.length > 0 &&
     effectiveRules &&
     trimmed.length <= MAX_CHARS &&
     !atPostLimit &&
-    !atCommentLimit;
+    !atCommentLimit &&
+    !linkBlocked;
 
   function handlePost() {
     if (!canPost) return;
@@ -123,6 +126,13 @@ export function ConnectComposeScreen() {
             {atCommentLimit ? (
               <AppText variant="bodySmall" style={styles.limitWarn}>
                 Daily comment limit reached ({commentsDailyLimit}). Limits reset tomorrow.
+              </AppText>
+            ) : null}
+
+            {linkBlocked ? (
+              <AppText variant="bodySmall" style={styles.limitWarn}>
+                Links are paused for the first 14 days (day {accountAgeDays} of your account). Text
+                only for now.
               </AppText>
             ) : null}
 

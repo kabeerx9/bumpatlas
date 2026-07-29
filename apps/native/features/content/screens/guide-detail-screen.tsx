@@ -21,7 +21,7 @@ function formatReviewDate(iso: string) {
 export function GuideDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { bookmarkedGuides, toggleBookmark } = useMockUi();
+  const { bookmarkedGuides, toggleBookmark, markLearnDone } = useMockUi();
 
   const guide = useMemo(
     () => mockGuides.find((item) => item.id === id) ?? mockGuides[0],
@@ -29,6 +29,11 @@ export function GuideDetailScreen() {
   );
 
   const bookmarked = bookmarkedGuides[guide.id] ?? false;
+
+  function finishReading() {
+    markLearnDone();
+    router.back();
+  }
 
   return (
     <View style={styles.root}>
@@ -109,6 +114,9 @@ export function GuideDetailScreen() {
         </ScrollView>
 
         <View style={styles.footer}>
+          <Button size="lg" onPress={finishReading}>
+            Mark Learn done for today
+          </Button>
           <Button
             size="lg"
             variant="ghost"
@@ -230,6 +238,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(44,36,32,0.06)",
     backgroundColor: "rgba(248,237,230,0.92)",
+    gap: spacing.sm,
   },
   assistantBtn: {
     backgroundColor: colors.surface.card,

@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -40,7 +41,11 @@ export function PaywallScreen() {
     setRestoring(true);
     setTimeout(() => {
       setRestoring(false);
-      router.back();
+      Alert.alert(
+        "Purchases restored",
+        "No active premium found in this mock. When RevenueCat is connected, entitlements restore here.",
+        [{ text: "OK", onPress: () => router.back() }],
+      );
     }, 800);
   }
 

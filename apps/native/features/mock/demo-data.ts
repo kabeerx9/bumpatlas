@@ -160,6 +160,19 @@ export const mockMilestones = [
   { id: "m1", title: "Social smile", status: "Observed" },
   { id: "m2", title: "Tracks faces", status: "Emerging" },
   { id: "m3", title: "Lifts head briefly", status: "Observed" },
+  { id: "m4", title: "Cooing sounds", status: "Emerging" },
+  { id: "m5", title: "Hands to mouth", status: "Not observed" },
+];
+
+export const mockMemoryPrompts = [
+  "What made Ava smile today?",
+  "What did you notice in a quiet minute?",
+  "What felt softer than yesterday?",
+  "One tiny win from today?",
+  "What do you want future-you to remember?",
+  "How does your bump feel right now?",
+  "What helped you take a breath today?",
+  "Who showed up for you this week?",
 ];
 
 export const mockGroupPosts = [
