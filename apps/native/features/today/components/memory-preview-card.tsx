@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, colors, radius, shadows, spacing } from "@/design-system";
+import { AppText, colors, radius, spacing } from "@/design-system";
 
 type MemoryPreviewCardProps = {
   title: string;
@@ -17,18 +17,23 @@ export function MemoryPreviewCard({ title, dateLabel, onPress }: MemoryPreviewCa
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.photo}>
-        <Feather name="image" size={22} color={colors.brand.peach} />
+        <View style={styles.photoInner}>
+          <Feather name="image" size={22} color={colors.brand.peach} />
+        </View>
       </View>
       <View style={styles.copy}>
-        <AppText variant="caption" tone="secondary">
-          Latest memory · {dateLabel}
+        <AppText variant="caption" style={styles.eyebrow}>
+          Latest · {dateLabel}
         </AppText>
         <AppText weight="semibold" numberOfLines={2}>
           {title}
         </AppText>
-        <AppText variant="caption" style={styles.link}>
-          Open journey
-        </AppText>
+        <View style={styles.linkRow}>
+          <AppText variant="caption" weight="semibold" style={styles.link}>
+            Open journey
+          </AppText>
+          <Feather name="arrow-up-right" size={14} color={colors.brand.peach} />
+        </View>
       </View>
     </Pressable>
   );
@@ -39,20 +44,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.md,
     padding: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface.card,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
-    ...shadows.soft,
+    borderRadius: radius.xl,
+    backgroundColor: "rgba(255,255,255,0.78)",
   },
   pressed: {
-    opacity: 0.94,
+    opacity: 0.92,
   },
   photo: {
-    width: 88,
-    height: 88,
-    borderRadius: radius.md,
+    width: 92,
+    height: 92,
+    borderRadius: radius.lg,
     backgroundColor: colors.brand.peachSoft,
+    padding: 4,
+  },
+  photoInner: {
+    flex: 1,
+    borderRadius: radius.md,
+    backgroundColor: "rgba(255,255,255,0.55)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -61,8 +69,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 4,
   },
+  eyebrow: {
+    color: colors.brand.peach,
+  },
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
   link: {
     color: colors.brand.peach,
-    marginTop: 2,
   },
 });

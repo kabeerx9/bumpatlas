@@ -1,13 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, colors, spacing } from "@/design-system";
-
-function greetingForHour(hour: number) {
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
+import { AppText, colors, radius, spacing } from "@/design-system";
 
 type TodayProfileBarProps = {
   displayName: string;
@@ -20,27 +14,20 @@ export function TodayProfileBar({
   stageLabel,
   onSettingsPress,
 }: TodayProfileBarProps) {
-  const greeting = greetingForHour(new Date().getHours());
-
   return (
     <View style={styles.bar}>
       <View style={styles.profile}>
         <View style={styles.avatarRing}>
           <View style={styles.avatar}>
-            <AppText weight="semibold" tone="inverse">
+            <AppText weight="semibold" tone="inverse" style={styles.initial}>
               {displayName.slice(0, 1)}
             </AppText>
           </View>
         </View>
-        <View>
-          <AppText variant="caption" tone="secondary">
-            {greeting}
-          </AppText>
-          <AppText variant="subhead" weight="semibold">
-            {displayName}
-          </AppText>
-          <AppText variant="caption" tone="secondary">
-            {stageLabel}
+        <View style={styles.copy}>
+          <AppText variant="title">{displayName}</AppText>
+          <AppText variant="bodySmall" tone="secondary">
+            {stageLabel} · growing gently
           </AppText>
         </View>
       </View>
@@ -71,30 +58,35 @@ const styles = StyleSheet.create({
   },
   avatarRing: {
     padding: 3,
-    borderRadius: 999,
+    borderRadius: radius.full,
     borderWidth: 2,
     borderColor: colors.brand.peach,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: colors.brand.peach,
     alignItems: "center",
     justifyContent: "center",
+  },
+  initial: {
+    fontSize: 20,
+  },
+  copy: {
+    gap: 2,
+    flex: 1,
   },
   actions: {
     flexDirection: "row",
     gap: spacing.sm,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surface.card,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255,255,255,0.72)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
   },
 });

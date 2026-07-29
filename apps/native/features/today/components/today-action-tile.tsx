@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import type { ComponentProps } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, colors, radius, shadows, spacing } from "@/design-system";
+import { AppText, colors, radius, spacing } from "@/design-system";
 
 type IconName = ComponentProps<typeof Feather>["name"];
 
@@ -35,19 +35,19 @@ export function TodayActionTile({
         </View>
         {done ? (
           <View style={styles.done}>
-            <Feather name="check" size={10} color={colors.text.inverse} />
+            <Feather name="check" size={11} color={colors.text.inverse} />
           </View>
         ) : null}
       </View>
 
-      <AppText variant="caption" tone="secondary">
+      <AppText variant="caption" style={styles.label}>
         {label}
       </AppText>
       <AppText weight="semibold" numberOfLines={2} style={styles.title}>
         {title}
       </AppText>
       {detail ? (
-        <AppText variant="caption" tone="secondary" numberOfLines={1}>
+        <AppText variant="caption" tone="secondary">
           {detail}
         </AppText>
       ) : null}
@@ -58,18 +58,15 @@ export function TodayActionTile({
 const styles = StyleSheet.create({
   tile: {
     flex: 1,
-    minHeight: 132,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface.card,
+    minHeight: 150,
+    borderRadius: radius.xl,
+    backgroundColor: "rgba(255,255,255,0.78)",
     padding: spacing.lg,
     gap: 4,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
-    ...shadows.soft,
   },
   pressed: {
-    opacity: 0.94,
-    transform: [{ scale: 0.99 }],
+    opacity: 0.92,
+    transform: [{ scale: 0.985 }],
   },
   top: {
     flexDirection: "row",
@@ -78,22 +75,28 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: colors.brand.peachSoft,
     alignItems: "center",
     justifyContent: "center",
   },
   done: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: colors.brand.peach,
     alignItems: "center",
     justifyContent: "center",
   },
+  label: {
+    color: colors.brand.peach,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
   title: {
-    lineHeight: 20,
+    lineHeight: 21,
+    color: colors.brand.ink,
   },
 });

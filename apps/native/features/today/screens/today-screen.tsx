@@ -1,9 +1,17 @@
+import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AppText, Atmosphere, colors, radius, spacing } from "@/design-system";
+import { AppText, colors, spacing } from "@/design-system";
 import { mockProfile, mockToday } from "@/features/mock/demo-data";
 import { CaptureHeroCard } from "@/features/today/components/capture-hero-card";
 import { ConnectBanner } from "@/features/today/components/connect-banner";
@@ -16,6 +24,15 @@ export function TodayScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const connect = mockToday.connectCard;
+  const fade = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fade, {
+      toValue: 1,
+      duration: 480,
+      useNativeDriver: true,
+    }).start();
+  }, [fade]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -23,7 +40,13 @@ export function TodayScreen() {
   }, []);
 
   return (
-    <Atmosphere variant="cream">
+    <View style={styles.root}>
+      <View style={styles.atmosphere}>
+        <View style={styles.blobPeach} />
+        <View style={styles.blobSoft} />
+        <View style={styles.blobWash} />
+      </View>
+
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -36,13 +59,16 @@ export function TodayScreen() {
             />
           }
         >
-          <TodayProfileBar
-            displayName={mockProfile.displayName}
-            stageLabel={mockProfile.stageLabel}
-            onSettingsPress={() => router.push(appRoutes.family)}
-          />
+          <Animated.View style={{ opacity: fade }}>
+            <TodayProfileBar
+              displayName={mockProfile.displayName}
+              stageLabel={mockProfile.stageLabel}
+              onSettingsPress={() => router.push(appRoutes.family)}
+            />
+          </Animated.View>
 
           <CaptureHeroCard
+            babyName={mockProfile.displayName}
             prompt={mockToday.memoryPrompt}
             activeDays={mockToday.weekProgress.activeDays}
             goal={mockToday.weekProgress.goal}
@@ -51,7 +77,10 @@ export function TodayScreen() {
 
           <View style={styles.sectionHead}>
             <AppText variant="subhead" weight="semibold">
-              For you today
+              Keep going gently
+            </AppText>
+            <AppText variant="bodySmall" tone="secondary">
+              Care · Learn · Connect — a few calm minutes
             </AppText>
           </View>
 
@@ -86,45 +115,89 @@ export function TodayScreen() {
             dateLabel={mockToday.latestMemory.dateLabel}
             onPress={() => router.push(appRoutes.journey)}
           />
-
-          <Pressable
-            style={styles.assistantPill}
-            onPress={() => router.push(appRoutes.assistant)}
-          >
-            <AppText variant="bodySmall" weight="semibold" style={styles.assistantText}>
-              Ask BumpAtlas
-            </AppText>
-          </Pressable>
         </ScrollView>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Ask BumpAtlas"
+          onPress={() => router.push(appRoutes.assistant)}
+          style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+        >
+          <Feather name="message-circle" size={22} color={colors.text.inverse} />
+        </Pressable>
       </SafeAreaView>
-    </Atmosphere>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: "#F8EDE6",
+  },
+  atmosphere: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: "hidden",
+  },
+  blobPeach: {
+    position: "absolute",
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: "rgba(229,155,138,0.28)",
+    top: -100,
+    right: -90,
+  },
+  blobSoft: {
+    position: "absolute",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: "rgba(255,248,244,0.9)",
+    top: 220,
+    left: -110,
+  },
+  blobWash: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: "rgba(243,199,188,0.35)",
+    bottom: -80,
+    right: -60,
+  },
   safe: { flex: 1 },
   scroll: {
     paddingHorizontal: spacing.page,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 100,
     gap: spacing.lg,
   },
   sectionHead: {
+    gap: 4,
     marginTop: spacing.xs,
   },
   gridRow: {
     flexDirection: "row",
     gap: spacing.md,
   },
-  assistantPill: {
-    alignSelf: "center",
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.brand.peach,
-    backgroundColor: colors.surface.card,
+  fab: {
+    position: "absolute",
+    right: spacing.page,
+    bottom: spacing.lg,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: colors.brand.peach,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.brand.peach,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  assistantText: {
-    color: colors.brand.peach,
+  fabPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.96 }],
   },
 });
