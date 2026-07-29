@@ -63,6 +63,7 @@ function RootStack() {
         <Stack.Screen name="no-access" />
         <Stack.Screen name="assistant" options={{ presentation: "modal" }} />
         <Stack.Screen name="account" />
+        <Stack.Screen name="stage-setup" options={{ presentation: "modal" }} />
         <Stack.Screen name="expo-ui" />
         <Stack.Screen name="widgets" />
       </Stack.Protected>

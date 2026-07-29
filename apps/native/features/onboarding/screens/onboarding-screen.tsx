@@ -51,6 +51,8 @@ export function OnboardingScreen() {
     wellnessReminder: true,
     partnerActivity: true,
     weeklyRecap: true,
+    communityReply: false,
+    subscription: true,
   });
 
   const resolvedHouseholdName = useMemo(() => {
@@ -119,6 +121,8 @@ export function OnboardingScreen() {
       childName,
       childDob,
       householdName: resolvedHouseholdName,
+      primaryGoal: goal,
+      notificationPrefs,
     });
     await completeOnboarding();
     router.replace(destination === "invite" ? appRoutes.invite : appRoutes.home);

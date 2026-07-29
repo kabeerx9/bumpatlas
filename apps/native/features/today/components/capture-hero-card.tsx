@@ -12,6 +12,7 @@ type CaptureHeroCardProps = {
   prompt: string;
   activeDays: number;
   goal: number;
+  emphasized?: boolean;
   onCapture: () => void;
 };
 
@@ -20,6 +21,7 @@ export function CaptureHeroCard({
   prompt,
   activeDays,
   goal,
+  emphasized,
   onCapture,
 }: CaptureHeroCardProps) {
   const appear = useRef(new Animated.Value(0)).current;
@@ -42,6 +44,7 @@ export function CaptureHeroCard({
     <Animated.View
       style={[
         styles.shell,
+        emphasized && styles.emphasized,
         {
           opacity: appear,
           transform: [
@@ -61,7 +64,7 @@ export function CaptureHeroCard({
       <View style={styles.topRow}>
         <View style={styles.topCopy}>
           <AppText variant="caption" style={styles.eyebrow}>
-            Today with {babyName}
+            {emphasized ? "Your focus · Capture" : `Today with ${babyName}`}
           </AppText>
           <AppText variant="caption" weight="semibold" style={styles.week}>
             Calm days this week
@@ -105,6 +108,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     minHeight: 280,
     ...shadows.purple,
+  },
+  emphasized: {
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.55)",
   },
   blobTop: {
     position: "absolute",

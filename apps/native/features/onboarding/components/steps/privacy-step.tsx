@@ -55,17 +55,22 @@ export function PrivacyStep({
             </AppText>
           ) : null}
         </View>
-        <AppText variant="bodySmall" style={styles.acceptCopy}>
-          I agree to the{" "}
-          <AppText
-            variant="bodySmall"
-            weight="semibold"
-            style={styles.link}
-            onPress={() => router.push(appRoutes.legal("terms"))}
+        <View style={styles.acceptCopy}>
+          <AppText variant="bodySmall">I agree to the Terms of Service</AppText>
+          <Pressable
+            onPress={(event) => {
+              event.stopPropagation?.();
+              router.push(appRoutes.legal("terms"));
+            }}
+            hitSlop={8}
+            accessibilityRole="link"
+            accessibilityLabel="Open Terms of Service"
           >
-            Terms of Service
-          </AppText>
-        </AppText>
+            <AppText variant="caption" weight="semibold" style={styles.link}>
+              Read Terms
+            </AppText>
+          </Pressable>
+        </View>
       </Pressable>
 
       <Pressable
@@ -81,17 +86,22 @@ export function PrivacyStep({
             </AppText>
           ) : null}
         </View>
-        <AppText variant="bodySmall" style={styles.acceptCopy}>
-          I agree to the{" "}
-          <AppText
-            variant="bodySmall"
-            weight="semibold"
-            style={styles.link}
-            onPress={() => router.push(appRoutes.legal("privacy"))}
+        <View style={styles.acceptCopy}>
+          <AppText variant="bodySmall">I agree to the Privacy Policy</AppText>
+          <Pressable
+            onPress={(event) => {
+              event.stopPropagation?.();
+              router.push(appRoutes.legal("privacy"));
+            }}
+            hitSlop={8}
+            accessibilityRole="link"
+            accessibilityLabel="Open Privacy Policy"
           >
-            Privacy Policy
-          </AppText>
-        </AppText>
+            <AppText variant="caption" weight="semibold" style={styles.link}>
+              Read Privacy Policy
+            </AppText>
+          </Pressable>
+        </View>
       </Pressable>
     </View>
   );
@@ -116,6 +126,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border.subtle,
+    minHeight: 44,
   },
   checkbox: {
     width: 22,
@@ -132,6 +143,7 @@ const styles = StyleSheet.create({
   },
   acceptCopy: {
     flex: 1,
+    gap: 4,
   },
   link: {
     color: colors.brand.peach,

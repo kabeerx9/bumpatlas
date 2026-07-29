@@ -7,9 +7,10 @@ type NavigationRouter = {
 export function pushDecoratedUrl(
   router: NavigationRouter,
   decorateUrl: (url: string) => string,
-  href: string,
+  href: Href,
 ) {
-  const url = decorateUrl(href);
+  const path = typeof href === "string" ? href : "/";
+  const url = decorateUrl(path);
   const nextHref = url.startsWith("http") ? new URL(url).pathname : url;
   router.push(nextHref as Href);
 }

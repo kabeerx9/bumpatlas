@@ -10,127 +10,123 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { mockGroupPosts } from "@/features/mock/demo-data";
 import { useMockUi } from "@/features/mock/mock-ui-context";
+import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { appRoutes } from "@/navigation/routes";
 
 export function ConnectPostDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { commentsUsedToday, commentsDailyLimit, incrementCommentCount } = useMockUi();
+  const {
+    commentsUsedToday,
+    commentsDailyLimit,
+    activeGroupId,
+    getGroupFeed,
+    addGroupComment,
+  } = useMockUi();
   const [comment, setComment] = useState("");
-  const [localComments, setLocalComments] = useState<
-    Array<{ id: string; author: string; body: string; createdAt: string }>
-  >([]);
 
+  const feed = getGroupFeed(activeGroupId);
   const post = useMemo(
-    () => mockGroupPosts.find((item) => item.id === id) ?? mockGroupPosts[0],
-    [id],
+    () => feed.find((item) => item.id === id) ?? feed[0],
+    [feed, id],
   );
 
-  const allComments = [...post.comments, ...localComments];
   const atCommentLimit = commentsUsedToday >= commentsDailyLimit;
 
   function submitComment() {
     const trimmed = comment.trim();
-    if (!trimmed || atCommentLimit) return;
-    incrementCommentCount();
-    setLocalComments((current) => [
-      ...current,
-      {
-        id: `local-${Date.now()}`,
-        author: "You · 12 weeks",
-        body: trimmed,
-        createdAt: "Just now",
-      },
-    ]);
+    if (!trimmed || atCommentLimit || !post) return;
+    addGroupComment({ postId: post.id, body: trimmed, groupId: activeGroupId });
     setComment("");
   }
 
+  if (!post) {
+    return (
+      <SoftStackShell title="Thread" onBack={() => router.back()} scroll={false}>
+        <View style={styles.empty}>
+          <AppText weight="semibold">Post not found</AppText>
+          <Button size="lg" onPress={() => router.back()}>
+            Back to Connect
+          </Button>
+        </View>
+      </SoftStackShell>
+    );
+  }
+
   return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
-            <Feather name="arrow-left" size={20} color={colors.brand.ink} />
-          </Pressable>
-          <AppText weight="semibold">Thread</AppText>
-          <Pressable
-            onPress={() => router.push(appRoutes.connectReport(post.id))}
-            style={styles.iconBtn}
-            accessibilityLabel="Report post"
-          >
-            <Feather name="flag" size={18} color={colors.text.muted} />
-          </Pressable>
+    <SoftStackShell
+      title="Thread"
+      onBack={() => router.back()}
+      scroll={false}
+      right={
+        <Pressable
+          onPress={() => router.push(appRoutes.connectReport(post.id))}
+          style={styles.iconBtn}
+          accessibilityLabel="Report post"
+        >
+          <Feather name="flag" size={18} color={colors.text.muted} />
+        </Pressable>
+      }
+    >
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.postCard}>
+          <AppText variant="caption" style={styles.postMeta}>
+            {post.author}
+          </AppText>
+          <AppText variant="body" tone="inverse">
+            {post.body}
+          </AppText>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <View style={styles.postCard}>
-            <AppText variant="caption" style={styles.postMeta}>
-              {post.author}
+        <AppText weight="semibold">{post.comments.length} replies</AppText>
+        <AppText variant="caption" tone="secondary">
+          Comments {commentsUsedToday}/{commentsDailyLimit} today
+        </AppText>
+
+        {post.comments.map((item) => (
+          <View key={item.id} style={styles.commentCard}>
+            <AppText variant="caption" tone="secondary">
+              {item.author} · {item.createdAt}
             </AppText>
-            <AppText variant="body" tone="inverse">
-              {post.body}
-            </AppText>
+            <AppText variant="bodySmall">{item.body}</AppText>
           </View>
+        ))}
+      </ScrollView>
 
-          <AppText weight="semibold">{allComments.length} replies</AppText>
-          <AppText variant="caption" tone="secondary">
-            Comments {commentsUsedToday}/{commentsDailyLimit} today
-          </AppText>
-
-          {allComments.map((item) => (
-            <View key={item.id} style={styles.commentCard}>
-              <AppText variant="caption" tone="secondary">
-                {item.author} · {item.createdAt}
-              </AppText>
-              <AppText variant="bodySmall">{item.body}</AppText>
-            </View>
-          ))}
-        </ScrollView>
-
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-          <View style={styles.composer}>
-            <TextInput
-              value={comment}
-              onChangeText={setComment}
-              placeholder={
-                atCommentLimit
-                  ? "Daily comment limit reached"
-                  : "Write a supportive reply..."
-              }
-              placeholderTextColor={colors.text.muted}
-              style={styles.input}
-              editable={!atCommentLimit}
-              accessibilityLabel="Reply text"
-            />
-            <Button
-              size="sm"
-              disabled={comment.trim().length === 0 || atCommentLimit}
-              onPress={submitComment}
-            >
-              Reply
-            </Button>
-          </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </View>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <View style={styles.composer}>
+          <TextInput
+            value={comment}
+            onChangeText={setComment}
+            placeholder={
+              atCommentLimit
+                ? "Daily comment limit reached"
+                : "Write a supportive reply..."
+            }
+            placeholderTextColor={colors.text.muted}
+            style={styles.input}
+            editable={!atCommentLimit}
+            accessibilityLabel="Reply text"
+            allowFontScaling
+            maxFontSizeMultiplier={1.35}
+          />
+          <Button
+            size="sm"
+            disabled={comment.trim().length === 0 || atCommentLimit}
+            onPress={submitComment}
+          >
+            Reply
+          </Button>
+        </View>
+      </KeyboardAvoidingView>
+    </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F8EDE6" },
-  safe: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.page,
-    paddingVertical: spacing.md,
-  },
   iconBtn: {
     width: 44,
     height: 44,
@@ -140,7 +136,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   scroll: {
-    paddingHorizontal: spacing.page,
     paddingBottom: spacing.xl,
     gap: spacing.md,
   },
@@ -160,8 +155,7 @@ const styles = StyleSheet.create({
   composer: {
     flexDirection: "row",
     gap: spacing.sm,
-    paddingHorizontal: spacing.page,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.sm,
     paddingTop: spacing.sm,
     alignItems: "center",
     borderTopWidth: 1,
@@ -175,5 +169,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     fontFamily: "Poppins_400Regular",
     color: colors.text.primary,
+  },
+  empty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
+    paddingHorizontal: spacing.page,
   },
 });

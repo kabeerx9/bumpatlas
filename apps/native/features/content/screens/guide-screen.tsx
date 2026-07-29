@@ -7,10 +7,13 @@ import { SoftHeader } from "@/features/shared/components/soft-header";
 import { SoftPanel } from "@/features/shared/components/soft-panel";
 import { SoftScreen } from "@/features/shared/components/soft-screen";
 import { mockGuides, mockToday } from "@/features/mock/demo-data";
+import { useMockUi } from "@/features/mock/mock-ui-context";
 import { appRoutes } from "@/navigation/routes";
 
 export function GuideScreen() {
   const router = useRouter();
+  const { bookmarkedGuides } = useMockUi();
+  const featuredBookmarked = Boolean(bookmarkedGuides[mockToday.learnCard.id]);
 
   return (
     <SoftScreen>
@@ -46,9 +49,19 @@ export function GuideScreen() {
 
       <Pressable onPress={() => router.push(appRoutes.guideArticle(mockToday.learnCard.id))}>
         <SoftPanel>
-          <AppText variant="caption" style={styles.peachLabel}>
-            Featured for 12 weeks
-          </AppText>
+          <View style={styles.featuredTop}>
+            <AppText variant="caption" style={styles.peachLabel}>
+              Featured for 12 weeks
+            </AppText>
+            {featuredBookmarked ? (
+              <View style={styles.savedChip}>
+                <Feather name="bookmark" size={12} color={colors.text.inverse} />
+                <AppText variant="caption" weight="semibold" tone="inverse">
+                  Saved
+                </AppText>
+              </View>
+            ) : null}
+          </View>
           <AppText weight="semibold">{mockToday.learnCard.title}</AppText>
           <AppText variant="bodySmall" tone="secondary">
             {mockToday.learnCard.detail}
@@ -64,25 +77,33 @@ export function GuideScreen() {
 
       <AppText weight="semibold">Browse tips</AppText>
 
-      {mockGuides.map((guide) => (
-        <Pressable
-          key={guide.id}
-          onPress={() => router.push(appRoutes.guideArticle(guide.id))}
-        >
-          <SoftPanel style={styles.guideRow}>
-            <View style={styles.guideIcon}>
-              <Feather name="book-open" size={16} color={colors.brand.peach} />
-            </View>
-            <View style={styles.guideCopy}>
-              <AppText variant="caption" style={styles.peachLabel}>
-                {guide.category}
-              </AppText>
-              <AppText weight="semibold">{guide.title}</AppText>
-            </View>
-            <Feather name="chevron-right" size={18} color={colors.text.muted} />
-          </SoftPanel>
-        </Pressable>
-      ))}
+      {mockGuides.map((guide) => {
+        const saved = Boolean(bookmarkedGuides[guide.id]);
+        return (
+          <Pressable
+            key={guide.id}
+            onPress={() => router.push(appRoutes.guideArticle(guide.id))}
+            accessibilityLabel={`${guide.title}${saved ? ", bookmarked" : ""}`}
+          >
+            <SoftPanel style={styles.guideRow}>
+              <View style={styles.guideIcon}>
+                <Feather name="book-open" size={16} color={colors.brand.peach} />
+              </View>
+              <View style={styles.guideCopy}>
+                <AppText variant="caption" style={styles.peachLabel}>
+                  {guide.category}
+                </AppText>
+                <AppText weight="semibold">{guide.title}</AppText>
+              </View>
+              {saved ? (
+                <Feather name="bookmark" size={18} color={colors.brand.peach} />
+              ) : (
+                <Feather name="chevron-right" size={18} color={colors.text.muted} />
+              )}
+            </SoftPanel>
+          </Pressable>
+        );
+      })}
     </SoftScreen>
   );
 }
@@ -120,6 +141,22 @@ const styles = StyleSheet.create({
     color: colors.brand.peach,
     letterSpacing: 0.4,
     textTransform: "uppercase",
+  },
+  featuredTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  savedChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.brand.peach,
+    borderRadius: 999,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    minHeight: 28,
   },
   guideRow: {
     flexDirection: "row",

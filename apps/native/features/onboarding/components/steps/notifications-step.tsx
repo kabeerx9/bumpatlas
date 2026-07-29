@@ -1,21 +1,17 @@
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, colors, radius, spacing } from "@/design-system";
+import type { NotificationPrefKey } from "@/features/mock/mock-ui-context";
 
-type NotificationPrefs = {
-  dailyPrompt: boolean;
-  wellnessReminder: boolean;
-  partnerActivity: boolean;
-  weeklyRecap: boolean;
-};
+type NotificationPrefs = Record<NotificationPrefKey, boolean>;
 
 type NotificationsStepProps = {
   prefs: NotificationPrefs;
-  onToggle: (key: keyof NotificationPrefs) => void;
+  onToggle: (key: NotificationPrefKey) => void;
 };
 
 const OPTIONS: Array<{
-  key: keyof NotificationPrefs;
+  key: NotificationPrefKey;
   label: string;
   description: string;
 }> = [
@@ -38,6 +34,16 @@ const OPTIONS: Array<{
     key: "weeklyRecap",
     label: "Weekly recap ready",
     description: "When your share card is prepared",
+  },
+  {
+    key: "communityReply",
+    label: "Community reply",
+    description: "Muted by default during beta",
+  },
+  {
+    key: "subscription",
+    label: "Subscription",
+    description: "Billing and plan updates",
   },
 ];
 
@@ -91,6 +97,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border.subtle,
+    minHeight: 72,
   },
   rowEnabled: {
     borderColor: colors.brand.peachSoft,

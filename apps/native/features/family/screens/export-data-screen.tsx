@@ -1,10 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StyleSheet, View } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 
 export function ExportDataScreen() {
   const router = useRouter();
@@ -16,79 +16,58 @@ export function ExportDataScreen() {
   }
 
   return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
-            <Feather name="arrow-left" size={20} color={colors.brand.ink} />
-          </Pressable>
-          <AppText weight="semibold">Export data</AppText>
-          <View style={styles.iconBtn} />
-        </View>
+    <SoftStackShell
+      title="Export data"
+      onBack={() => router.back()}
+      footer={
+        <Button
+          size="lg"
+          disabled={status === "preparing"}
+          onPress={status === "ready" ? () => router.back() : startExport}
+        >
+          {status === "idle"
+            ? "Request export"
+            : status === "preparing"
+              ? "Preparing..."
+              : "Done"}
+        </Button>
+      }
+    >
+      <View style={styles.hero}>
+        <Feather name="download" size={28} color={colors.text.inverse} />
+        <AppText variant="heading" tone="inverse" align="center">
+          Your household data
+        </AppText>
+        <AppText variant="bodySmall" style={styles.heroCopy} align="center">
+          Export includes memories, milestones, wellness history, and account metadata. Free
+          forever — never paywalled.
+        </AppText>
+      </View>
 
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <View style={styles.hero}>
-            <Feather name="download" size={28} color={colors.text.inverse} />
-            <AppText variant="heading" tone="inverse" align="center">
-              Your household data
-            </AppText>
-            <AppText variant="bodySmall" style={styles.heroCopy} align="center">
-              Export includes memories, milestones, wellness history, and account metadata. Free
-              forever — never paywalled.
-            </AppText>
-          </View>
-
-          <View style={styles.list}>
-            {["Journal memories (text + photos)", "Milestones & recaps", "Wellness completions", "Account & consent records"].map(
-              (item) => (
-                <View key={item} style={styles.row}>
-                  <Feather name="check" size={16} color={colors.brand.peach} />
-                  <AppText variant="bodySmall">{item}</AppText>
-                </View>
-              ),
-            )}
-          </View>
-
-          {status === "ready" ? (
-            <View style={styles.ready}>
-              <AppText weight="semibold">Export ready</AppText>
-              <AppText variant="bodySmall" tone="secondary">
-                In production, a download link would arrive by email within 48 hours.
-              </AppText>
+      <View style={styles.list}>
+        {["Journal memories (text + photos)", "Milestones & recaps", "Wellness completions", "Account & consent records"].map(
+          (item) => (
+            <View key={item} style={styles.row}>
+              <Feather name="check" size={16} color={colors.brand.peach} />
+              <AppText variant="bodySmall">{item}</AppText>
             </View>
-          ) : null}
-        </ScrollView>
+          ),
+        )}
+      </View>
 
-        <View style={styles.footer}>
-          <Button
-            size="lg"
-            disabled={status === "preparing"}
-            onPress={status === "ready" ? () => router.back() : startExport}
-          >
-            {status === "idle"
-              ? "Request export"
-              : status === "preparing"
-                ? "Preparing..."
-                : "Done"}
-          </Button>
+      {status === "ready" ? (
+        <View style={styles.ready}>
+          <AppText weight="semibold">Export ready</AppText>
+          <AppText variant="bodySmall" tone="secondary">
+            In production, a download link would arrive by email within 48 hours.
+          </AppText>
         </View>
-      </SafeAreaView>
-    </View>
+      ) : null}
+    </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F8EDE6" },
-  safe: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.page,
-    paddingVertical: spacing.md,
-  },
-  iconBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  scroll: { paddingHorizontal: spacing.page, gap: spacing.lg, paddingBottom: spacing.xl },
   hero: {
     borderRadius: radius.xl,
     backgroundColor: colors.brand.peach,
@@ -110,5 +89,4 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.xs,
   },
-  footer: { paddingHorizontal: spacing.page, paddingBottom: spacing.xl },
 });

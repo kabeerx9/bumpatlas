@@ -9,11 +9,12 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { mockGroupPosts, mockToday } from "@/features/mock/demo-data";
+import { mockToday } from "@/features/mock/demo-data";
+import { mockStageGroups } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
+import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 
 const MAX_CHARS = 500;
 
@@ -31,16 +32,21 @@ export function ConnectComposeScreen() {
   }>();
 
   const isReply = mode === "reply" && Boolean(postId);
-  const parentPost = useMemo(
-    () => mockGroupPosts.find((post) => post.id === postId),
-    [postId],
-  );
 
-  const { communityRulesAccepted, acceptCommunityRules, postsUsedToday, incrementPostCount, commentsUsedToday, incrementCommentCount, commentsDailyLimit, linksAllowed, accountAgeDays } =
+  const { communityRulesAccepted, acceptCommunityRules, postsUsedToday, commentsUsedToday, commentsDailyLimit, linksAllowed, accountAgeDays, activeGroupId, addGroupPost, addGroupComment, getGroupFeed } =
     useMockUi();
 
   const [body, setBody] = useState("");
   const [rulesAccepted, setRulesAccepted] = useState(communityRulesAccepted);
+
+  const feed = getGroupFeed(activeGroupId);
+  const parentPost = useMemo(
+    () => feed.find((post) => post.id === postId),
+    [feed, postId],
+  );
+
+  const activeGroup = mockStageGroups.find((group) => group.id === activeGroupId) ?? mockStageGroups[1];
+  const groupPrompt = activeGroup?.prompt ?? mockToday.connectCard.prompt;
 
   const trimmed = body.trim();
   const effectiveRules = rulesAccepted || communityRulesAccepted;
@@ -59,8 +65,11 @@ export function ConnectComposeScreen() {
   function handlePost() {
     if (!canPost) return;
     if (!communityRulesAccepted) acceptCommunityRules();
-    if (isReply) incrementCommentCount();
-    else incrementPostCount();
+    if (isReply && postId) {
+      addGroupComment({ postId, body: trimmed, groupId: activeGroupId });
+    } else {
+      addGroupPost({ body: trimmed, groupId: activeGroupId });
+    }
     router.back();
   }
 
@@ -69,180 +78,118 @@ export function ConnectComposeScreen() {
   }
 
   return (
-    <View style={styles.root}>
-      <View style={styles.atmosphere} pointerEvents="none">
-        <View style={styles.blob} />
-        <View style={styles.blobSoft} />
-      </View>
+    <SoftStackShell
+      title={isReply ? "Reply" : "Share a reply"}
+      closeIcon="x"
+      onBack={() => router.back()}
+      scroll={false}
+      footer={
+        <Button size="lg" disabled={!canPost} onPress={handlePost}>
+          {isReply ? "Post reply" : "Post to group"}
+        </Button>
+      }
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.flex}
+      >
+        <View style={styles.body}>
+          <View style={styles.contextPanel}>
+            <AppText variant="caption" style={styles.peachLabel}>
+              {isReply ? "Replying in" : "Today’s prompt"} · {activeGroup?.name ?? mockToday.connectCard.groupName}
+            </AppText>
+            <AppText variant="title" tone="inverse" style={styles.contextTitle}>
+              {isReply && parentPost
+                ? parentPost.body
+                : groupPrompt}
+            </AppText>
+            {isReply && parentPost ? (
+              <AppText variant="caption" style={styles.contextMeta}>
+                {parentPost.author} · comments {commentsUsedToday}/{commentsDailyLimit} today
+              </AppText>
+            ) : (
+              <AppText variant="caption" style={styles.contextMeta}>
+                {feed.length} notes in group · posts {postsUsedToday}/10 today · comments{" "}
+                {commentsUsedToday}/{commentsDailyLimit}
+              </AppText>
+            )}
+          </View>
 
-      <SafeAreaView style={styles.safe}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.flex}
-        >
-          <View style={styles.header}>
+          {atPostLimit ? (
+            <AppText variant="bodySmall" style={styles.limitWarn}>
+              Daily post limit reached (10). Replies still count toward your comment limit.
+            </AppText>
+          ) : null}
+
+          {atCommentLimit ? (
+            <AppText variant="bodySmall" style={styles.limitWarn}>
+              Daily comment limit reached ({commentsDailyLimit}). Limits reset tomorrow.
+            </AppText>
+          ) : null}
+
+          {linkBlocked ? (
+            <AppText variant="bodySmall" style={styles.limitWarn}>
+              Links are paused for the first 14 days (day {accountAgeDays} of your account). Text
+              only for now.
+            </AppText>
+          ) : null}
+
+          <TextInput
+            value={body}
+            onChangeText={setBody}
+            placeholder={
+              isReply
+                ? "Write a supportive reply..."
+                : "What made today a little easier?"
+            }
+            placeholderTextColor={colors.text.muted}
+            multiline
+            maxLength={MAX_CHARS}
+            style={styles.input}
+            textAlignVertical="top"
+            accessibilityLabel="Post text"
+          />
+
+          <AppText variant="caption" tone="secondary" style={styles.counter}>
+            {body.length}/{MAX_CHARS}
+          </AppText>
+
+          <View style={styles.rulesCard}>
+            <View style={styles.rulesHeader}>
+              <Feather name="shield" size={16} color={colors.brand.peach} />
+              <AppText weight="semibold">Community rules</AppText>
+            </View>
+            {communityRules.map((rule) => (
+              <AppText key={rule} variant="bodySmall" tone="secondary">
+                · {rule}
+              </AppText>
+            ))}
             <Pressable
-              onPress={() => router.back()}
-              hitSlop={12}
-              style={styles.closeBtn}
-              accessibilityLabel="Close composer"
+              onPress={toggleRules}
+              style={styles.acceptRow}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: effectiveRules }}
             >
-              <Feather name="x" size={20} color={colors.brand.ink} />
-            </Pressable>
-            <AppText weight="semibold">
-              {isReply ? "Reply" : "Share a reply"}
-            </AppText>
-            <View style={styles.headerSpacer} />
-          </View>
-
-          <View style={styles.body}>
-            <View style={styles.contextPanel}>
-              <AppText variant="caption" style={styles.peachLabel}>
-                {isReply ? "Replying in" : "Today’s prompt"} · {mockToday.connectCard.groupName}
-              </AppText>
-              <AppText variant="title" tone="inverse" style={styles.contextTitle}>
-                {isReply && parentPost
-                  ? parentPost.body
-                  : mockToday.connectCard.prompt}
-              </AppText>
-              {isReply && parentPost ? (
-                <AppText variant="caption" style={styles.contextMeta}>
-                  {parentPost.author} · comments {commentsUsedToday}/{commentsDailyLimit} today
-                </AppText>
-              ) : (
-                <AppText variant="caption" style={styles.contextMeta}>
-                  {mockToday.connectCard.replyCount} parents replied today · posts{" "}
-                  {postsUsedToday}/10 today · comments {commentsUsedToday}/{commentsDailyLimit}
-                </AppText>
-              )}
-            </View>
-
-            {atPostLimit ? (
-              <AppText variant="bodySmall" style={styles.limitWarn}>
-                Daily post limit reached (10). Replies still count toward your comment limit.
-              </AppText>
-            ) : null}
-
-            {atCommentLimit ? (
-              <AppText variant="bodySmall" style={styles.limitWarn}>
-                Daily comment limit reached ({commentsDailyLimit}). Limits reset tomorrow.
-              </AppText>
-            ) : null}
-
-            {linkBlocked ? (
-              <AppText variant="bodySmall" style={styles.limitWarn}>
-                Links are paused for the first 14 days (day {accountAgeDays} of your account). Text
-                only for now.
-              </AppText>
-            ) : null}
-
-            <TextInput
-              value={body}
-              onChangeText={setBody}
-              placeholder={
-                isReply
-                  ? "Write a supportive reply..."
-                  : "What made today a little easier?"
-              }
-              placeholderTextColor={colors.text.muted}
-              multiline
-              maxLength={MAX_CHARS}
-              style={styles.input}
-              textAlignVertical="top"
-              accessibilityLabel="Post text"
-            />
-
-            <AppText variant="caption" tone="secondary" style={styles.counter}>
-              {body.length}/{MAX_CHARS}
-            </AppText>
-
-            <View style={styles.rulesCard}>
-              <View style={styles.rulesHeader}>
-                <Feather name="shield" size={16} color={colors.brand.peach} />
-                <AppText weight="semibold">Community rules</AppText>
+              <View style={[styles.checkbox, effectiveRules && styles.checkboxChecked]}>
+                {effectiveRules ? (
+                  <Feather name="check" size={14} color={colors.text.inverse} />
+                ) : null}
               </View>
-              {communityRules.map((rule) => (
-                <AppText key={rule} variant="bodySmall" tone="secondary">
-                  · {rule}
-                </AppText>
-              ))}
-              <Pressable
-                onPress={toggleRules}
-                style={styles.acceptRow}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: effectiveRules }}
-              >
-                <View style={[styles.checkbox, effectiveRules && styles.checkboxChecked]}>
-                  {effectiveRules ? (
-                    <Feather name="check" size={14} color={colors.text.inverse} />
-                  ) : null}
-                </View>
-                <AppText variant="bodySmall" style={styles.acceptCopy}>
-                  I agree to keep Connect kind and text-only
-                </AppText>
-              </Pressable>
-            </View>
+              <AppText variant="bodySmall" style={styles.acceptCopy}>
+                I agree to keep Connect kind and text-only
+              </AppText>
+            </Pressable>
           </View>
-
-          <View style={styles.footer}>
-            <Button size="lg" disabled={!canPost} onPress={handlePost}>
-              {isReply ? "Post reply" : "Post to group"}
-            </Button>
-          </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </View>
+        </View>
+      </KeyboardAvoidingView>
+    </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: "#F8EDE6",
-  },
-  atmosphere: {
-    ...StyleSheet.absoluteFill,
-    overflow: "hidden",
-  },
-  blob: {
-    position: "absolute",
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: "rgba(229,155,138,0.28)",
-    top: -80,
-    right: -70,
-  },
-  blobSoft: {
-    position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "rgba(243,199,188,0.3)",
-    bottom: 80,
-    left: -60,
-  },
-  safe: { flex: 1 },
   flex: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.page,
-    paddingVertical: spacing.md,
-  },
-  closeBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerSpacer: { width: 44 },
   body: {
     flex: 1,
-    paddingHorizontal: spacing.page,
     gap: spacing.md,
   },
   contextPanel: {
@@ -316,10 +263,5 @@ const styles = StyleSheet.create({
   },
   acceptCopy: {
     flex: 1,
-  },
-  footer: {
-    paddingHorizontal: spacing.page,
-    paddingBottom: spacing.xl,
-    paddingTop: spacing.md,
   },
 });

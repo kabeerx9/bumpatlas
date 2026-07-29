@@ -1,21 +1,28 @@
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 
-import { AppText, Atmosphere, BrandWordmark, colors, spacing } from "@/design-system";
+import { AppText, BrandWordmark, colors, spacing } from "@/design-system";
+import { SoftScreen } from "@/features/shared/components/soft-screen";
+import { useRespectReduceMotion } from "@/features/shared/hooks/use-respect-reduce-motion";
 
 export function SplashScreen() {
   const fade = useRef(new Animated.Value(0)).current;
+  const { reduceMotion } = useRespectReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion.current) {
+      fade.setValue(1);
+      return;
+    }
     Animated.timing(fade, {
       toValue: 1,
       duration: 800,
       useNativeDriver: true,
     }).start();
-  }, [fade]);
+  }, [fade, reduceMotion]);
 
   return (
-    <Atmosphere variant="cream">
+    <SoftScreen scroll={false} edges={["top", "bottom"]}>
       <View style={styles.body}>
         <Animated.View style={[styles.center, { opacity: fade }]}>
           <BrandWordmark size="xl" markOnly style={styles.mark} />
@@ -27,7 +34,7 @@ export function SplashScreen() {
           </AppText>
         </Animated.View>
       </View>
-    </Atmosphere>
+    </SoftScreen>
   );
 }
 

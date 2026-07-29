@@ -1,18 +1,18 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Alert, Pressable, Share, StyleSheet, View } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { mockProfile, mockRecaps } from "@/features/mock/demo-data";
+import { mockRecaps } from "@/features/mock/demo-data";
 import { useMockUi } from "@/features/mock/mock-ui-context";
+import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { appRoutes } from "@/navigation/routes";
 
 export function RecapScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { recapEligible, isPremiumPreview, setPremiumPreview } = useMockUi();
+  const { recapEligible, isPremiumPreview, setPremiumPreview, childDisplayName } = useMockUi();
   const [linkCopied, setLinkCopied] = useState(false);
   const [themePreview, setThemePreview] = useState(false);
 
@@ -22,44 +22,41 @@ export function RecapScreen() {
   }, [id]);
 
   const privateWebLink = `https://bumpatlas.app/recap/${recap.id}?t=mock-private-token`;
+  const premiumTheme = themePreview || isPremiumPreview;
 
   if (!recapEligible) {
     return (
-      <View style={styles.root}>
-        <SafeAreaView style={styles.safe}>
-          <View style={styles.header}>
-            <Pressable
-              onPress={() => router.back()}
-              style={styles.iconBtn}
-              accessibilityLabel="Close recap"
-            >
-              <Feather name="x" size={20} color={colors.brand.ink} />
-            </Pressable>
-            <AppText weight="semibold">Weekly recap</AppText>
-            <View style={styles.iconBtn} />
-          </View>
-          <View style={styles.ineligible}>
-            <Feather name="heart" size={28} color={colors.brand.peach} />
-            <AppText variant="heading" align="center">
-              Keep going gently
-            </AppText>
-            <AppText variant="body" tone="secondary" align="center">
-              Recaps unlock with ≥3 memories this week, or ≥2 story days + ≥1 wellness day. No
-              streak to protect.
-            </AppText>
-            <Button size="lg" onPress={() => router.push(appRoutes.capture)}>
-              Capture a moment
-            </Button>
-          </View>
-        </SafeAreaView>
-      </View>
+      <SoftStackShell title="Weekly recap" closeIcon="x" onBack={() => router.back()} scroll={false}>
+        <View style={styles.ineligible}>
+          <Feather name="heart" size={28} color={colors.brand.peach} />
+          <AppText variant="heading" align="center">
+            Keep going gently
+          </AppText>
+          <AppText variant="body" tone="secondary" align="center">
+            Recaps unlock with ≥3 memories this week, or ≥2 story days + ≥1 wellness day. No streak
+            to protect.
+          </AppText>
+          <Button size="lg" onPress={() => router.push(appRoutes.capture)}>
+            Capture a moment
+          </Button>
+        </View>
+      </SoftStackShell>
     );
   }
 
   async function shareRecap() {
-    const highlights = recap.highlights.join(" · ");
+    const highlights = recap.highlights.map((line) => `· ${line}`).join("\n");
     await Share.share({
-      message: `${recap.title} — ${recap.summary}. ${highlights}. Shared privately from BumpAtlas.`,
+      message: [
+        `${childDisplayName}'s week · ${recap.weekLabel}`,
+        recap.title,
+        "",
+        highlights,
+        "",
+        "Shared privately from BumpAtlas · household only",
+        "(Mock share card — native image export lands with real media pipeline.)",
+      ].join("\n"),
+      title: `${childDisplayName}'s recap card`,
     });
   }
 
@@ -76,171 +73,141 @@ export function RecapScreen() {
   }
 
   return (
-    <View style={styles.root}>
-      <View style={styles.atmosphere} pointerEvents="none">
-        <View style={styles.blob} />
-      </View>
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.iconBtn}
-            accessibilityLabel="Close recap"
-          >
-            <Feather name="x" size={20} color={colors.brand.ink} />
-          </Pressable>
-          <AppText weight="semibold">Weekly recap</AppText>
-          <View style={styles.iconBtn} />
+    <SoftStackShell
+      title="Weekly recap"
+      closeIcon="x"
+      onBack={() => router.back()}
+      footer={
+        <Button size="lg" onPress={() => void shareRecap()}>
+          Share recap card
+        </Button>
+      }
+    >
+      <View style={[styles.shareCard, premiumTheme && styles.shareCardPremium]}>
+        <AppText variant="caption" style={styles.eyebrow}>
+          {recap.weekLabel}
+          {premiumTheme ? " · Premium theme" : ""}
+        </AppText>
+        <AppText variant="heading" tone="inverse">
+          {recap.title}
+        </AppText>
+        <AppText variant="bodySmall" style={styles.childName}>
+          {childDisplayName}&apos;s week
+        </AppText>
+        <View style={styles.cardArt}>
+          <View style={styles.cardArtOrb} />
+          <View style={[styles.cardArtOrb, styles.cardArtOrbTwo]} />
         </View>
-
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <View style={styles.shareCard}>
-            <AppText variant="caption" style={styles.eyebrow}>
-              {recap.weekLabel}
-              {themePreview || isPremiumPreview ? " · Premium theme" : ""}
-            </AppText>
-            <AppText variant="heading" tone="inverse">
-              {recap.title}
-            </AppText>
-            <AppText variant="bodySmall" style={styles.childName}>
-              {mockProfile.displayName}&apos;s week
-            </AppText>
-            <View style={styles.highlights}>
-              {recap.highlights.map((highlight) => (
-                <View key={highlight} style={styles.bulletRow}>
-                  <View style={styles.bullet} />
-                  <AppText variant="bodySmall" style={styles.bulletText}>
-                    {highlight}
-                  </AppText>
-                </View>
-              ))}
+        <View style={styles.highlights}>
+          {recap.highlights.map((highlight) => (
+            <View key={highlight} style={styles.bulletRow}>
+              <View style={styles.bullet} />
+              <AppText variant="bodySmall" style={styles.bulletText}>
+                {highlight}
+              </AppText>
             </View>
-            <AppText variant="caption" style={styles.footer}>
-              BumpAtlas · household only
-            </AppText>
-          </View>
+          ))}
+        </View>
+        <AppText variant="caption" style={styles.footer}>
+          BumpAtlas · household only · no birth date / location
+        </AppText>
+      </View>
 
-          <View style={styles.themeCard}>
-            <AppText weight="semibold">Premium theme preview</AppText>
-            <AppText variant="bodySmall" tone="secondary">
-              Soft parchment layout with a calmer type rhythm — free keeps the standard card.
-            </AppText>
-            <Pressable
-              style={styles.copyBtn}
-              onPress={() => {
-                setThemePreview(true);
-                setPremiumPreview(true);
-              }}
-              accessibilityLabel="Preview premium recap theme"
-            >
-              <Feather name="star" size={14} color={colors.text.inverse} />
-              <AppText variant="caption" weight="semibold" tone="inverse">
-                {themePreview ? "Premium theme applied" : "Preview premium theme"}
-              </AppText>
-            </Pressable>
-            {themePreview ? (
-              <Pressable
-                onPress={() => router.push(appRoutes.paywall("recap"))}
-                style={styles.premiumLink}
-                accessibilityLabel="Unlock premium recap themes"
-              >
-                <AppText variant="caption" weight="semibold" style={styles.premiumText}>
-                  Keep this theme with Premium
-                </AppText>
-                <Feather name="arrow-up-right" size={14} color={colors.brand.peach} />
-              </Pressable>
-            ) : null}
-          </View>
-
-          <View style={styles.privacy}>
-            <Feather name="lock" size={16} color={colors.brand.peach} />
-            <AppText variant="bodySmall" tone="secondary" style={styles.privacyCopy}>
-              Share cards omit exact birth date, location, and health details by default.
-              Household-only — never auto-posts to Connect.
-            </AppText>
-          </View>
-
-          <View style={styles.linkCard}>
-            <AppText weight="semibold">Private web link</AppText>
-            <AppText variant="bodySmall" tone="secondary">
-              Share a view-only link for grandparents or your partner. Companion web surface stays
-              privacy-safe.
-            </AppText>
-            <AppText variant="caption" tone="secondary" numberOfLines={2}>
-              {privateWebLink}
-            </AppText>
-            <Pressable
-              style={styles.copyBtn}
-              onPress={() => void copyPrivateLink()}
-              accessibilityLabel="Copy private web link"
-            >
-              <Feather name="link" size={14} color={colors.text.inverse} />
-              <AppText variant="caption" weight="semibold" tone="inverse">
-                {linkCopied ? "Link shared" : "Copy / share private link"}
-              </AppText>
-            </Pressable>
-          </View>
-
+      <View style={styles.themeCard}>
+        <AppText weight="semibold">Premium theme preview</AppText>
+        <AppText variant="bodySmall" tone="secondary">
+          Soft parchment layout with a calmer type rhythm — free keeps the standard card.
+        </AppText>
+        <Pressable
+          style={styles.copyBtn}
+          onPress={() => {
+            setThemePreview(true);
+            setPremiumPreview(true);
+          }}
+          accessibilityLabel="Preview premium recap theme"
+        >
+          <Feather name="star" size={14} color={colors.text.inverse} />
+          <AppText variant="caption" weight="semibold" tone="inverse">
+            {themePreview ? "Premium theme applied" : "Preview premium theme"}
+          </AppText>
+        </Pressable>
+        {themePreview ? (
           <Pressable
-            style={styles.premiumLink}
             onPress={() => router.push(appRoutes.paywall("recap"))}
-            accessibilityLabel="Preview premium recap theme"
+            style={styles.premiumLink}
+            accessibilityLabel="Unlock premium recap themes"
           >
             <AppText variant="caption" weight="semibold" style={styles.premiumText}>
-              Preview premium recap theme
+              Keep this theme with Premium
             </AppText>
             <Feather name="arrow-up-right" size={14} color={colors.brand.peach} />
           </Pressable>
-        </ScrollView>
+        ) : null}
+      </View>
 
-        <View style={styles.footerBar}>
-          <Button size="lg" onPress={() => void shareRecap()}>
-            Share recap card
-          </Button>
-        </View>
-      </SafeAreaView>
-    </View>
+      <View style={styles.privacy}>
+        <Feather name="lock" size={16} color={colors.brand.peach} />
+        <AppText variant="bodySmall" tone="secondary" style={styles.privacyCopy}>
+          Share cards omit exact birth date, location, and health details by default. Household-only
+          — never auto-posts to Connect.
+        </AppText>
+      </View>
+
+      <View style={styles.linkCard}>
+        <AppText weight="semibold">Private web link</AppText>
+        <AppText variant="bodySmall" tone="secondary">
+          Share a view-only link for grandparents or your partner. Companion web surface stays
+          privacy-safe.
+        </AppText>
+        <AppText variant="caption" tone="secondary" numberOfLines={2}>
+          {privateWebLink}
+        </AppText>
+        <Pressable
+          style={styles.copyBtn}
+          onPress={() => void copyPrivateLink()}
+          accessibilityLabel="Copy private web link"
+        >
+          <Feather name="link" size={14} color={colors.text.inverse} />
+          <AppText variant="caption" weight="semibold" tone="inverse">
+            {linkCopied ? "Link shared" : "Copy / share private link"}
+          </AppText>
+        </Pressable>
+      </View>
+    </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F8EDE6" },
-  atmosphere: { ...StyleSheet.absoluteFill, overflow: "hidden" },
-  blob: {
-    position: "absolute",
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: "rgba(229,155,138,0.24)",
-    top: -80,
-    right: -60,
-  },
-  safe: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.page,
-    paddingVertical: spacing.md,
-  },
-  iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scroll: {
-    paddingHorizontal: spacing.page,
-    gap: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
   shareCard: {
     borderRadius: 28,
     backgroundColor: colors.brand.peach,
     padding: spacing.xl,
     gap: spacing.sm,
+    overflow: "hidden",
+  },
+  shareCardPremium: {
+    backgroundColor: "#C98978",
+  },
+  cardArt: {
+    ...StyleSheet.absoluteFill,
+    opacity: 0.35,
+  },
+  cardArtOrb: {
+    position: "absolute",
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    top: -40,
+    right: -30,
+  },
+  cardArtOrbTwo: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    top: 120,
+    left: -20,
+    right: undefined,
   },
   eyebrow: {
     color: "rgba(255,255,255,0.78)",
@@ -301,11 +268,6 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   premiumText: { color: colors.brand.peach },
-  footerBar: {
-    paddingHorizontal: spacing.page,
-    paddingBottom: spacing.xl,
-    paddingTop: spacing.md,
-  },
   ineligible: {
     flex: 1,
     alignItems: "center",

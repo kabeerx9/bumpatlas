@@ -13,7 +13,7 @@ import {
 } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { mockMemories, mockMilestones, mockProfile, mockRecaps } from "@/features/mock/demo-data";
+import { mockMilestones, mockRecaps } from "@/features/mock/demo-data";
 import { mockOnThisDay } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftHeader } from "@/features/shared/components/soft-header";
@@ -49,6 +49,8 @@ export function JourneyScreen() {
     setPremiumPreview,
     milestoneStatuses,
     recapEligible,
+    childDisplayName,
+    journeyMemories,
   } = useMockUi();
   const [filter, setFilter] = useState<Filter>("all");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -70,13 +72,13 @@ export function JourneyScreen() {
 
   const filteredMemories = useMemo(() => {
     const q = journalQuery.trim().toLowerCase();
-    if (!q) return mockMemories;
-    if (!isPremiumPreview) return mockMemories;
-    return mockMemories.filter(
+    if (!q) return journeyMemories;
+    if (!isPremiumPreview) return journeyMemories;
+    return journeyMemories.filter(
       (memory) =>
         memory.title.toLowerCase().includes(q) || memory.body.toLowerCase().includes(q),
     );
-  }, [journalQuery, isPremiumPreview]);
+  }, [journalQuery, isPremiumPreview, journeyMemories]);
 
   const visibleMemories = useMemo(
     () => filteredMemories.slice(0, visibleCount),
@@ -101,17 +103,17 @@ export function JourneyScreen() {
     if (nearBottom) loadMore();
   }
 
-  if (showEmptyJourney) {
+  if (showEmptyJourney || journeyMemories.length === 0) {
     return (
       <SoftScreen>
         <SoftHeader
           eyebrow="Journey"
-          title={`${mockProfile.displayName}'s story`}
+          title={`${childDisplayName}'s story`}
           subtitle="A private timeline of moments, milestones, and recaps — household only."
         />
         <SoftPanel style={styles.empty}>
           <Feather name="book-open" size={28} color={colors.brand.peach} />
-          <AppText weight="semibold">Start {mockProfile.displayName}&apos;s first page</AppText>
+          <AppText weight="semibold">Start {childDisplayName}&apos;s first page</AppText>
           <AppText variant="bodySmall" tone="secondary">
             Capture one small moment — a photo or a short note is enough.
           </AppText>
@@ -126,7 +128,7 @@ export function JourneyScreen() {
       <SoftScreen>
         <SoftHeader
           eyebrow="Journey"
-          title={`${mockProfile.displayName}'s story`}
+          title={`${childDisplayName}'s story`}
           subtitle="Loading your timeline…"
         />
         <SoftSkeleton lines={4} />
@@ -143,7 +145,7 @@ export function JourneyScreen() {
     >
       <SoftHeader
         eyebrow="Journey"
-        title={`${mockProfile.displayName}'s story`}
+        title={`${childDisplayName}'s story`}
         subtitle="A private timeline of moments, milestones, and recaps — household only."
         right={
           <Pressable

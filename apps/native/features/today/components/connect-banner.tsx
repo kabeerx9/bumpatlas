@@ -7,22 +7,34 @@ type ConnectBannerProps = {
   prompt: string;
   groupName: string;
   replyCount: number;
+  emphasized?: boolean;
   onPress: () => void;
 };
 
-export function ConnectBanner({ prompt, groupName, replyCount, onPress }: ConnectBannerProps) {
+export function ConnectBanner({
+  prompt,
+  groupName,
+  replyCount,
+  emphasized,
+  onPress,
+}: ConnectBannerProps) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={`Connect: ${prompt}`}
       onPress={onPress}
-      style={({ pressed }) => [styles.banner, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.banner,
+        emphasized && styles.emphasized,
+        pressed && styles.pressed,
+      ]}
     >
       <View style={styles.iconWrap}>
         <Feather name="users" size={18} color={colors.text.inverse} />
       </View>
       <View style={styles.copy}>
         <AppText variant="caption" style={styles.eyebrow}>
-          Connect · {groupName}
+          {emphasized ? "Your focus · " : ""}Connect · {groupName}
         </AppText>
         <AppText weight="semibold" numberOfLines={2} style={styles.title}>
           {prompt}
@@ -44,6 +56,11 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: radius.xl,
     backgroundColor: "rgba(255,255,255,0.78)",
+    minHeight: 72,
+  },
+  emphasized: {
+    borderWidth: 1.5,
+    borderColor: colors.brand.peach,
   },
   pressed: {
     opacity: 0.92,

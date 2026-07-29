@@ -3,15 +3,15 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
 import { mockToday } from "@/features/mock/demo-data";
 import { useMockUi } from "@/features/mock/mock-ui-context";
+import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useRespectReduceMotion } from "@/features/shared/hooks/use-respect-reduce-motion";
 import { appRoutes } from "@/navigation/routes";
 
 type Phase = "ready" | "clearance" | "in_progress" | "done" | "skipped";
@@ -25,6 +25,7 @@ function formatSeconds(total: number) {
 export function CareScreen() {
   const router = useRouter();
   const { stageMode, completeCare: completeCareProgress } = useMockUi();
+  const { reduceMotion } = useRespectReduceMotion();
   const action =
     stageMode === "pregnancy" ? mockToday.pregnancyWellnessAction : mockToday.wellnessAction;
   const [phase, setPhase] = useState<Phase>("ready");
@@ -77,6 +78,10 @@ export function CareScreen() {
     setPhase("in_progress");
     setActiveStep(0);
     setSecondsLeft(action.durationSeconds);
+    if (reduceMotion.current) {
+      setTimerRunning(false);
+      return;
+    }
     setTimerRunning(true);
   }
 
@@ -103,117 +108,62 @@ export function CareScreen() {
   if (phase === "done" || phase === "skipped") {
     const skipped = phase === "skipped";
     return (
-      <View style={styles.root}>
-        <View style={styles.atmosphere} pointerEvents="none">
-          <View style={styles.blob} />
-        </View>
-        <SafeAreaView style={styles.safe}>
-          <View style={styles.finishWrap}>
-            <View style={styles.finishMark}>
-              <Feather
-                name={skipped ? "heart" : badgeAwarded ? "award" : "check"}
-                size={28}
-                color={colors.brand.peach}
-              />
-            </View>
-            <AppText variant="heading" align="center">
-              {skipped ? "That’s okay" : badgeAwarded ? "Care Pause earned" : "You took a pause"}
-            </AppText>
-            <AppText variant="body" tone="secondary" align="center" style={styles.finishCopy}>
-              {skipped
-                ? "Skipping Care never takes away your memories or your week. Come back when you have a quiet minute."
-                : badgeAwarded
-                  ? `${action.badgeOnComplete?.description ?? "You completed a wellness Care action."} Your week of calm days still welcomes this — no streak to protect.`
-                  : "Two minutes for you counts. Your week of calm days still welcomes this — no streak to protect."}
-            </AppText>
-            {!skipped && badgeAwarded && action.badgeOnComplete ? (
-              <View style={styles.badgeCard}>
-                <Feather name="award" size={20} color={colors.brand.peach} />
-                <View style={styles.badgeCopy}>
-                  <AppText weight="semibold">{action.badgeOnComplete.title}</AppText>
-                  <AppText variant="caption" tone="secondary">
-                    Added to your badges
-                  </AppText>
-                </View>
-              </View>
-            ) : null}
-            <Button size="lg" onPress={goHome} style={styles.finishCta}>
-              Back to Today
-            </Button>
-            {!skipped ? (
-              <Pressable
-                onPress={() => router.push(appRoutes.badges)}
-                style={styles.badgesLink}
-                accessibilityLabel="View badges"
-              >
-                <AppText variant="caption" weight="semibold" style={styles.packsText}>
-                  View badges
-                </AppText>
-              </Pressable>
-            ) : null}
+      <SoftStackShell title="Care" closeIcon="x" onBack={goHome} scroll={false}>
+        <View style={styles.finishWrap}>
+          <View style={styles.finishMark}>
+            <Feather
+              name={skipped ? "heart" : badgeAwarded ? "award" : "check"}
+              size={28}
+              color={colors.brand.peach}
+            />
           </View>
-        </SafeAreaView>
-      </View>
+          <AppText variant="heading" align="center">
+            {skipped ? "That’s okay" : badgeAwarded ? "Care Pause earned" : "You took a pause"}
+          </AppText>
+          <AppText variant="body" tone="secondary" align="center" style={styles.finishCopy}>
+            {skipped
+              ? "Skipping Care never takes away your memories or your week. Come back when you have a quiet minute."
+              : badgeAwarded
+                ? `${action.badgeOnComplete?.description ?? "You completed a wellness Care action."} Your week of calm days still welcomes this — no streak to protect.`
+                : "Two minutes for you counts. Your week of calm days still welcomes this — no streak to protect."}
+          </AppText>
+          {!skipped && badgeAwarded && action.badgeOnComplete ? (
+            <View style={styles.badgeCard}>
+              <Feather name="award" size={20} color={colors.brand.peach} />
+              <View style={styles.badgeCopy}>
+                <AppText weight="semibold">{action.badgeOnComplete.title}</AppText>
+                <AppText variant="caption" tone="secondary">
+                  Added to your badges
+                </AppText>
+              </View>
+            </View>
+          ) : null}
+          <Button size="lg" onPress={goHome} style={styles.finishCta}>
+            Back to Today
+          </Button>
+          {!skipped ? (
+            <Pressable
+              onPress={() => router.push(appRoutes.badges)}
+              style={styles.badgesLink}
+              accessibilityLabel="View badges"
+            >
+              <AppText variant="caption" weight="semibold" style={styles.packsText}>
+                View badges
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
+      </SoftStackShell>
     );
   }
 
   if (phase === "clearance") {
     return (
-      <View style={styles.root}>
-        <View style={styles.atmosphere} pointerEvents="none">
-          <View style={styles.blob} />
-        </View>
-        <SafeAreaView style={styles.safe}>
-          <View style={styles.header}>
-            <Pressable
-              onPress={() => setPhase("ready")}
-              hitSlop={12}
-              style={styles.closeBtn}
-              accessibilityLabel="Back"
-            >
-              <Feather name="arrow-left" size={20} color={colors.brand.ink} />
-            </Pressable>
-            <View style={styles.headerCopy}>
-              <AppText weight="semibold">Before you begin</AppText>
-              <AppText variant="caption" tone="secondary">
-                Medical clearance reminder
-              </AppText>
-            </View>
-            <View style={styles.headerSpacer} />
-          </View>
-
-          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-            <View style={styles.clearanceCard}>
-              <Feather name="alert-circle" size={22} color={colors.brand.peach} />
-              <AppText variant="title">{action.title}</AppText>
-              <AppText variant="body" tone="secondary" style={styles.clearanceBody}>
-                {action.clearanceCopy}
-              </AppText>
-              <AppText variant="bodySmall" tone="secondary">
-                {action.stopCopy}
-              </AppText>
-            </View>
-
-            <Pressable
-              onPress={() => setClearanceAcknowledged(!clearanceAcknowledged)}
-              style={styles.acceptRow}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: clearanceAcknowledged }}
-              accessibilityLabel="I understand and feel cleared to try this gently"
-            >
-              <View style={[styles.checkbox, clearanceAcknowledged && styles.checkboxOn]}>
-                {clearanceAcknowledged ? (
-                  <Feather name="check" size={14} color={colors.text.inverse} />
-                ) : null}
-              </View>
-              <AppText variant="bodySmall" style={styles.acceptCopy}>
-                I understand — I’ll stop if anything feels wrong, and I’ve checked with my clinician
-                if I have complications or restrictions.
-              </AppText>
-            </Pressable>
-          </ScrollView>
-
-          <View style={styles.footer}>
+      <SoftStackShell
+        title="Before you begin"
+        onBack={() => setPhase("ready")}
+        footer={
+          <>
             <Button size="lg" disabled={!clearanceAcknowledged} onPress={startCare}>
               Begin gently
             </Button>
@@ -222,236 +172,195 @@ export function CareScreen() {
                 Skip for today
               </AppText>
             </Pressable>
+          </>
+        }
+      >
+        <AppText variant="caption" tone="secondary">
+          Medical clearance reminder
+        </AppText>
+
+        <View style={styles.clearanceCard}>
+          <Feather name="alert-circle" size={22} color={colors.brand.peach} />
+          <AppText variant="title">{action.title}</AppText>
+          <AppText variant="body" tone="secondary" style={styles.clearanceBody}>
+            {action.clearanceCopy}
+          </AppText>
+          <AppText variant="bodySmall" tone="secondary">
+            {action.stopCopy}
+          </AppText>
+        </View>
+
+        <Pressable
+          onPress={() => setClearanceAcknowledged(!clearanceAcknowledged)}
+          style={styles.acceptRow}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: clearanceAcknowledged }}
+          accessibilityLabel="I understand and feel cleared to try this gently"
+        >
+          <View style={[styles.checkbox, clearanceAcknowledged && styles.checkboxOn]}>
+            {clearanceAcknowledged ? (
+              <Feather name="check" size={14} color={colors.text.inverse} />
+            ) : null}
           </View>
-        </SafeAreaView>
-      </View>
+          <AppText variant="bodySmall" style={styles.acceptCopy}>
+            I understand — I’ll stop if anything feels wrong, and I’ve checked with my clinician
+            if I have complications or restrictions.
+          </AppText>
+        </Pressable>
+      </SoftStackShell>
     );
   }
 
   return (
-    <View style={styles.root}>
-      <View style={styles.atmosphere} pointerEvents="none">
-        <View style={styles.blob} />
-        <View style={styles.blobSoft} />
+    <SoftStackShell
+      title="Care"
+      closeIcon="x"
+      onBack={goHome}
+      footer={
+        phase === "ready" ? (
+          <>
+            <Button size="lg" onPress={requestStart}>
+              Begin gently
+            </Button>
+            <Pressable onPress={skipCare} style={styles.skipBtn} hitSlop={8}>
+              <AppText tone="secondary" align="center">
+                Skip for today
+              </AppText>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Button size="lg" onPress={completeCare}>
+              I’m done
+            </Button>
+            <Pressable onPress={skipCare} style={styles.skipBtn} hitSlop={8}>
+              <AppText tone="secondary" align="center">
+                Stop now · that’s enough
+              </AppText>
+            </Pressable>
+          </>
+        )
+      }
+    >
+      <AppText variant="caption" tone="secondary" align="center">
+        For you · {action.duration}
+      </AppText>
+
+      <View style={styles.hero}>
+        <View style={styles.heroIcon}>
+          <Feather name="wind" size={22} color={colors.text.inverse} />
+        </View>
+        <AppText variant="heading" style={styles.heroTitle}>
+          {action.title}
+        </AppText>
+        <AppText variant="body" style={styles.heroDetail}>
+          {action.detail}
+        </AppText>
+        <AppText variant="caption" style={styles.heroMeta}>
+          {action.stageNote}
+        </AppText>
+        <AppText variant="caption" style={styles.heroMeta}>
+          Reviewed by {action.reviewerName} · {action.reviewedOn}
+        </AppText>
+        <AppText variant="caption" style={styles.heroMeta}>
+          Source: {action.sourceName}
+        </AppText>
       </View>
 
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
+      {phase === "in_progress" ? (
+        <View style={styles.timerCard}>
+          <AppText variant="caption" style={styles.peachLabel}>
+            Soft timer · optional
+            {reduceMotion.current ? " · reduce motion on" : ""}
+          </AppText>
+          <AppText variant="hero" style={styles.timerValue}>
+            {formatSeconds(secondsLeft)}
+          </AppText>
           <Pressable
-            onPress={goHome}
-            hitSlop={12}
-            style={styles.closeBtn}
-            accessibilityLabel="Close care"
+            onPress={timerRunning ? stopTimer : () => setTimerRunning(true)}
+            accessibilityLabel={timerRunning ? "Pause timer" : "Resume timer"}
+            style={styles.timerToggleHit}
           >
-            <Feather name="x" size={20} color={colors.brand.ink} />
-          </Pressable>
-          <View style={styles.headerCopy}>
-            <AppText weight="semibold">Care</AppText>
-            <AppText variant="caption" tone="secondary">
-              For you · {action.duration}
+            <AppText weight="semibold" style={styles.timerToggle}>
+              {timerRunning ? "Pause timer" : "Resume timer"}
             </AppText>
-          </View>
-          <View style={styles.headerSpacer} />
+          </Pressable>
         </View>
+      ) : null}
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scroll}
+      <AppText weight="semibold">How to do it</AppText>
+
+      {action.steps.map((step, index) => {
+        const isActive = phase === "in_progress" && index === activeStep;
+        const isPast = phase === "in_progress" && index < activeStep;
+        return (
+          <Pressable
+            key={step.id}
+            onPress={() => {
+              if (phase === "in_progress") setActiveStep(index);
+            }}
+            style={[
+              styles.stepCard,
+              isActive && styles.stepActive,
+              isPast && styles.stepPast,
+            ]}
+            accessibilityLabel={`Step ${index + 1}: ${step.title}`}
+          >
+            <View style={[styles.stepIndex, isActive && styles.stepIndexActive]}>
+              {isPast ? (
+                <Feather name="check" size={14} color={colors.text.inverse} />
+              ) : (
+                <AppText
+                  variant="caption"
+                  weight="semibold"
+                  style={isActive ? styles.stepIndexTextActive : undefined}
+                >
+                  {index + 1}
+                </AppText>
+              )}
+            </View>
+            <View style={styles.stepCopy}>
+              <AppText weight="semibold">{step.title}</AppText>
+              <AppText variant="bodySmall" tone="secondary">
+                {step.body}
+              </AppText>
+            </View>
+          </Pressable>
+        );
+      })}
+
+      {phase === "in_progress" && activeStep < action.steps.length - 1 ? (
+        <Button
+          variant="ghost"
+          onPress={() => setActiveStep((current) => current + 1)}
+          style={styles.nextStep}
         >
-          <View style={styles.hero}>
-            <View style={styles.heroIcon}>
-              <Feather name="wind" size={22} color={colors.text.inverse} />
-            </View>
-            <AppText variant="heading" style={styles.heroTitle}>
-              {action.title}
-            </AppText>
-            <AppText variant="body" style={styles.heroDetail}>
-              {action.detail}
-            </AppText>
-            <AppText variant="caption" style={styles.heroMeta}>
-              {action.stageNote}
-            </AppText>
-            <AppText variant="caption" style={styles.heroMeta}>
-              Reviewed by {action.reviewerName} · {action.reviewedOn}
-            </AppText>
-            <AppText variant="caption" style={styles.heroMeta}>
-              Source: {action.sourceName}
-            </AppText>
-          </View>
+          Next step
+        </Button>
+      ) : null}
 
-          {phase === "in_progress" ? (
-            <View style={styles.timerCard}>
-              <AppText variant="caption" style={styles.peachLabel}>
-                Soft timer · optional
-              </AppText>
-              <AppText variant="hero" style={styles.timerValue}>
-                {formatSeconds(secondsLeft)}
-              </AppText>
-              <Pressable
-                onPress={timerRunning ? stopTimer : () => setTimerRunning(true)}
-                accessibilityLabel={timerRunning ? "Pause timer" : "Resume timer"}
-                style={styles.timerToggleHit}
-              >
-                <AppText weight="semibold" style={styles.timerToggle}>
-                  {timerRunning ? "Pause timer" : "Resume timer"}
-                </AppText>
-              </Pressable>
-            </View>
-          ) : null}
+      <View style={styles.stopBox}>
+        <Feather name="alert-circle" size={16} color={colors.brand.peach} />
+        <AppText variant="bodySmall" tone="secondary" style={styles.stopCopy}>
+          {action.stopCopy}
+        </AppText>
+      </View>
 
-          <AppText weight="semibold">How to do it</AppText>
-
-          {action.steps.map((step, index) => {
-            const isActive = phase === "in_progress" && index === activeStep;
-            const isPast = phase === "in_progress" && index < activeStep;
-            return (
-              <Pressable
-                key={step.id}
-                onPress={() => {
-                  if (phase === "in_progress") setActiveStep(index);
-                }}
-                style={[
-                  styles.stepCard,
-                  isActive && styles.stepActive,
-                  isPast && styles.stepPast,
-                ]}
-                accessibilityLabel={`Step ${index + 1}: ${step.title}`}
-              >
-                <View style={[styles.stepIndex, isActive && styles.stepIndexActive]}>
-                  {isPast ? (
-                    <Feather name="check" size={14} color={colors.text.inverse} />
-                  ) : (
-                    <AppText
-                      variant="caption"
-                      weight="semibold"
-                      style={isActive ? styles.stepIndexTextActive : undefined}
-                    >
-                      {index + 1}
-                    </AppText>
-                  )}
-                </View>
-                <View style={styles.stepCopy}>
-                  <AppText weight="semibold">{step.title}</AppText>
-                  <AppText variant="bodySmall" tone="secondary">
-                    {step.body}
-                  </AppText>
-                </View>
-              </Pressable>
-            );
-          })}
-
-          {phase === "in_progress" && activeStep < action.steps.length - 1 ? (
-            <Button
-              variant="ghost"
-              onPress={() => setActiveStep((current) => current + 1)}
-              style={styles.nextStep}
-            >
-              Next step
-            </Button>
-          ) : null}
-
-          <View style={styles.stopBox}>
-            <Feather name="alert-circle" size={16} color={colors.brand.peach} />
-            <AppText variant="bodySmall" tone="secondary" style={styles.stopCopy}>
-              {action.stopCopy}
-            </AppText>
-          </View>
-
-          <Pressable
-            onPress={() => router.push(appRoutes.wellnessPacks)}
-            style={styles.packsLink}
-            accessibilityLabel="Browse wellness packs"
-          >
-            <AppText variant="caption" weight="semibold" style={styles.packsText}>
-              Browse more Care packs
-            </AppText>
-            <Feather name="arrow-up-right" size={14} color={colors.brand.peach} />
-          </Pressable>
-        </ScrollView>
-
-        <View style={styles.footer}>
-          {phase === "ready" ? (
-            <>
-              <Button size="lg" onPress={requestStart}>
-                Begin gently
-              </Button>
-              <Pressable onPress={skipCare} style={styles.skipBtn} hitSlop={8}>
-                <AppText tone="secondary" align="center">
-                  Skip for today
-                </AppText>
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <Button size="lg" onPress={completeCare}>
-                I’m done
-              </Button>
-              <Pressable onPress={skipCare} style={styles.skipBtn} hitSlop={8}>
-                <AppText tone="secondary" align="center">
-                  Stop now · that’s enough
-                </AppText>
-              </Pressable>
-            </>
-          )}
-        </View>
-      </SafeAreaView>
-    </View>
+      <Pressable
+        onPress={() => router.push(appRoutes.wellnessPacks)}
+        style={styles.packsLink}
+        accessibilityLabel="Browse wellness packs"
+      >
+        <AppText variant="caption" weight="semibold" style={styles.packsText}>
+          Browse more Care packs
+        </AppText>
+        <Feather name="arrow-up-right" size={14} color={colors.brand.peach} />
+      </Pressable>
+    </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: "#F8EDE6",
-  },
-  atmosphere: {
-    ...StyleSheet.absoluteFill,
-    overflow: "hidden",
-  },
-  blob: {
-    position: "absolute",
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: "rgba(229,155,138,0.26)",
-    top: -90,
-    right: -70,
-  },
-  blobSoft: {
-    position: "absolute",
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: "rgba(243,199,188,0.28)",
-    bottom: 120,
-    left: -80,
-  },
-  safe: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.page,
-    paddingVertical: spacing.md,
-  },
-  closeBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCopy: {
-    alignItems: "center",
-    gap: 2,
-  },
-  headerSpacer: { width: 44 },
-  scroll: {
-    paddingHorizontal: spacing.page,
-    paddingBottom: spacing.xl,
-    gap: spacing.md,
-  },
   hero: {
     borderRadius: 28,
     backgroundColor: colors.brand.peach,
@@ -559,15 +468,6 @@ const styles = StyleSheet.create({
   packsText: {
     color: colors.brand.peach,
   },
-  footer: {
-    paddingHorizontal: spacing.page,
-    paddingBottom: spacing.xl,
-    paddingTop: spacing.md,
-    gap: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(44,36,32,0.06)",
-    backgroundColor: "rgba(248,237,230,0.92)",
-  },
   skipBtn: {
     paddingVertical: spacing.sm,
     minHeight: 44,
@@ -576,7 +476,6 @@ const styles = StyleSheet.create({
   finishWrap: {
     flex: 1,
     justifyContent: "center",
-    paddingHorizontal: spacing.page,
     gap: spacing.md,
     alignItems: "center",
   },

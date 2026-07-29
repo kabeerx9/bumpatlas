@@ -1,9 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AppText, Atmosphere, Button, colors, radius, spacing } from "@/design-system";
+import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import { SoftScreen } from "@/features/shared/components/soft-screen";
 
 type OnboardingShellProps = {
   children: ReactNode;
@@ -33,8 +33,8 @@ export function OnboardingShell({
   const progress = Math.min(100, Math.max(8, (stepIndex / totalSteps) * 100));
 
   return (
-    <Atmosphere>
-      <SafeAreaView style={styles.safe}>
+    <SoftScreen scroll={false} edges={["top", "bottom"]}>
+      <View style={styles.column}>
         <View style={styles.topBar}>
           {onBack ? (
             <Pressable
@@ -51,7 +51,7 @@ export function OnboardingShell({
           )}
 
           {showManageProfile ? (
-            <Pressable style={styles.manageChip}>
+            <Pressable style={styles.manageChip} accessibilityLabel="Manage profile">
               <Feather name="user" size={14} color={colors.brand.ink} />
               <AppText variant="caption" weight="semibold">
                 Manage Profile
@@ -80,13 +80,13 @@ export function OnboardingShell({
             {continueLabel}
           </Button>
         </View>
-      </SafeAreaView>
-    </Atmosphere>
+      </View>
+    </SoftScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
+  column: { flex: 1 },
   topBar: {
     paddingHorizontal: spacing.page,
     paddingTop: spacing.sm,
@@ -115,6 +115,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
+    minHeight: 44,
   },
   progressTrack: {
     marginTop: spacing.md,
@@ -145,6 +146,8 @@ const styles = StyleSheet.create({
   },
   secondaryBtn: {
     paddingVertical: spacing.sm,
+    minHeight: 44,
+    justifyContent: "center",
   },
   cta: {
     width: "100%",

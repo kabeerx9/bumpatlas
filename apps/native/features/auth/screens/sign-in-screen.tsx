@@ -10,11 +10,9 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   AppText,
-  Atmosphere,
   BrandWordmark,
   Button,
   colors,
@@ -23,6 +21,7 @@ import {
 } from "@/design-system";
 import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
 import { pushDecoratedUrl } from "@/features/auth/utils/navigation";
+import { SoftScreen } from "@/features/shared/components/soft-screen";
 import { appRoutes } from "@/navigation/routes";
 
 export function SignInScreen() {
@@ -84,13 +83,12 @@ export function SignInScreen() {
 
   if (requiresEmailCode) {
     return (
-      <Atmosphere>
-        <SafeAreaView style={styles.safe}>
-          <View style={styles.formWrap}>
-            <BrandWordmark size="md" markOnly style={styles.logo} />
-            <AppText variant="heading" align="center">
-              Verify Your Account
-            </AppText>
+      <SoftScreen scroll={false} edges={["top", "bottom"]}>
+        <View style={styles.formWrap}>
+          <BrandWordmark size="md" markOnly style={styles.logo} />
+          <AppText variant="heading" align="center">
+            Verify Your Account
+          </AppText>
             <AppText variant="body" tone="secondary" align="center">
               Enter the 6-digit code we sent to your email.
             </AppText>
@@ -112,14 +110,12 @@ export function SignInScreen() {
               {isFetching ? "Verifying..." : "Verify"}
             </Button>
           </View>
-        </SafeAreaView>
-      </Atmosphere>
+      </SoftScreen>
     );
   }
 
   return (
-    <Atmosphere>
-      <SafeAreaView style={styles.safe}>
+    <SoftScreen scroll={false} edges={["top", "bottom"]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.flex}
@@ -218,8 +214,7 @@ export function SignInScreen() {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Atmosphere>
+    </SoftScreen>
   );
 }
 

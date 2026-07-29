@@ -9,11 +9,10 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppText, colors, radius, spacing } from "@/design-system";
-import { mockMemories, mockProfile, mockToday } from "@/features/mock/demo-data";
-import { mockOnThisDay, mockPregnancy } from "@/features/mock/mock-content";
+import { mockProfile, mockToday } from "@/features/mock/demo-data";
+import { mockOnThisDay, mockPregnancy, mockStageGroups } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import {
   gestationalWeekFromDueDate,
@@ -22,6 +21,7 @@ import {
 import { OfflineBanner } from "@/features/shared/components/offline-banner";
 import { DraftQueuePanel } from "@/features/shared/components/draft-queue-panel";
 import { SoftPanel } from "@/features/shared/components/soft-panel";
+import { SoftScreen } from "@/features/shared/components/soft-screen";
 import { useRespectReduceMotion } from "@/features/shared/hooks/use-respect-reduce-motion";
 import { ageBucketFromDob, ageBucketLabel, approximateAgeLabel } from "@/features/shared/lib/age-bucket";
 import { CaptureHeroCard } from "@/features/today/components/capture-hero-card";
@@ -52,9 +52,19 @@ export function TodayScreen() {
     markLearnDone,
     isPremiumPreview,
     childDisplayName,
+    activeGroupId,
+    primaryGoal,
+    journeyMemories,
   } = useMockUi();
 
-  const connect = mockToday.connectCard;
+  const activeGroup =
+    mockStageGroups.find((group) => group.id === activeGroupId) ?? mockStageGroups[1];
+  const connectPrompt = activeGroup?.prompt ?? mockToday.connectCard.prompt;
+  const connectGroupName = activeGroup?.name ?? mockToday.connectCard.groupName;
+  const connectReplyCount = Math.max(
+    activeGroup?.posts?.length ?? 0,
+    mockToday.connectCard.replyCount,
+  );
   const fade = useRef(new Animated.Value(0)).current;
   const { reduceMotion } = useRespectReduceMotion();
   const stageUnknown = stageMode === "unknown";
@@ -63,7 +73,7 @@ export function TodayScreen() {
   const childBucket = ageBucketFromDob(mockProfile.dob);
   const childStageLabel = `${approximateAgeLabel(mockProfile.dob)} · ${ageBucketLabel(childBucket)}`;
 
-  const onThisDayMemory = mockMemories.find((m) => m.title === mockOnThisDay.title);
+  const onThisDayMemory = journeyMemories.find((m) => m.title === mockOnThisDay.title);
 
   useEffect(() => {
     if (reduceMotion.current) {
@@ -83,25 +93,18 @@ export function TodayScreen() {
   }, []);
 
   return (
-    <View style={styles.root}>
-      <View style={styles.atmosphere}>
-        <View style={styles.blobPeach} />
-        <View style={styles.blobSoft} />
-        <View style={styles.blobWash} />
-      </View>
-
-      <SafeAreaView style={styles.safe} edges={["top"]}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scroll}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.brand.peach}
-            />
-          }
-        >
+    <SoftScreen scroll={false} edges={["top"]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.brand.peach}
+          />
+        }
+      >
           <Animated.View style={{ opacity: fade }}>
             <TodayProfileBar
               displayName={childDisplayName}
@@ -131,11 +134,11 @@ export function TodayScreen() {
               </AppText>
               <Pressable
                 style={styles.unknownBtn}
-                onPress={() => router.push(appRoutes.onboarding)}
-                accessibilityLabel="Complete onboarding"
+                onPress={() => router.push(appRoutes.stageSetup)}
+                accessibilityLabel="Complete stage setup"
               >
                 <AppText variant="caption" weight="semibold" tone="inverse">
-                  Complete onboarding
+                  Complete stage setup
                 </AppText>
               </Pressable>
             </SoftPanel>
@@ -182,6 +185,7 @@ export function TodayScreen() {
             }
             activeDays={weekProgress.activeDays}
             goal={weekProgress.goal}
+            emphasized={primaryGoal === "memories"}
             onCapture={() => router.push(appRoutes.capture)}
           />
 
@@ -193,19 +197,29 @@ export function TodayScreen() {
               Story days {storyDaysThisWeek}/{weekProgress.goal} · Wellness days{" "}
               {wellnessDaysThisWeek}/{weekProgress.goal} · either counts as a calm day
             </AppText>
+            {primaryGoal ? (
+              <AppText variant="caption" style={styles.peachLabel}>
+                Your focus · {primaryGoal}
+              </AppText>
+            ) : null}
           </SoftPanel>
 
           <View style={styles.quickLinks}>
             <Pressable
               style={styles.quickChip}
               onPress={() => router.push(appRoutes.wellnessPacks)}
+              accessibilityLabel="Open wellness packs"
             >
               <Feather name="heart" size={14} color={colors.brand.peach} />
               <AppText variant="caption" weight="semibold" style={styles.chipText}>
                 Wellness packs
               </AppText>
             </Pressable>
-            <Pressable style={styles.quickChip} onPress={() => router.push(appRoutes.badges)}>
+            <Pressable
+              style={styles.quickChip}
+              onPress={() => router.push(appRoutes.badges)}
+              accessibilityLabel="Open badges"
+            >
               <Feather name="award" size={14} color={colors.brand.peach} />
               <AppText variant="caption" weight="semibold" style={styles.chipText}>
                 Badges
@@ -222,7 +236,12 @@ export function TodayScreen() {
             </AppText>
           </View>
 
-          <View style={styles.gridRow}>
+          <View
+            style={[
+              styles.gridRow,
+              primaryGoal === "learn" && styles.gridRowReverse,
+            ]}
+          >
             <TodayActionTile
               icon="wind"
               label="Care"
@@ -237,6 +256,7 @@ export function TodayScreen() {
                   : mockToday.wellnessAction.duration
               }
               done={loopCompletion.care}
+              emphasized={primaryGoal === "wellness"}
               onPress={() => router.push(appRoutes.care)}
             />
             <TodayActionTile
@@ -249,6 +269,7 @@ export function TodayScreen() {
               }
               detail="Stage tip"
               done={loopCompletion.learn}
+              emphasized={primaryGoal === "learn"}
               onPress={() => {
                 markLearnDone();
                 router.push(
@@ -262,14 +283,15 @@ export function TodayScreen() {
 
           {connectTodayMode === "alone" ? (
             <InvitePartnerBanner
-              childName={mockProfile.displayName}
+              childName={childDisplayName}
               onInvite={() => router.push(appRoutes.invite)}
             />
           ) : (
             <ConnectBanner
-              prompt={connect.prompt}
-              groupName={connect.groupName}
-              replyCount={connect.replyCount}
+              prompt={connectPrompt}
+              groupName={connectGroupName}
+              replyCount={connectReplyCount}
+              emphasized={primaryGoal === "connect"}
               onPress={() => router.push(appRoutes.connect)}
             />
           )}
@@ -285,8 +307,7 @@ export function TodayScreen() {
               <View style={styles.inviteCtaCopy}>
                 <AppText weight="semibold">Invite your partner after 3 memories</AppText>
                 <AppText variant="bodySmall" tone="secondary">
-                  Both of you can add to {mockProfile.displayName}&apos;s story — free includes 2
-                  adults.
+                  Both of you can add to {childDisplayName}&apos;s story — free includes 2 adults.
                 </AppText>
               </View>
               <View style={styles.inviteCtaActions}>
@@ -295,7 +316,11 @@ export function TodayScreen() {
                     Invite
                   </AppText>
                 </Pressable>
-                <Pressable onPress={dismissInviteCta} hitSlop={8}>
+                <Pressable
+                  onPress={dismissInviteCta}
+                  hitSlop={8}
+                  accessibilityLabel="Dismiss invite reminder"
+                >
                   <Feather name="x" size={18} color={colors.text.muted} />
                 </Pressable>
               </View>
@@ -345,58 +370,21 @@ export function TodayScreen() {
             dateLabel={mockToday.latestMemory.dateLabel}
             onPress={() => router.push(appRoutes.memory("1"))}
           />
-        </ScrollView>
+      </ScrollView>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Ask BumpAtlas"
-          onPress={() => router.push(appRoutes.assistant)}
-          style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
-        >
-          <Feather name="message-circle" size={22} color={colors.text.inverse} />
-        </Pressable>
-      </SafeAreaView>
-    </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Ask BumpAtlas"
+        onPress={() => router.push(appRoutes.assistant)}
+        style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+      >
+        <Feather name="message-circle" size={22} color={colors.text.inverse} />
+      </Pressable>
+    </SoftScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: "#F8EDE6",
-  },
-  atmosphere: {
-    ...StyleSheet.absoluteFill,
-    overflow: "hidden",
-  },
-  blobPeach: {
-    position: "absolute",
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: "rgba(229,155,138,0.28)",
-    top: -100,
-    right: -90,
-  },
-  blobSoft: {
-    position: "absolute",
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: "rgba(255,248,244,0.9)",
-    top: 220,
-    left: -110,
-  },
-  blobWash: {
-    position: "absolute",
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: "rgba(243,199,188,0.35)",
-    bottom: -80,
-    right: -60,
-  },
-  safe: { flex: 1 },
   scroll: {
     paddingHorizontal: spacing.page,
     paddingBottom: 100,
@@ -461,6 +449,9 @@ const styles = StyleSheet.create({
   gridRow: {
     flexDirection: "row",
     gap: spacing.md,
+  },
+  gridRowReverse: {
+    flexDirection: "row-reverse",
   },
   inviteCta: { gap: spacing.md },
   inviteCtaCopy: { gap: 4 },

@@ -202,7 +202,7 @@ export function FamilyScreen() {
           <AppText variant="caption" weight="semibold" style={styles.link}>
             {connectScenario === "warming"
               ? "Simulate active Connect group"
-              : "Simulate warming Connect group"}
+              : "Simulate warming Connect (Parent wellbeing starts empty)"}
           </AppText>
         </Pressable>
         <Pressable

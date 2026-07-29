@@ -11,7 +11,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppText, colors, radius, spacing } from "@/design-system";
 import { mockAssistantResponses } from "@/features/mock/mock-content";
@@ -20,6 +19,7 @@ import { CitationCard, type Citation } from "@/features/shared/components/citati
 import { EscalateCard } from "@/features/shared/components/escalate-card";
 import { QuotaMeter } from "@/features/shared/components/quota-meter";
 import { SoftPanel } from "@/features/shared/components/soft-panel";
+import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { appRoutes } from "@/navigation/routes";
 
 const SUGGESTIONS = [
@@ -161,211 +161,188 @@ export function AssistantScreen() {
   }
 
   return (
-    <View style={styles.root}>
-      <View style={styles.atmosphere} pointerEvents="none">
-        <View style={styles.blob} />
+    <SoftStackShell
+      title="Ask BumpAtlas"
+      closeIcon="x"
+      onBack={() => router.back()}
+      scroll={false}
+      right={
+        <Pressable
+          onPress={clearConversation}
+          hitSlop={12}
+          style={styles.iconBtn}
+          accessibilityLabel="Clear conversation"
+        >
+          <Feather name="trash-2" size={18} color={colors.brand.ink} />
+        </Pressable>
+      }
+    >
+      <AppText variant="caption" tone="secondary" align="center">
+        Educational · not medical advice
+      </AppText>
+
+      <View style={styles.quotaWrap}>
+        <QuotaMeter
+          used={aiMessagesUsed}
+          limit={aiDailyLimit}
+          label="AI messages today"
+          onUpgrade={dailyExhausted ? () => router.push(appRoutes.paywall("ai-quota")) : undefined}
+        />
+        <QuotaMeter
+          used={aiHourlyUsed}
+          limit={aiHourlyLimit}
+          label="AI messages this hour"
+          exhaustedLabel="Hourly limit reached · View premium"
+          onUpgrade={
+            hourlyExhausted && !dailyExhausted
+              ? () => router.push(appRoutes.paywall("ai-quota"))
+              : undefined
+          }
+        />
+        {limitReason ? (
+          <AppText variant="caption" tone="secondary">
+            {limitReason}. Free plan soft-caps keep answers calm for everyone.
+          </AppText>
+        ) : null}
       </View>
 
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
-            <Feather name="x" size={20} color={colors.brand.ink} />
-          </Pressable>
-          <View style={styles.titleWrap}>
-            <AppText weight="semibold">Ask BumpAtlas</AppText>
-            <AppText variant="caption" tone="secondary">
-              Educational · not medical advice
-            </AppText>
-          </View>
-          <Pressable
-            onPress={clearConversation}
-            hitSlop={12}
-            style={styles.closeBtn}
-            accessibilityLabel="Clear conversation"
-          >
-            <Feather name="trash-2" size={18} color={colors.brand.ink} />
-          </Pressable>
-        </View>
-
-        <View style={styles.quotaWrap}>
-          <QuotaMeter
-            used={aiMessagesUsed}
-            limit={aiDailyLimit}
-            label="AI messages today"
-            onUpgrade={dailyExhausted ? () => router.push(appRoutes.paywall("ai-quota")) : undefined}
-          />
-          <QuotaMeter
-            used={aiHourlyUsed}
-            limit={aiHourlyLimit}
-            label="AI messages this hour"
-            exhaustedLabel="Hourly limit reached · View premium"
-            onUpgrade={
-              hourlyExhausted && !dailyExhausted
-                ? () => router.push(appRoutes.paywall("ai-quota"))
-                : undefined
-            }
-          />
-          {limitReason ? (
-            <AppText variant="caption" tone="secondary">
-              {limitReason}. Free plan soft-caps keep answers calm for everyone.
-            </AppText>
-          ) : null}
-        </View>
-
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          <ScrollView contentContainerStyle={styles.thread} showsVerticalScrollIndicator={false}>
-            {thread.map((item, index) => (
-              <View key={item.role === "assistant" ? item.id : `user-${index}`}>
-                <View
-                  style={[
-                    styles.bubble,
-                    item.role === "user" ? styles.userBubble : styles.aiBubble,
-                  ]}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.thread} showsVerticalScrollIndicator={false}>
+          {thread.map((item, index) => (
+            <View key={item.role === "assistant" ? item.id : `user-${index}`}>
+              <View
+                style={[
+                  styles.bubble,
+                  item.role === "user" ? styles.userBubble : styles.aiBubble,
+                ]}
+              >
+                <AppText
+                  variant="bodySmall"
+                  tone={item.role === "user" ? "inverse" : "primary"}
                 >
-                  <AppText
-                    variant="bodySmall"
-                    tone={item.role === "user" ? "inverse" : "primary"}
-                  >
-                    {item.text}
-                  </AppText>
-                  {item.role === "assistant" && item.citation ? (
-                    <CitationCard
-                      citation={item.citation}
-                      onOpen={() =>
-                        item.citation?.guideId &&
-                        router.push(appRoutes.guideArticle(item.citation.guideId))
-                      }
-                    />
-                  ) : null}
-                  {item.role === "assistant" && item.escalate ? (
-                    <EscalateCard
-                      onEmergency={() =>
-                        Alert.alert(
-                          "Emergency",
-                          "If you or your baby are in immediate danger, call your local emergency number.",
-                        )
-                      }
-                    />
-                  ) : null}
-                </View>
-                {item.role === "assistant" && item.id !== "intro" ? (
-                  <Pressable
-                    onPress={() => reportAnswer(item.id)}
-                    style={styles.reportRow}
-                    disabled={reportedIds.includes(item.id)}
-                  >
-                    <Feather name="flag" size={12} color={colors.text.muted} />
-                    <AppText variant="caption" tone="secondary">
-                      {reportedIds.includes(item.id) ? "Reported" : "Report answer"}
-                    </AppText>
-                  </Pressable>
+                  {item.text}
+                </AppText>
+                {item.role === "assistant" && item.citation ? (
+                  <CitationCard
+                    citation={item.citation}
+                    onOpen={() =>
+                      item.citation?.guideId &&
+                      router.push(appRoutes.guideArticle(item.citation.guideId))
+                    }
+                  />
+                ) : null}
+                {item.role === "assistant" && item.escalate ? (
+                  <EscalateCard
+                    onEmergency={() =>
+                      Alert.alert(
+                        "Emergency",
+                        "If you or your baby are in immediate danger, call your local emergency number.",
+                      )
+                    }
+                  />
                 ) : null}
               </View>
-            ))}
-
-            {pendingSummary ? (
-              <SoftPanel style={styles.consentPanel}>
-                <AppText weight="semibold">Week summary consent</AppText>
+              {item.role === "assistant" && item.id !== "intro" ? (
                 <Pressable
-                  style={styles.consentRow}
-                  onPress={() => setWeekSummaryConsent(!weekSummaryConsent)}
+                  onPress={() => reportAnswer(item.id)}
+                  style={styles.reportRow}
+                  disabled={reportedIds.includes(item.id)}
                 >
-                  <View style={[styles.checkbox, weekSummaryConsent && styles.checkboxOn]}>
-                    {weekSummaryConsent ? (
-                      <Feather name="check" size={12} color={colors.text.inverse} />
-                    ) : null}
-                  </View>
-                  <AppText variant="bodySmall" style={styles.consentCopy}>
-                    I consent to summarizing my selected week of text memories
+                  <Feather name="flag" size={12} color={colors.text.muted} />
+                  <AppText variant="caption" tone="secondary">
+                    {reportedIds.includes(item.id) ? "Reported" : "Report answer"}
                   </AppText>
                 </Pressable>
-                <Pressable
-                  style={[styles.consentBtn, !weekSummaryConsent && styles.consentBtnDisabled]}
-                  onPress={confirmSummaryWithConsent}
-                  disabled={!weekSummaryConsent}
-                >
-                  <AppText variant="caption" weight="semibold" tone="inverse">
-                    Continue with summary
-                  </AppText>
-                </Pressable>
-              </SoftPanel>
-            ) : null}
-
-            <View style={styles.suggestions}>
-              {SUGGESTIONS.map((suggestion) => (
-                <Pressable
-                  key={suggestion}
-                  style={styles.suggestion}
-                  onPress={() => send(suggestion)}
-                  disabled={exhausted}
-                >
-                  <AppText variant="caption" weight="semibold" style={styles.suggestionText}>
-                    {suggestion}
-                  </AppText>
-                </Pressable>
-              ))}
+              ) : null}
             </View>
-          </ScrollView>
+          ))}
 
-          <View style={styles.composer}>
-            <TextInput
-              value={message}
-              onChangeText={setMessage}
-              placeholder={limitReason ?? "Ask something calm..."}
-              placeholderTextColor={colors.text.muted}
-              style={styles.input}
-              editable={!exhausted}
-            />
-            <Pressable
-              onPress={() => send(message)}
-              disabled={message.trim().length === 0 || exhausted}
-              style={[styles.sendBtn, (message.trim().length === 0 || exhausted) && styles.sendDisabled]}
-            >
-              <Feather name="arrow-up" size={20} color={colors.text.inverse} />
-            </Pressable>
+          {pendingSummary ? (
+            <SoftPanel style={styles.consentPanel}>
+              <AppText weight="semibold">Week summary consent</AppText>
+              <Pressable
+                style={styles.consentRow}
+                onPress={() => setWeekSummaryConsent(!weekSummaryConsent)}
+              >
+                <View style={[styles.checkbox, weekSummaryConsent && styles.checkboxOn]}>
+                  {weekSummaryConsent ? (
+                    <Feather name="check" size={12} color={colors.text.inverse} />
+                  ) : null}
+                </View>
+                <AppText variant="bodySmall" style={styles.consentCopy}>
+                  I consent to summarizing my selected week of text memories
+                </AppText>
+              </Pressable>
+              <Pressable
+                style={[styles.consentBtn, !weekSummaryConsent && styles.consentBtnDisabled]}
+                onPress={confirmSummaryWithConsent}
+                disabled={!weekSummaryConsent}
+              >
+                <AppText variant="caption" weight="semibold" tone="inverse">
+                  Continue with summary
+                </AppText>
+              </Pressable>
+            </SoftPanel>
+          ) : null}
+
+          <View style={styles.suggestions}>
+            {SUGGESTIONS.map((suggestion) => (
+              <Pressable
+                key={suggestion}
+                style={styles.suggestion}
+                onPress={() => send(suggestion)}
+                disabled={exhausted}
+              >
+                <AppText variant="caption" weight="semibold" style={styles.suggestionText}>
+                  {suggestion}
+                </AppText>
+              </Pressable>
+            ))}
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </View>
+        </ScrollView>
+
+        <View style={styles.composer}>
+          <TextInput
+            value={message}
+            onChangeText={setMessage}
+            placeholder={limitReason ?? "Ask something calm..."}
+            placeholderTextColor={colors.text.muted}
+            style={styles.input}
+            editable={!exhausted}
+            accessibilityLabel="Ask BumpAtlas"
+            allowFontScaling
+            maxFontSizeMultiplier={1.35}
+          />
+          <Pressable
+            onPress={() => send(message)}
+            disabled={message.trim().length === 0 || exhausted}
+            style={[styles.sendBtn, (message.trim().length === 0 || exhausted) && styles.sendDisabled]}
+            accessibilityLabel="Send message"
+            accessibilityRole="button"
+          >
+            <Feather name="arrow-up" size={20} color={colors.text.inverse} />
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F8EDE6" },
-  atmosphere: { ...StyleSheet.absoluteFill, overflow: "hidden" },
-  blob: {
-    position: "absolute",
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: "rgba(229,155,138,0.22)",
-    top: -60,
-    right: -50,
-  },
-  safe: { flex: 1 },
-  flex: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.page,
-    paddingVertical: spacing.md,
-  },
-  closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "rgba(255,255,255,0.78)",
     alignItems: "center",
     justifyContent: "center",
   },
-  titleWrap: { alignItems: "center", gap: 2 },
-  quotaWrap: { paddingHorizontal: spacing.page, paddingBottom: spacing.sm, gap: spacing.sm },
+  flex: { flex: 1 },
+  quotaWrap: { paddingBottom: spacing.sm, gap: spacing.sm },
   thread: {
-    paddingHorizontal: spacing.page,
     paddingBottom: spacing.xl,
     gap: spacing.sm,
   },
@@ -420,8 +397,7 @@ const styles = StyleSheet.create({
   composer: {
     flexDirection: "row",
     gap: spacing.sm,
-    paddingHorizontal: spacing.page,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.sm,
     paddingTop: spacing.sm,
     alignItems: "center",
   },

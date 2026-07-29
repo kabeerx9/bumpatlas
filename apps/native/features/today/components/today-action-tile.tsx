@@ -12,6 +12,7 @@ type TodayActionTileProps = {
   title: string;
   detail?: string;
   done?: boolean;
+  emphasized?: boolean;
   onPress: () => void;
 };
 
@@ -21,19 +22,29 @@ export function TodayActionTile({
   title,
   detail,
   done,
+  emphasized,
   onPress,
 }: TodayActionTileProps) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={`${label}: ${title}${emphasized ? ", your focus" : ""}`}
       onPress={onPress}
-      style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.tile,
+        emphasized && styles.emphasized,
+        pressed && styles.pressed,
+      ]}
     >
       <View style={styles.top}>
-        <View style={styles.iconWrap}>
-          <Feather name={icon} size={18} color={colors.brand.peach} />
+        <View style={[styles.iconWrap, emphasized && styles.iconEmphasized]}>
+          <Feather name={icon} size={18} color={emphasized ? colors.text.inverse : colors.brand.peach} />
         </View>
-        {done ? (
+        {emphasized ? (
+          <AppText variant="caption" weight="semibold" style={styles.focusChip}>
+            Focus
+          </AppText>
+        ) : done ? (
           <View style={styles.done}>
             <Feather name="check" size={11} color={colors.text.inverse} />
           </View>
@@ -64,6 +75,11 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: 4,
   },
+  emphasized: {
+    borderWidth: 1.5,
+    borderColor: colors.brand.peach,
+    backgroundColor: "rgba(255,248,244,0.95)",
+  },
   pressed: {
     opacity: 0.92,
     transform: [{ scale: 0.985 }],
@@ -81,6 +97,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.peachSoft,
     alignItems: "center",
     justifyContent: "center",
+  },
+  iconEmphasized: {
+    backgroundColor: colors.brand.peach,
+  },
+  focusChip: {
+    color: colors.brand.peach,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
   },
   done: {
     width: 22,

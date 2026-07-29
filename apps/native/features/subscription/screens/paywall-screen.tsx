@@ -4,14 +4,13 @@ import { useState } from "react";
 import {
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
 import { mockPaywall } from "@/features/mock/demo-data";
+import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 
 type BillingCycle = "annual" | "monthly";
 
@@ -50,119 +49,12 @@ export function PaywallScreen() {
   }
 
   return (
-    <View style={styles.root}>
-      <View style={styles.atmosphere} pointerEvents="none">
-        <View style={styles.blob} />
-        <View style={styles.blobSoft} />
-      </View>
-
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            style={styles.closeBtn}
-            accessibilityLabel="Close paywall"
-          >
-            <Feather name="x" size={20} color={colors.brand.ink} />
-          </Pressable>
-          <AppText weight="semibold">Premium</AppText>
-          <View style={styles.headerSpacer} />
-        </View>
-
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scroll}
-        >
-          <View style={styles.hero}>
-            <AppText variant="caption" style={styles.heroEyebrow}>
-              Household plan
-            </AppText>
-            <AppText variant="heading" style={styles.heroTitle}>
-              {headline}
-            </AppText>
-            <AppText variant="bodySmall" style={styles.heroCopy}>
-              One subscription covers everyone in your household — partners, grandparents, and
-              caregivers you invite.
-            </AppText>
-          </View>
-
-          <View style={styles.cycleRow}>
-            <Pressable
-              onPress={() => setCycle("annual")}
-              style={[styles.cycleChip, cycle === "annual" && styles.cycleChipActive]}
-            >
-              <AppText
-                variant="caption"
-                weight="semibold"
-                style={cycle === "annual" ? styles.cycleTextActive : styles.cycleText}
-              >
-                Annual · best value
-              </AppText>
-            </Pressable>
-            <Pressable
-              onPress={() => setCycle("monthly")}
-              style={[styles.cycleChip, cycle === "monthly" && styles.cycleChipActive]}
-            >
-              <AppText
-                variant="caption"
-                weight="semibold"
-                style={cycle === "monthly" ? styles.cycleTextActive : styles.cycleText}
-              >
-                Monthly
-              </AppText>
-            </Pressable>
-          </View>
-
-          <View style={styles.priceCard}>
-            <AppText variant="heading" style={styles.price}>
-              {price}
-              <AppText variant="body" style={styles.priceSuffix}>
-                {cycle === "annual" ? "/yr" : "/mo"}
-              </AppText>
-            </AppText>
-            <AppText variant="bodySmall" tone="secondary">
-              {priceDetail}
-            </AppText>
-            {cycle === "annual" ? (
-              <View style={styles.savingsBadge}>
-                <Feather name="gift" size={14} color={colors.brand.peach} />
-                <AppText variant="caption" weight="semibold" style={styles.savingsCopy}>
-                  Save vs monthly · founding offer active
-                </AppText>
-              </View>
-            ) : null}
-          </View>
-
-          <View style={styles.section}>
-            <AppText weight="semibold">Premium includes</AppText>
-            {mockPaywall.premiumIncludes.map((item) => (
-              <View key={item} style={styles.listRow}>
-                <Feather name="check" size={16} color={colors.brand.peach} />
-                <AppText variant="bodySmall" style={styles.listCopy}>
-                  {item}
-                </AppText>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.freeSection}>
-            <AppText weight="semibold">Free forever — always</AppText>
-            <AppText variant="bodySmall" tone="secondary" style={styles.freeIntro}>
-              We never paywall basic journal, invite, export, or deletion.
-            </AppText>
-            {mockPaywall.freeForever.map((item) => (
-              <View key={item} style={styles.listRow}>
-                <Feather name="heart" size={14} color={colors.text.muted} />
-                <AppText variant="bodySmall" tone="secondary" style={styles.listCopy}>
-                  {item}
-                </AppText>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-
-        <View style={styles.footer}>
+    <SoftStackShell
+      title="Premium"
+      closeIcon="x"
+      onBack={() => router.back()}
+      footer={
+        <>
           <Button size="lg" onPress={handleSubscribe}>
             Start household premium
           </Button>
@@ -179,61 +71,100 @@ export function PaywallScreen() {
           <AppText variant="caption" tone="secondary" style={styles.legal}>
             Billed through App Store or Google Play. Manage or cancel in store settings.
           </AppText>
-        </View>
-      </SafeAreaView>
-    </View>
+        </>
+      }
+    >
+      <View style={styles.hero}>
+        <AppText variant="caption" style={styles.heroEyebrow}>
+          Household plan
+        </AppText>
+        <AppText variant="heading" style={styles.heroTitle}>
+          {headline}
+        </AppText>
+        <AppText variant="bodySmall" style={styles.heroCopy}>
+          One subscription covers everyone in your household — partners, grandparents, and
+          caregivers you invite.
+        </AppText>
+      </View>
+
+      <View style={styles.cycleRow}>
+        <Pressable
+          onPress={() => setCycle("annual")}
+          style={[styles.cycleChip, cycle === "annual" && styles.cycleChipActive]}
+        >
+          <AppText
+            variant="caption"
+            weight="semibold"
+            style={cycle === "annual" ? styles.cycleTextActive : styles.cycleText}
+          >
+            Annual · best value
+          </AppText>
+        </Pressable>
+        <Pressable
+          onPress={() => setCycle("monthly")}
+          style={[styles.cycleChip, cycle === "monthly" && styles.cycleChipActive]}
+        >
+          <AppText
+            variant="caption"
+            weight="semibold"
+            style={cycle === "monthly" ? styles.cycleTextActive : styles.cycleText}
+          >
+            Monthly
+          </AppText>
+        </Pressable>
+      </View>
+
+      <View style={styles.priceCard}>
+        <AppText variant="heading" style={styles.price}>
+          {price}
+          <AppText variant="body" style={styles.priceSuffix}>
+            {cycle === "annual" ? "/yr" : "/mo"}
+          </AppText>
+        </AppText>
+        <AppText variant="bodySmall" tone="secondary">
+          {priceDetail}
+        </AppText>
+        {cycle === "annual" ? (
+          <View style={styles.savingsBadge}>
+            <Feather name="gift" size={14} color={colors.brand.peach} />
+            <AppText variant="caption" weight="semibold" style={styles.savingsCopy}>
+              Save vs monthly · founding offer active
+            </AppText>
+          </View>
+        ) : null}
+      </View>
+
+      <View style={styles.section}>
+        <AppText weight="semibold">Premium includes</AppText>
+        {mockPaywall.premiumIncludes.map((item) => (
+          <View key={item} style={styles.listRow}>
+            <Feather name="check" size={16} color={colors.brand.peach} />
+            <AppText variant="bodySmall" style={styles.listCopy}>
+              {item}
+            </AppText>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.freeSection}>
+        <AppText weight="semibold">Free forever — always</AppText>
+        <AppText variant="bodySmall" tone="secondary" style={styles.freeIntro}>
+          We never paywall basic journal, invite, export, or deletion.
+        </AppText>
+        {mockPaywall.freeForever.map((item) => (
+          <View key={item} style={styles.listRow}>
+            <Feather name="heart" size={14} color={colors.text.muted} />
+            <AppText variant="bodySmall" tone="secondary" style={styles.listCopy}>
+              {item}
+            </AppText>
+          </View>
+        ))}
+      </View>
+    </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: "#F8EDE6",
-  },
-  atmosphere: {
-    ...StyleSheet.absoluteFill,
-    overflow: "hidden",
-  },
-  blob: {
-    position: "absolute",
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: "rgba(229,155,138,0.26)",
-    top: -100,
-    right: -80,
-  },
-  blobSoft: {
-    position: "absolute",
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: "rgba(243,199,188,0.28)",
-    bottom: 160,
-    left: -80,
-  },
-  safe: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.page,
-    paddingVertical: spacing.md,
-  },
-  closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerSpacer: { width: 40 },
-  scroll: {
-    paddingHorizontal: spacing.page,
-    paddingBottom: spacing.lg,
-    gap: spacing.lg,
-  },
   hero: {
     borderRadius: 28,
     backgroundColor: colors.brand.peach,
@@ -324,15 +255,6 @@ const styles = StyleSheet.create({
   listCopy: {
     flex: 1,
     lineHeight: 20,
-  },
-  footer: {
-    paddingHorizontal: spacing.page,
-    paddingBottom: spacing.xl,
-    paddingTop: spacing.md,
-    gap: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(44,36,32,0.06)",
-    backgroundColor: "rgba(248,237,230,0.92)",
   },
   restoreBtn: {
     alignItems: "center",

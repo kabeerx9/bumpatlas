@@ -1,12 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import type { ComponentProps } from "react";
+import type { ColorValue } from "react-native";
 
 import { colors } from "@/design-system";
 
 type IconName = ComponentProps<typeof Feather>["name"];
 
-function TabIcon({ color, name }: { color: string; name: IconName }) {
+function TabIcon({ color, name }: { color: ColorValue; name: IconName }) {
   return <Feather name={name} size={20} color={color} />;
 }
 

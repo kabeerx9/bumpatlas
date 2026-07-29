@@ -1,12 +1,12 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
 import { mockGroupPosts } from "@/features/mock/demo-data";
 import { HighRiskEscalatePanel } from "@/features/shared/components/high-risk-escalate";
+import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 
 const REASONS = [
   "Medical advice for my child",
@@ -43,94 +43,68 @@ export function ConnectReportScreen() {
   }
 
   return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
-            <Feather name="x" size={20} color={colors.brand.ink} />
-          </Pressable>
-          <AppText weight="semibold">Report</AppText>
-          <View style={styles.iconBtn} />
-        </View>
-
-        <ScrollView contentContainerStyle={styles.scroll}>
-          {submitted ? (
-            <View style={styles.success}>
-              <Feather name="check-circle" size={24} color={colors.brand.peach} />
-              <AppText weight="semibold">Report received</AppText>
-              <AppText variant="bodySmall" tone="secondary" align="center">
-                Founders review reports during beta — usually within a few hours.
-                {selected === CSAM_REASON
-                  ? " CSAM reports are escalated immediately for priority review and platform action."
-                  : isHighRisk
-                    ? " This report was flagged for priority safety review."
-                    : ""}
-              </AppText>
-            </View>
-          ) : (
-            <>
-              <AppText variant="body" tone="secondary">
-                Why are you reporting this post from {post.author}?
-              </AppText>
-              <View style={styles.preview}>
-                <AppText variant="bodySmall" tone="secondary" numberOfLines={3}>
-                  {post.body}
-                </AppText>
-              </View>
-              {REASONS.map((reason) => (
-                <Pressable
-                  key={reason}
-                  onPress={() => selectReason(reason)}
-                  style={[styles.reason, selected === reason && styles.reasonActive]}
-                >
-                  <AppText variant="bodySmall">{reason}</AppText>
-                </Pressable>
-              ))}
-
-              {isHighRisk ? (
-                <HighRiskEscalatePanel
-                  onAcknowledge={() => setHighRiskAcknowledged(true)}
-                  onKeepReporting={() => setHighRiskAcknowledged(true)}
-                />
-              ) : null}
-            </>
-          )}
-        </ScrollView>
-
-        {!submitted ? (
-          <View style={styles.footer}>
-            <Button size="lg" disabled={!canSubmit} onPress={() => setSubmitted(true)}>
-              Submit report
-            </Button>
-          </View>
+    <SoftStackShell
+      title="Report"
+      closeIcon="x"
+      onBack={() => router.back()}
+      footer={
+        submitted ? (
+          <Button size="lg" onPress={() => router.back()}>
+            Done
+          </Button>
         ) : (
-          <View style={styles.footer}>
-            <Button size="lg" onPress={() => router.back()}>
-              Done
-            </Button>
+          <Button size="lg" disabled={!canSubmit} onPress={() => setSubmitted(true)}>
+            Submit report
+          </Button>
+        )
+      }
+    >
+      {submitted ? (
+        <View style={styles.success}>
+          <Feather name="check-circle" size={24} color={colors.brand.peach} />
+          <AppText weight="semibold">Report received</AppText>
+          <AppText variant="bodySmall" tone="secondary" align="center">
+            Founders review reports during beta — usually within a few hours.
+            {selected === CSAM_REASON
+              ? " CSAM reports are escalated immediately for priority review and platform action."
+              : isHighRisk
+                ? " This report was flagged for priority safety review."
+                : ""}
+          </AppText>
+        </View>
+      ) : (
+        <>
+          <AppText variant="body" tone="secondary">
+            Why are you reporting this post from {post.author}?
+          </AppText>
+          <View style={styles.preview}>
+            <AppText variant="bodySmall" tone="secondary" numberOfLines={3}>
+              {post.body}
+            </AppText>
           </View>
-        )}
-      </SafeAreaView>
-    </View>
+          {REASONS.map((reason) => (
+            <Pressable
+              key={reason}
+              onPress={() => selectReason(reason)}
+              style={[styles.reason, selected === reason && styles.reasonActive]}
+            >
+              <AppText variant="bodySmall">{reason}</AppText>
+            </Pressable>
+          ))}
+
+          {isHighRisk ? (
+            <HighRiskEscalatePanel
+              onAcknowledge={() => setHighRiskAcknowledged(true)}
+              onKeepReporting={() => setHighRiskAcknowledged(true)}
+            />
+          ) : null}
+        </>
+      )}
+    </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F8EDE6" },
-  safe: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.page,
-    paddingVertical: spacing.md,
-  },
-  iconBtn: { width: 44, height: 44 },
-  scroll: {
-    paddingHorizontal: spacing.page,
-    gap: spacing.sm,
-    paddingBottom: spacing.xl,
-  },
   preview: {
     borderRadius: radius.lg,
     backgroundColor: "rgba(255,255,255,0.78)",
@@ -153,9 +127,5 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     borderRadius: radius.xl,
     backgroundColor: colors.brand.peachSoft,
-  },
-  footer: {
-    paddingHorizontal: spacing.page,
-    paddingBottom: spacing.xl,
   },
 });

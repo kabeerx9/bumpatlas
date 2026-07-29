@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, Button, colors, spacing } from "@/design-system";
-import { mockGroupPosts, mockToday } from "@/features/mock/demo-data";
-import { mockPostLimits, mockStageGroups } from "@/features/mock/mock-content";
+import { mockToday } from "@/features/mock/demo-data";
+import { mockStageGroups } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftHeader } from "@/features/shared/components/soft-header";
 import { SoftPanel } from "@/features/shared/components/soft-panel";
@@ -14,7 +14,6 @@ import { appRoutes } from "@/navigation/routes";
 
 export function ConnectScreen() {
   const router = useRouter();
-  const group = mockToday.connectCard;
   const {
     connectScenario,
     likedPosts,
@@ -23,10 +22,15 @@ export function ConnectScreen() {
     blockAuthor,
     activeGroupId,
     postsUsedToday,
+    commentsUsedToday,
+    commentsDailyLimit,
     communityRulesAccepted,
     acceptCommunityRules,
     connectRulesSeen,
     markConnectRulesSeen,
+    accountAgeDays,
+    linksAllowed,
+    getGroupFeed,
   } = useMockUi();
   const [showBlockMenu, setShowBlockMenu] = useState<string | null>(null);
   const [rulesOpen, setRulesOpen] = useState(!connectRulesSeen && !communityRulesAccepted);
@@ -36,12 +40,15 @@ export function ConnectScreen() {
     [activeGroupId],
   );
 
-  const visiblePosts = useMemo(
-    () => mockGroupPosts.filter((post) => !blockedAuthorIds.includes(post.authorId)),
-    [blockedAuthorIds],
-  );
+  const groupPrompt = activeGroup.prompt ?? mockToday.connectCard.prompt;
 
-  const isWarming = connectScenario === "warming";
+  const visiblePosts = useMemo(() => {
+    return getGroupFeed(activeGroupId).filter(
+      (post) => !blockedAuthorIds.includes(post.authorId),
+    );
+  }, [activeGroupId, blockedAuthorIds, getGroupFeed]);
+
+  const isWarming = connectScenario === "warming" || visiblePosts.length === 0;
 
   function confirmBlock(authorId: string, authorName: string) {
     Alert.alert(
@@ -110,8 +117,9 @@ export function ConnectScreen() {
       ) : null}
 
       <AppText variant="caption" tone="secondary">
-        {postsUsedToday} of {mockPostLimits.postsLimit} posts today · {activeGroup.memberCount}{" "}
-        members
+        {postsUsedToday} of 10 posts today · comments {commentsUsedToday}/{commentsDailyLimit} ·{" "}
+        {activeGroup.memberCount} members
+        {!linksAllowed ? ` · links paused (day ${accountAgeDays}/14)` : ""}
       </AppText>
 
       <Pressable onPress={() => router.push(appRoutes.connectGroups)} style={styles.changeGroup}>
@@ -143,10 +151,10 @@ export function ConnectScreen() {
               Today's prompt
             </AppText>
             <AppText variant="title" tone="inverse">
-              {group.prompt}
+              {groupPrompt}
             </AppText>
             <AppText variant="bodySmall" style={styles.promptMeta}>
-              {group.replyCount} replies today · keep it kind
+              {visiblePosts.length} recent notes · keep it kind
             </AppText>
             <Button
               variant="ghost"
@@ -182,7 +190,12 @@ export function ConnectScreen() {
                   </AppText>
                 </Pressable>
                 <View style={styles.postActions}>
-                  <Pressable style={styles.action} onPress={() => togglePostLike(post.id)}>
+                  <Pressable
+                    style={styles.action}
+                    onPress={() => togglePostLike(post.id)}
+                    accessibilityLabel={liked ? "Unlike post" : "Like post"}
+                    hitSlop={8}
+                  >
                     <Feather
                       name="heart"
                       size={14}
@@ -195,6 +208,8 @@ export function ConnectScreen() {
                   <Pressable
                     style={styles.action}
                     onPress={() => router.push(appRoutes.connectPost(post.id))}
+                    accessibilityLabel="Reply to post"
+                    hitSlop={8}
                   >
                     <Feather name="message-circle" size={14} color={colors.brand.peach} />
                     <AppText variant="caption" tone="secondary">
@@ -204,6 +219,8 @@ export function ConnectScreen() {
                   <Pressable
                     style={styles.action}
                     onPress={() => router.push(appRoutes.connectReport(post.id))}
+                    accessibilityLabel="Report post"
+                    hitSlop={8}
                   >
                     <Feather name="flag" size={14} color={colors.text.muted} />
                     <AppText variant="caption" tone="secondary">
@@ -299,7 +316,14 @@ const styles = StyleSheet.create({
   },
   commentCount: { marginTop: spacing.xs },
   postActions: { flexDirection: "row", gap: spacing.lg, marginTop: spacing.sm },
-  action: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  action: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
   blockRow: {
     marginTop: spacing.sm,
     paddingTop: spacing.sm,

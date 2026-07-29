@@ -9,11 +9,9 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   AppText,
-  Atmosphere,
   BrandWordmark,
   Button,
   colors,
@@ -22,6 +20,7 @@ import {
 } from "@/design-system";
 import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
 import { pushDecoratedUrl } from "@/features/auth/utils/navigation";
+import { SoftScreen } from "@/features/shared/components/soft-screen";
 import { appRoutes } from "@/navigation/routes";
 
 export function SignUpScreen() {
@@ -72,8 +71,7 @@ export function SignUpScreen() {
     signUp.missingFields.length === 0
   ) {
     return (
-      <Atmosphere>
-        <SafeAreaView style={styles.safe}>
+      <SoftScreen scroll={false} edges={["top", "bottom"]}>
           <View style={styles.formWrap}>
             <BrandWordmark size="md" markOnly style={styles.logo} />
             <AppText variant="heading" align="center">
@@ -107,14 +105,12 @@ export function SignUpScreen() {
               Resend Code
             </Button>
           </View>
-        </SafeAreaView>
-      </Atmosphere>
+      </SoftScreen>
     );
   }
 
   return (
-    <Atmosphere>
-      <SafeAreaView style={styles.safe}>
+    <SoftScreen scroll={false} edges={["top", "bottom"]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.flex}
@@ -207,8 +203,7 @@ export function SignUpScreen() {
             <View nativeID="clerk-captcha" />
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Atmosphere>
+    </SoftScreen>
   );
 }
 

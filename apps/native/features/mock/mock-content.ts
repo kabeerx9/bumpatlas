@@ -399,30 +399,87 @@ export const mockStageGroups = [
     name: "Pregnancy circle",
     description: "Expecting parents · text-only support",
     memberCount: 42,
+    prompt: "What’s one thing that made today feel a little softer?",
+    posts: [
+      {
+        id: "gp1",
+        authorId: "u-leia",
+        author: "Leia · week 24",
+        body: "Third trimester naps hit different. Grateful for a quiet sofa hour.",
+        reactions: 9,
+        comments: [
+          {
+            id: "gc1",
+            authorId: "u-sam",
+            author: "Sam · week 28",
+            body: "Same. Rest counts.",
+            createdAt: "1h ago",
+          },
+        ],
+      },
+    ],
   },
   {
     id: "g-06",
     name: "0–6 months circle",
     description: "Newborns & early weeks",
     memberCount: 68,
+    prompt: "What’s one thing that made today easier?",
   },
   {
     id: "g-618",
     name: "6–18 months circle",
     description: "Sitting, crawling, first foods",
     memberCount: 51,
+    prompt: "What new tiny skill surprised you this week?",
+    posts: [
+      {
+        id: "gp2",
+        authorId: "u-noah",
+        author: "Noah · 11 months",
+        body: "First successful self-feed with a soft spoon. Floor was a crime scene.",
+        reactions: 14,
+        comments: [],
+      },
+    ],
   },
   {
     id: "g-tod",
     name: "Toddler / preschool",
     description: "Walking, talking, big feelings",
     memberCount: 37,
+    prompt: "What boundary felt kind today?",
+    posts: [
+      {
+        id: "gp3",
+        authorId: "u-rim",
+        author: "Rim · 2y",
+        body: "We named the feeling and held the limit. Hard, but calmer than yesterday.",
+        reactions: 11,
+        comments: [],
+      },
+    ],
   },
   {
     id: "g-well",
     name: "Parent wellbeing",
     description: "Care for the caregiver",
     memberCount: 29,
+    prompt: "What did you do for yourself in under five minutes?",
+    posts: [] as Array<{
+      id: string;
+      authorId: string;
+      author: string;
+      body: string;
+      reactions: number;
+      comments: Array<{
+        id: string;
+        authorId: string;
+        author: string;
+        body: string;
+        createdAt: string;
+      }>;
+    }>,
   },
 ];
 

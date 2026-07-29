@@ -1,4 +1,3 @@
-import { Feather } from "@expo/vector-icons";
 import { useClerk, useUser } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -12,13 +11,13 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AppText, Atmosphere, Button, colors, radius, spacing } from "@/design-system";
+import { AppText, Button, colors, radius, spacing } from "@/design-system";
 import {
   useDeleteAccountMutation,
   useUpdateAccountMutation,
 } from "@/features/profile/mutations";
+import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { ApiError } from "@/lib/api";
 import { appRoutes } from "@/navigation/routes";
 
@@ -84,111 +83,91 @@ export function AccountScreen() {
   const deleting = deleteAccountMutation.isPending;
 
   return (
-    <Atmosphere>
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
-            <Feather name="arrow-left" size={20} color={colors.brand.ink} />
-          </Pressable>
-          <AppText weight="semibold">Account</AppText>
-          <View style={styles.iconBtn} />
-        </View>
+    <SoftStackShell title="Account" onBack={() => router.back()} scroll={false}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.flex}
+      >
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <AppText variant="body" tone="secondary">
+            Update your profile or permanently delete your account and data.
+          </AppText>
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.flex}
-        >
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-            <AppText variant="body" tone="secondary">
-              Update your profile or permanently delete your account and data.
+          <View style={styles.card}>
+            <AppText weight="semibold">Profile</AppText>
+            <AppText variant="label" tone="secondary">
+              First name
             </AppText>
+            <TextInput
+              style={styles.input}
+              value={firstName}
+              onChangeText={setFirstName}
+              autoCapitalize="words"
+            />
+            <AppText variant="label" tone="secondary">
+              Last name
+            </AppText>
+            <TextInput
+              style={styles.input}
+              value={lastName}
+              onChangeText={setLastName}
+              autoCapitalize="words"
+            />
+            {saveError ? (
+              <AppText variant="bodySmall" style={styles.error}>
+                {saveError}
+              </AppText>
+            ) : null}
+            {saveSuccess ? (
+              <AppText variant="bodySmall" style={styles.success}>
+                Profile updated.
+              </AppText>
+            ) : null}
+            <Button disabled={saving} onPress={() => void handleSave()}>
+              {saving ? "Saving..." : "Save changes"}
+            </Button>
+          </View>
 
-            <View style={styles.card}>
-              <AppText weight="semibold">Profile</AppText>
-              <AppText variant="label" tone="secondary">
-                First name
+          <View style={[styles.card, styles.dangerCard]}>
+            <AppText weight="semibold" style={styles.dangerTitle}>
+              Delete account
+            </AppText>
+            <AppText variant="bodySmall" tone="secondary">
+              Removes your account, authored posts, AI history, and household membership. Export
+              first if you want a copy.
+            </AppText>
+            <AppText variant="label" tone="secondary">
+              Type DELETE to confirm
+            </AppText>
+            <TextInput
+              style={styles.input}
+              value={deleteConfirmation}
+              onChangeText={setDeleteConfirmation}
+              placeholder="DELETE"
+              autoCapitalize="characters"
+            />
+            {deleteError ? (
+              <AppText variant="bodySmall" style={styles.error}>
+                {deleteError}
               </AppText>
-              <TextInput
-                style={styles.input}
-                value={firstName}
-                onChangeText={setFirstName}
-                autoCapitalize="words"
-              />
-              <AppText variant="label" tone="secondary">
-                Last name
-              </AppText>
-              <TextInput
-                style={styles.input}
-                value={lastName}
-                onChangeText={setLastName}
-                autoCapitalize="words"
-              />
-              {saveError ? (
-                <AppText variant="bodySmall" style={styles.error}>
-                  {saveError}
-                </AppText>
-              ) : null}
-              {saveSuccess ? (
-                <AppText variant="bodySmall" style={styles.success}>
-                  Profile updated.
-                </AppText>
-              ) : null}
-              <Button disabled={saving} onPress={() => void handleSave()}>
-                {saving ? "Saving..." : "Save changes"}
-              </Button>
-            </View>
-
-            <View style={[styles.card, styles.dangerCard]}>
-              <AppText weight="semibold" style={styles.dangerTitle}>
-                Delete account
-              </AppText>
-              <AppText variant="bodySmall" tone="secondary">
-                Removes your account, authored posts, AI history, and household membership. Export
-                first if you want a copy.
-              </AppText>
-              <AppText variant="label" tone="secondary">
-                Type DELETE to confirm
-              </AppText>
-              <TextInput
-                style={styles.input}
-                value={deleteConfirmation}
-                onChangeText={setDeleteConfirmation}
-                placeholder="DELETE"
-                autoCapitalize="characters"
-              />
-              {deleteError ? (
-                <AppText variant="bodySmall" style={styles.error}>
-                  {deleteError}
-                </AppText>
-              ) : null}
-              <Button
-                disabled={!canDelete || deleting}
-                onPress={handleDeletePress}
-                style={styles.dangerBtn}
-              >
-                {deleting ? "Deleting..." : "Delete account"}
-              </Button>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Atmosphere>
+            ) : null}
+            <Button
+              disabled={!canDelete || deleting}
+              onPress={handleDeletePress}
+              style={styles.dangerBtn}
+            >
+              {deleting ? "Deleting..." : "Delete account"}
+            </Button>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
   flex: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.page,
-    paddingVertical: spacing.md,
-  },
-  iconBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   scroll: {
-    paddingHorizontal: spacing.page,
     paddingBottom: spacing.xxl,
     gap: spacing.lg,
   },
