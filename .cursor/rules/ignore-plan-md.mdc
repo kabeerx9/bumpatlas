@@ -1,0 +1,11 @@
+---
+description: Always keep Cursor/agent plan markdown files out of git
+alwaysApply: true
+---
+
+# Ignore plan markdown files
+
+- Never stage or commit Cursor plan files (`*.plan.md`, `.cursor/plans/**`).
+- If a new plan file appears in the working tree, ensure it is covered by `.gitignore` instead of adding it.
+- Do not edit the plan file when the user says not to; treat plans as local agent artifacts.
+- Canonical product/engineering specs under `docs/` (for example blueprints meant for implementation) may still be committed when the user asks — those are not Cursor plan files.

@@ -1,5 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 
+import { handleApiError } from "@/lib/api/errors";
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -9,6 +11,13 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
+      onError: handleApiError,
     },
   },
+});
+
+queryClient.getQueryCache().subscribe((event) => {
+  if (event.type === "updated" && event.query.state.status === "error") {
+    handleApiError(event.query.state.error);
+  }
 });

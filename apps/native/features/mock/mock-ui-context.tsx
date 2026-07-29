@@ -1,7 +1,37 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { mockGroupPosts, mockMemories } from "@/features/mock/demo-data";
 import { mockNotificationCategories, mockPregnancy, mockStageGroups } from "@/features/mock/mock-content";
+import {
+  clearMemoryDrafts,
+  loadMemoryDrafts,
+  saveMemoryDrafts,
+  type PersistedMemoryDraft,
+} from "@/lib/drafts/memory-draft-store";
+import { flushMemoryDrafts } from "@/lib/drafts/flush-drafts";
+import { useConnectivity } from "@/lib/network/use-connectivity";
+import { useMockData } from "@/lib/api/client";
+import {
+  useAiUsageQuery,
+  useEntitlementsQuery,
+  useFamilyQuery,
+  useNotificationPreferencesQuery,
+  useTodayQuery,
+} from "@/lib/api/hooks";
+import * as familiesApi from "@/lib/api/families";
+import * as profilesApi from "@/lib/api/profiles";
+import * as consentsApi from "@/lib/api/consents";
+import * as memoriesApi from "@/lib/api/memories";
+import * as notificationsApi from "@/lib/api/notifications";
 
 type StageMode = "postpartum" | "pregnancy" | "unknown";
 
@@ -59,6 +89,8 @@ export type MemoryDraft = {
   eventDate: string;
   createdAtLabel: string;
   hasPhoto: boolean;
+  photoUri?: string | null;
+  visibility: "HOUSEHOLD" | "PRIVATE";
 };
 
 export type OnboardingProfileInput = {
@@ -80,16 +112,20 @@ type CaptureInput = {
 
 type MockUiState = {
   isOffline: boolean;
-  setOffline: (value: boolean) => void;
+  deviceOffline: boolean;
   dismissOfflineBanner: () => void;
   offlineBannerDismissed: boolean;
   aiMessagesUsed: number;
   incrementAiUsage: () => void;
-  resetAiUsage: () => void;
+  setAiUsage: (usage: {
+    dailyUsed: number;
+    dailyLimit: number;
+    hourlyUsed: number;
+    hourlyLimit: number;
+  }) => void;
   aiDailyLimit: number;
   aiHourlyUsed: number;
   aiHourlyLimit: number;
-  resetAiHourly: () => void;
   likedPosts: Record<string, boolean>;
   togglePostLike: (postId: string) => void;
   blockedAuthorIds: string[];
@@ -102,7 +138,13 @@ type MockUiState = {
   pendingDraft: boolean;
   setPendingDraft: (value: boolean) => void;
   drafts: MemoryDraft[];
-  saveDraft: (input: { body: string; eventDate: string; hasPhoto: boolean }) => void;
+  saveDraft: (input: {
+    body: string;
+    eventDate: string;
+    hasPhoto: boolean;
+    photoUri?: string | null;
+    visibility?: "HOUSEHOLD" | "PRIVATE";
+  }) => void;
   removeDraft: (id: string) => void;
   clearDrafts: () => void;
   connectScenario: "active" | "warming";
@@ -146,7 +188,6 @@ type MockUiState = {
   mediaUploadsUsed: number;
   mediaUploadsLimit: number;
   incrementMediaUpload: () => void;
-  setMediaNearLimit: () => void;
   weekProgress: WeekProgress;
   loopCompletion: LoopCompletion;
   completeCare: () => { awardedBadgeId: string | null };
@@ -165,7 +206,9 @@ type MockUiState = {
   setPremiumPreview: (value: boolean) => void;
   newlyEarnedBadgeId: string | null;
   clearNewlyEarnedBadge: () => void;
-  applyOnboardingProfile: (input: OnboardingProfileInput) => void;
+  applyOnboardingProfile: (input: OnboardingProfileInput) => Promise<void>;
+  flushDraftQueue: () => Promise<number>;
+  syncingDrafts: boolean;
   groupRelatedAlerts: boolean;
   setGroupRelatedAlerts: (value: boolean) => void;
   accountAgeDays: number;
@@ -220,11 +263,35 @@ function buildInitialGroupFeed(): GroupFeedPost[] {
   return mockStageGroups.flatMap((group) => seedPostsForGroup(group.id));
 }
 
+function toPersistedDraft(draft: MemoryDraft): PersistedMemoryDraft {
+  return {
+    id: draft.id,
+    body: draft.body,
+    eventDate: draft.eventDate,
+    createdAtLabel: draft.createdAtLabel,
+    createdAtIso: new Date().toISOString(),
+    hasPhoto: draft.hasPhoto,
+    photoUri: draft.photoUri ?? null,
+    visibility: draft.visibility ?? "HOUSEHOLD",
+  };
+}
+
 export function MockUiProvider({ children }: { children: ReactNode }) {
-  const [isOffline, setIsOffline] = useState(false);
+  const connectivity = useConnectivity();
+  const todayQuery = useTodayQuery();
+  const entitlementsQuery = useEntitlementsQuery();
+  const familyQuery = useFamilyQuery();
+  const aiUsageQuery = useAiUsageQuery();
+  const notificationPrefsQuery = useNotificationPreferencesQuery();
+  const deviceOffline = connectivity.isOffline;
+  const isOffline = deviceOffline;
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false);
+  const [draftsHydrated, setDraftsHydrated] = useState(false);
   const [aiMessagesUsed, setAiMessagesUsed] = useState(2);
   const [aiHourlyUsed, setAiHourlyUsed] = useState(4);
+  const [aiDailyLimit, setAiDailyLimit] = useState(10);
+  const [aiHourlyLimit, setAiHourlyLimit] = useState(20);
+  const [mediaUploadsLimit, setMediaUploadsLimit] = useState(30);
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
   const [blockedAuthorIds, setBlockedAuthorIds] = useState<string[]>([]);
   const [communityRulesAccepted, setCommunityRulesAccepted] = useState(false);
@@ -283,6 +350,182 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
     mockMemories.map((memory) => ({ ...memory })),
   );
   const [groupFeedPosts, setGroupFeedPosts] = useState<GroupFeedPost[]>(buildInitialGroupFeed);
+  const [syncingDrafts, setSyncingDrafts] = useState(false);
+  const wasOfflineRef = useRef(isOffline);
+
+  useEffect(() => {
+    const today = todayQuery.data;
+    if (!today) return;
+    setLoopCompletion(today.loopCompletion);
+    setStoryDaysThisWeek(today.weekProgress.storyDays);
+    setWellnessDaysThisWeek(today.weekProgress.wellnessDays);
+    setMediaUploadsUsed(today.mediaUploadsUsed);
+    setMediaUploadsLimit(today.mediaUploadsLimit);
+    setAiMessagesUsed(today.aiMessagesUsed);
+    setAiDailyLimit(today.aiDailyLimit);
+    setPremiumPreview(today.isPremium);
+  }, [todayQuery.data]);
+
+  useEffect(() => {
+    const entitlements = entitlementsQuery.data;
+    if (!entitlements) return;
+    setPremiumPreview(entitlements.isPremium);
+    setMediaUploadsLimit(entitlements.mediaUploadsLimit);
+    setAiDailyLimit(entitlements.aiDailyLimit);
+  }, [entitlementsQuery.data]);
+
+  useEffect(() => {
+    const family = familyQuery.data;
+    if (!family) return;
+    setHouseholdName(family.name);
+    if (family.childDisplayName) setChildDisplayName(family.childDisplayName);
+    setStageMode(family.stageMode);
+    if (family.dueDate) setDueDateOverride(family.dueDate);
+  }, [familyQuery.data]);
+
+  useEffect(() => {
+    const usage = aiUsageQuery.data;
+    if (!usage) return;
+    setAiMessagesUsed(usage.dailyUsed);
+    setAiDailyLimit(usage.dailyLimit);
+    setAiHourlyUsed(usage.hourlyUsed);
+    setAiHourlyLimit(usage.hourlyLimit);
+  }, [aiUsageQuery.data]);
+
+  useEffect(() => {
+    const prefs = notificationPrefsQuery.data;
+    if (!prefs) return;
+    setQuietHoursEnabled(prefs.quietHoursEnabled);
+    setQuietStart(prefs.quietStart);
+    setQuietEnd(prefs.quietEnd);
+    setGroupRelatedAlerts(prefs.groupRelatedAlerts);
+    setNotificationPrefs((current) => ({ ...current, ...prefs.prefs }));
+  }, [notificationPrefsQuery.data]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadMemoryDrafts().then((stored) => {
+      if (cancelled) return;
+      const mapped: MemoryDraft[] = stored.map((draft) => ({
+        id: draft.id,
+        body: draft.body,
+        eventDate: draft.eventDate,
+        createdAtLabel: draft.createdAtLabel,
+        hasPhoto: draft.hasPhoto,
+        photoUri: draft.photoUri,
+        visibility: draft.visibility,
+      }));
+      setDrafts(mapped);
+      setPendingDraft(mapped.length > 0);
+      setDraftsHydrated(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!draftsHydrated) return;
+    void saveMemoryDrafts(drafts.map(toPersistedDraft));
+  }, [drafts, draftsHydrated]);
+
+  useEffect(() => {
+    if (!useMockData) return;
+    // Mock mode still keeps seeded memories for UX demos.
+  }, []);
+
+  useEffect(() => {
+    if (useMockData) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [memories, family] = await Promise.all([
+          memoriesApi.listMemories(),
+          familiesApi.getCurrentFamily().catch(() => null),
+        ]);
+        if (cancelled) return;
+        setJourneyMemories(
+          memories.items.map((memory) => ({
+            id: memory.id,
+            dateLabel: memory.eventDate,
+            title: memory.title,
+            body: memory.body,
+            author: memory.authorName,
+            visibility: memory.visibility,
+          })),
+        );
+        setMemoryCount(memories.items.length);
+        if (family) {
+          setHouseholdName(family.name);
+          if (family.childDisplayName) setChildDisplayName(family.childDisplayName);
+          setStageMode(family.stageMode);
+          if (family.dueDate) setDueDateOverride(family.dueDate);
+        }
+      } catch {
+        // Keep local seed until API is available.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const flushDraftQueue = useCallback(async () => {
+    if (syncingDrafts || drafts.length === 0 || isOffline) return 0;
+    setSyncingDrafts(true);
+    try {
+      const flushed = await flushMemoryDrafts(drafts);
+      if (flushed.length === 0) {
+        // Drop empty drafts that can never sync so we don't retry forever.
+        setDrafts((current) => {
+          const next = current.filter((draft) => draft.body.trim().length > 0);
+          setPendingDraft(next.length > 0);
+          return next;
+        });
+        return 0;
+      }
+
+      const flushedIds = new Set(flushed.map((item) => item.draftId));
+      setDrafts((current) => {
+        const next = current.filter((draft) => !flushedIds.has(draft.id));
+        setPendingDraft(next.length > 0);
+        return next;
+      });
+
+      for (const item of flushed) {
+        setJourneyMemories((current) => [
+          {
+            id: item.memoryId,
+            dateLabel: item.eventDate,
+            title:
+              item.body.length > 48 ? `${item.body.slice(0, 48)}…` : item.body,
+            body: item.body,
+            author: "You",
+            visibility: item.visibility,
+          },
+          ...current,
+        ]);
+        setMemoryCount((count) => count + 1);
+        setShowEmptyJourney(false);
+      }
+
+      return flushed.length;
+    } finally {
+      setSyncingDrafts(false);
+    }
+  }, [drafts, isOffline, syncingDrafts]);
+
+  const flushDraftQueueRef = useRef(flushDraftQueue);
+  flushDraftQueueRef.current = flushDraftQueue;
+
+  useEffect(() => {
+    const cameOnline = wasOfflineRef.current && !isOffline;
+    wasOfflineRef.current = isOffline;
+    if (!draftsHydrated || isOffline) return;
+    if (cameOnline || draftsHydrated) {
+      void flushDraftQueueRef.current();
+    }
+  }, [draftsHydrated, isOffline]);
 
   const earnBadge = useCallback((id: string) => {
     setEarnedBadgeIds((current) => {
@@ -340,6 +583,13 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       setJourneyMemories((current) =>
         current.map((memory) => (memory.id === id ? { ...memory, ...patch } : memory)),
       );
+      if (!useMockData) {
+        void memoriesApi.updateMemory(id, {
+          title: patch.title,
+          body: patch.body,
+          visibility: patch.visibility,
+        });
+      }
     },
     [],
   );
@@ -351,6 +601,9 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       if (next.length === 0) setShowEmptyJourney(true);
       return next;
     });
+    if (!useMockData) {
+      void memoriesApi.deleteMemory(id);
+    }
   }, []);
 
   const getGroupFeed = useCallback(
@@ -439,12 +692,20 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const saveDraft = useCallback(
-    (input: { body: string; eventDate: string; hasPhoto: boolean }) => {
+    (input: {
+      body: string;
+      eventDate: string;
+      hasPhoto: boolean;
+      photoUri?: string | null;
+      visibility?: "HOUSEHOLD" | "PRIVATE";
+    }) => {
       const draft: MemoryDraft = {
         id: `draft-${Date.now()}`,
         body: input.body,
         eventDate: input.eventDate,
         hasPhoto: input.hasPhoto,
+        photoUri: input.photoUri ?? null,
+        visibility: input.visibility ?? "HOUSEHOLD",
         createdAtLabel: "Just now",
       };
       setDrafts((current) => [draft, ...current]);
@@ -464,10 +725,11 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
   const clearDrafts = useCallback(() => {
     setDrafts([]);
     setPendingDraft(false);
+    void clearMemoryDrafts();
   }, []);
 
   const applyOnboardingProfile = useCallback(
-    (input: OnboardingProfileInput) => {
+    async (input: OnboardingProfileInput) => {
       if (input.householdName?.trim()) setHouseholdName(input.householdName.trim());
       if (input.childName?.trim()) setChildDisplayName(input.childName.trim());
       if (input.primaryGoal) setPrimaryGoal(input.primaryGoal);
@@ -476,6 +738,45 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
           ...current,
           ...input.notificationPrefs,
         }));
+      }
+
+      if (!useMockData) {
+        try {
+          const familyName =
+            input.householdName?.trim() ||
+            (input.childName?.trim() ? `${input.childName.trim()}'s household` : "Our household");
+          await familiesApi.createFamily({ name: familyName });
+
+          if (input.role === "expecting" && input.dueDate?.trim()) {
+            await profilesApi.createPregnancy({ dueDate: input.dueDate.trim() });
+          }
+          if (input.role === "parent" && input.childName?.trim() && input.childDob?.trim()) {
+            await profilesApi.createChild({
+              displayName: input.childName.trim(),
+              dateOfBirth: input.childDob.trim(),
+            });
+          }
+
+          await consentsApi.createConsent({ type: "age_attestation", version: "mvp-1" });
+          await consentsApi.createConsent({ type: "terms", version: "mvp-1" });
+          await consentsApi.createConsent({ type: "privacy", version: "mvp-1" });
+
+          if (input.notificationPrefs) {
+            await notificationsApi.updateNotificationPreferences({
+              prefs: {
+                dailyPrompt: true,
+                wellnessReminder: true,
+                partnerActivity: true,
+                weeklyRecap: true,
+                communityReply: false,
+                subscription: true,
+                ...input.notificationPrefs,
+              },
+            });
+          }
+        } catch {
+          // Local onboarding still completes; API retry happens when backend is up.
+        }
       }
 
       if (input.role === "expecting") {
@@ -512,7 +813,7 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
   const value = useMemo<MockUiState>(
     () => ({
       isOffline,
-      setOffline: setIsOffline,
+      deviceOffline,
       dismissOfflineBanner: () => setOfflineBannerDismissed(true),
       offlineBannerDismissed,
       aiMessagesUsed,
@@ -520,15 +821,15 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
         setAiMessagesUsed((count) => count + 1);
         setAiHourlyUsed((count) => count + 1);
       },
-      resetAiUsage: () => {
-        setAiMessagesUsed(0);
-        setAiHourlyUsed(0);
+      setAiUsage: (usage) => {
+        setAiMessagesUsed(usage.dailyUsed);
+        setAiDailyLimit(usage.dailyLimit);
+        setAiHourlyUsed(usage.hourlyUsed);
+        setAiHourlyLimit(usage.hourlyLimit);
       },
-      aiDailyLimit: isPremiumPreview ? 30 : 5,
+      aiDailyLimit,
       aiHourlyUsed,
-      aiHourlyLimit: 20,
-      resetAiHourly: () => setAiHourlyUsed(0),
-      likedPosts,
+      aiHourlyLimit,      likedPosts,
       togglePostLike: (postId) =>
         setLikedPosts((current) => ({
           ...current,
@@ -612,9 +913,8 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       weekSummaryConsent,
       setWeekSummaryConsent,
       mediaUploadsUsed,
-      mediaUploadsLimit: 10,
+      mediaUploadsLimit,
       incrementMediaUpload: () => setMediaUploadsUsed((count) => count + 1),
-      setMediaNearLimit: () => setMediaUploadsUsed(9),
       weekProgress: {
         storyDays: storyDaysThisWeek,
         wellnessDays: wellnessDaysThisWeek,
@@ -641,6 +941,8 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       newlyEarnedBadgeId,
       clearNewlyEarnedBadge: () => setNewlyEarnedBadgeId(null),
       applyOnboardingProfile,
+      flushDraftQueue,
+      syncingDrafts,
       groupRelatedAlerts,
       setGroupRelatedAlerts,
       accountAgeDays,
@@ -666,6 +968,8 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       activeGroupId,
       addGroupComment,
       addGroupPost,
+      aiDailyLimit,
+      aiHourlyLimit,
       aiHourlyUsed,
       aiMessagesUsed,
       applyOnboardingProfile,
@@ -683,10 +987,12 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       connectScenario,
       connectTodayMode,
       deleteJourneyMemory,
+      deviceOffline,
       drafts,
       dueDateOverride,
       earnBadge,
       earnedBadgeIds,
+      flushDraftQueue,
       getGroupFeed,
       groupFeedPosts,
       groupRelatedAlerts,
@@ -701,6 +1007,7 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       markConnectDone,
       markLearnDone,
       markPartnerJoined,
+      mediaUploadsLimit,
       mediaUploadsUsed,
       memoryCount,
       milestoneStatuses,
@@ -724,6 +1031,7 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       showEmptyJourney,
       stageMode,
       storyDaysThisWeek,
+      syncingDrafts,
       updateJourneyMemory,
       weekSummaryConsent,
       wellnessDaysThisWeek,
@@ -740,3 +1048,6 @@ export function useMockUi() {
   }
   return context;
 }
+
+/** Prefer this name in new code — same session facade as useMockUi. */
+export const useAppSession = useMockUi;

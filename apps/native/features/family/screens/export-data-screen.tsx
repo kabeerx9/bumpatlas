@@ -5,14 +5,23 @@ import { StyleSheet, View } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useCreateDataRequestMutation } from "@/lib/api/hooks";
 
 export function ExportDataScreen() {
   const router = useRouter();
-  const [status, setStatus] = useState<"idle" | "preparing" | "ready">("idle");
+  const createDataRequest = useCreateDataRequestMutation();
+  const [status, setStatus] = useState<"idle" | "preparing" | "ready" | "failed">("idle");
+  const [requestId, setRequestId] = useState<string | null>(null);
 
-  function startExport() {
+  async function startExport() {
     setStatus("preparing");
-    setTimeout(() => setStatus("ready"), 1200);
+    try {
+      const request = await createDataRequest.mutateAsync({ type: "export" });
+      setRequestId(request.id);
+      setStatus(request.status === "failed" ? "failed" : "ready");
+    } catch {
+      setStatus("failed");
+    }
   }
 
   return (
@@ -23,13 +32,15 @@ export function ExportDataScreen() {
         <Button
           size="lg"
           disabled={status === "preparing"}
-          onPress={status === "ready" ? () => router.back() : startExport}
+          onPress={status === "ready" ? () => router.back() : () => void startExport()}
         >
           {status === "idle"
             ? "Request export"
             : status === "preparing"
               ? "Preparing..."
-              : "Done"}
+              : status === "failed"
+                ? "Try again"
+                : "Done"}
         </Button>
       }
     >
@@ -45,21 +56,35 @@ export function ExportDataScreen() {
       </View>
 
       <View style={styles.list}>
-        {["Journal memories (text + photos)", "Milestones & recaps", "Wellness completions", "Account & consent records"].map(
-          (item) => (
-            <View key={item} style={styles.row}>
-              <Feather name="check" size={16} color={colors.brand.peach} />
-              <AppText variant="bodySmall">{item}</AppText>
-            </View>
-          ),
-        )}
+        {[
+          "Journal memories (text + photos)",
+          "Milestones & recaps",
+          "Wellness completions",
+          "Account & consent records",
+        ].map((item) => (
+          <View key={item} style={styles.row}>
+            <Feather name="check" size={16} color={colors.brand.peach} />
+            <AppText variant="bodySmall">{item}</AppText>
+          </View>
+        ))}
       </View>
 
       {status === "ready" ? (
         <View style={styles.ready}>
-          <AppText weight="semibold">Export ready</AppText>
+          <AppText weight="semibold">Export requested</AppText>
           <AppText variant="bodySmall" tone="secondary">
-            In production, a download link would arrive by email within 48 hours.
+            {requestId
+              ? `Request ${requestId}. A download link will arrive by email within 48 hours.`
+              : "A download link will arrive by email within 48 hours."}
+          </AppText>
+        </View>
+      ) : null}
+
+      {status === "failed" ? (
+        <View style={styles.ready}>
+          <AppText weight="semibold">Couldn’t start export</AppText>
+          <AppText variant="bodySmall" tone="secondary">
+            Check your connection and try again.
           </AppText>
         </View>
       ) : null}

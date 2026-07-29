@@ -1,28 +1,49 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
 import { mockInvitePreview } from "@/features/mock/demo-data";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useMockData } from "@/lib/api/client";
+import { useAcceptInviteMutation } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
+
+type AcceptedFamily = {
+  name: string;
+  childDisplayName: string | null;
+};
 
 export function InviteAcceptScreen() {
   const router = useRouter();
   const { token } = useLocalSearchParams<{ token: string }>();
   const { markPartnerJoined } = useMockUi();
+  const acceptInvite = useAcceptInviteMutation();
   const [accepted, setAccepted] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+  const [acceptedFamily, setAcceptedFamily] = useState<AcceptedFamily | null>(null);
 
-  const invite = mockInvitePreview;
-
-  function handleAccept() {
-    setAccepted(true);
-    markPartnerJoined();
-    setTimeout(() => {
-      router.replace(appRoutes.family);
-    }, 1200);
+  async function handleAccept() {
+    if (accepting || !token) return;
+    setAccepting(true);
+    try {
+      const family = await acceptInvite.mutateAsync({ token });
+      setAcceptedFamily({
+        name: family.name,
+        childDisplayName: family.childDisplayName ?? null,
+      });
+      setAccepted(true);
+      markPartnerJoined();
+      setTimeout(() => {
+        router.replace(appRoutes.family);
+      }, 1200);
+    } catch {
+      Alert.alert("Couldn’t accept invite", "Check your connection and try again.");
+    } finally {
+      setAccepting(false);
+    }
   }
 
   return (
@@ -32,10 +53,19 @@ export function InviteAcceptScreen() {
       onBack={() => router.back()}
       footer={
         <>
-          <Button size="lg" disabled={accepted} onPress={handleAccept}>
-            Accept invite
+          <Button
+            size="lg"
+            disabled={accepted || accepting || !token}
+            onPress={() => void handleAccept()}
+          >
+            {accepting ? "Accepting…" : "Accept invite"}
           </Button>
-          <Button variant="ghost" size="lg" onPress={() => router.back()} disabled={accepted}>
+          <Button
+            variant="ghost"
+            size="lg"
+            onPress={() => router.back()}
+            disabled={accepted || accepting}
+          >
             Decline
           </Button>
         </>
@@ -50,32 +80,23 @@ export function InviteAcceptScreen() {
             You&apos;re invited
           </AppText>
           <AppText variant="heading" style={styles.heroTitle}>
-            Join {invite.householdName}
+            {accepted && acceptedFamily ? `Welcome to ${acceptedFamily.name}` : "Join a household"}
           </AppText>
           <AppText variant="bodySmall" style={styles.heroCopy}>
-            {invite.inviterName} invited you to help with {invite.childName}&apos;s journal and
-            weekly recap.
+            {accepted && acceptedFamily
+              ? `You can now help capture ${
+                  acceptedFamily.childDisplayName ?? "their"
+                }'s moments and see the weekly recap.`
+              : "Accept below to join the household that sent you this invite. You'll see their name once you accept."}
           </AppText>
         </View>
 
         <View style={styles.detailCard}>
           <View style={styles.detailRow}>
             <AppText variant="caption" tone="secondary">
-              Role
-            </AppText>
-            <AppText weight="semibold">{invite.role}</AppText>
-          </View>
-          <View style={styles.detailRow}>
-            <AppText variant="caption" tone="secondary">
               Invite code
             </AppText>
-            <AppText weight="semibold">{token ?? invite.token}</AppText>
-          </View>
-          <View style={styles.detailRow}>
-            <AppText variant="caption" tone="secondary">
-              Valid for
-            </AppText>
-            <AppText weight="semibold">{invite.expiresLabel}</AppText>
+            <AppText weight="semibold">{token ?? "Missing invite code"}</AppText>
           </View>
           <View style={styles.detailRow}>
             <AppText variant="caption" tone="secondary">
@@ -83,6 +104,16 @@ export function InviteAcceptScreen() {
             </AppText>
             <AppText weight="semibold">Single-use · adult 18+ account required</AppText>
           </View>
+          {useMockData ? (
+            <View style={styles.detailRow}>
+              <AppText variant="caption" tone="secondary">
+                Demo preview
+              </AppText>
+              <AppText weight="semibold">
+                {mockInvitePreview.householdName} · {mockInvitePreview.childName}
+              </AppText>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.note}>

@@ -44,6 +44,20 @@
       "expo-secure-store",
       "expo-web-browser",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "BumpAtlas needs photo access to attach moments to your journal.",
+          "cameraPermission": "BumpAtlas needs camera access to capture moments for your journal."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#6A8FA8"
+        }
+      ],
+      [
         "expo-widgets",
         {
           "widgets": [
@@ -80,7 +94,8 @@
             ]
           }
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

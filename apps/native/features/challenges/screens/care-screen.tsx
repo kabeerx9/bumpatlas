@@ -9,9 +9,9 @@ import {
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
 import { mockToday } from "@/features/mock/demo-data";
-import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useRespectReduceMotion } from "@/features/shared/hooks/use-respect-reduce-motion";
+import { useCompleteChallengeMutation, useStageQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 type Phase = "ready" | "clearance" | "in_progress" | "done" | "skipped";
@@ -24,7 +24,9 @@ function formatSeconds(total: number) {
 
 export function CareScreen() {
   const router = useRouter();
-  const { stageMode, completeCare: completeCareProgress } = useMockUi();
+  const stageQuery = useStageQuery();
+  const stageMode = stageQuery.data?.stageMode ?? "postpartum";
+  const completeChallenge = useCompleteChallengeMutation();
   const { reduceMotion } = useRespectReduceMotion();
   const action =
     stageMode === "pregnancy" ? mockToday.pregnancyWellnessAction : mockToday.wellnessAction;
@@ -44,6 +46,17 @@ export function CareScreen() {
     setClearanceAcknowledged(false);
   }, [action.id, action.durationSeconds]);
 
+  async function finishCare() {
+    setTimerRunning(false);
+    try {
+      await completeChallenge.mutateAsync({ challengeId: action.id });
+    } catch {
+      // Local completion still counts; sync retries when the API is reachable.
+    }
+    setBadgeAwarded(Boolean(action.badgeOnComplete));
+    setPhase("done");
+  }
+
   useEffect(() => {
     if (!timerRunning) {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -53,10 +66,7 @@ export function CareScreen() {
     intervalRef.current = setInterval(() => {
       setSecondsLeft((current) => {
         if (current <= 1) {
-          setTimerRunning(false);
-          const result = completeCareProgress();
-          setBadgeAwarded(Boolean(result.awardedBadgeId || action.badgeOnComplete));
-          setPhase("done");
+          void finishCare();
           return 0;
         }
         return current - 1;
@@ -66,7 +76,8 @@ export function CareScreen() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [timerRunning, action.badgeOnComplete, completeCareProgress]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timerRunning]);
 
   function requestStart() {
     setPhase("clearance");
@@ -87,13 +98,6 @@ export function CareScreen() {
 
   function stopTimer() {
     setTimerRunning(false);
-  }
-
-  function completeCare() {
-    setTimerRunning(false);
-    const result = completeCareProgress();
-    setBadgeAwarded(Boolean(result.awardedBadgeId || action.badgeOnComplete));
-    setPhase("done");
   }
 
   function skipCare() {
@@ -228,7 +232,7 @@ export function CareScreen() {
           </>
         ) : (
           <>
-            <Button size="lg" onPress={completeCare}>
+            <Button size="lg" onPress={() => void finishCare()}>
               I’m done
             </Button>
             <Pressable onPress={skipCare} style={styles.skipBtn} hitSlop={8}>

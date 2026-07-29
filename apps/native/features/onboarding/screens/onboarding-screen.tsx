@@ -14,6 +14,7 @@ import { RoleStep, type OnboardingRole } from "@/features/onboarding/components/
 import { WelcomeStep } from "@/features/onboarding/components/steps/welcome-step";
 import { useOnboarding } from "@/features/onboarding/providers/onboarding-provider";
 import { useMockUi } from "@/features/mock/mock-ui-context";
+import { enablePushAndRegister } from "@/lib/notifications/push";
 import { appRoutes } from "@/navigation/routes";
 
 const ONBOARDING_STEPS = [
@@ -115,7 +116,7 @@ export function OnboardingScreen() {
   }
 
   async function finishOnboarding(destination: "home" | "invite") {
-    applyOnboardingProfile({
+    await applyOnboardingProfile({
       role,
       dueDate,
       childName,
@@ -132,6 +133,12 @@ export function OnboardingScreen() {
     if (step === "invite") {
       await finishOnboarding("invite");
       return;
+    }
+
+    if (step === "notifications") {
+      // Request OS permission here so the production path is ready before home.
+      // Denied is fine — prefs still save and can be enabled later in settings.
+      void enablePushAndRegister();
     }
 
     if (stepIndex < TOTAL_STEPS - 1) {

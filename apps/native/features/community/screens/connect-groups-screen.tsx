@@ -2,9 +2,9 @@ import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { mockStageGroups } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useGroupsQuery } from "@/lib/api/hooks";
 
 export function ConnectGroupsScreen() {
   const router = useRouter();
@@ -17,6 +17,9 @@ export function ConnectGroupsScreen() {
     accountAgeDays,
     linksAllowed,
   } = useMockUi();
+
+  const groupsQuery = useGroupsQuery();
+  const groups = groupsQuery.data?.items ?? [];
 
   return (
     <SoftStackShell
@@ -49,7 +52,7 @@ export function ConnectGroupsScreen() {
         )}
       </View>
 
-      {mockStageGroups.map((group) => {
+      {groups.map((group) => {
         const active = activeGroupId === group.id;
         return (
           <Pressable
@@ -70,10 +73,7 @@ export function ConnectGroupsScreen() {
               ) : null}
             </View>
             <AppText variant="bodySmall" tone="secondary">
-              {group.description}
-            </AppText>
-            <AppText variant="caption" tone="secondary">
-              Today&apos;s prompt · {group.prompt}
+              {group.stageLabel}
             </AppText>
             <AppText variant="caption" tone="secondary">
               {group.memberCount} parents

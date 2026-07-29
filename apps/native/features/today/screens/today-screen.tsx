@@ -30,11 +30,23 @@ import { InvitePartnerBanner } from "@/features/today/components/invite-partner-
 import { MemoryPreviewCard } from "@/features/today/components/memory-preview-card";
 import { TodayActionTile } from "@/features/today/components/today-action-tile";
 import { TodayProfileBar } from "@/features/today/components/today-profile-bar";
+import {
+  queryKeys,
+  useFamilyQuery,
+  useGroupsQuery,
+  useMemoriesQuery,
+  useTodayQuery,
+} from "@/lib/api/hooks";
+import { queryClient } from "@/lib/queryClient";
 import { appRoutes } from "@/navigation/routes";
 
 export function TodayScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const todayQuery = useTodayQuery();
+  const familyQuery = useFamilyQuery();
+  const memoriesQuery = useMemoriesQuery();
+  const groupsQuery = useGroupsQuery();
   const {
     isOffline,
     offlineBannerDismissed,
@@ -42,7 +54,6 @@ export function TodayScreen() {
     pendingDraft,
     connectTodayMode,
     stageMode,
-    memoryCount,
     inviteCtaDismissed,
     dismissInviteCta,
     weekProgress,
@@ -51,24 +62,48 @@ export function TodayScreen() {
     wellnessDaysThisWeek,
     markLearnDone,
     isPremiumPreview,
-    childDisplayName,
     activeGroupId,
     primaryGoal,
-    journeyMemories,
+    flushDraftQueue,
   } = useMockUi();
 
-  const activeGroup =
+  const today = todayQuery.data;
+  const childDisplayName =
+    familyQuery.data?.childDisplayName ?? "your child";
+  const resolvedStage = familyQuery.data?.stageMode ?? stageMode;
+  const memoryCount = memoriesQuery.data?.items.length ?? 0;
+  const journeyMemories = (memoriesQuery.data?.items ?? []).map((memory) => ({
+    id: memory.id,
+    title: memory.title,
+    body: memory.body,
+  }));
+  const prompt =
+    resolvedStage === "pregnancy"
+      ? mockPregnancy.bumpPrompt
+      : (today?.prompt ?? mockToday.memoryPrompt);
+  const progress = today?.weekProgress ?? weekProgress;
+  const loop = today?.loopCompletion ?? loopCompletion;
+  const storyDays = today?.weekProgress.storyDays ?? storyDaysThisWeek;
+  const wellnessDays = today?.weekProgress.wellnessDays ?? wellnessDaysThisWeek;
+  const premium = today?.isPremium ?? isPremiumPreview;
+
+  const activeGroupMock =
     mockStageGroups.find((group) => group.id === activeGroupId) ?? mockStageGroups[1];
-  const connectPrompt = activeGroup?.prompt ?? mockToday.connectCard.prompt;
-  const connectGroupName = activeGroup?.name ?? mockToday.connectCard.groupName;
+  const activeGroupFromQuery = groupsQuery.data?.items.find((group) => group.id === activeGroupId);
+  const connectPrompt = activeGroupMock?.prompt ?? mockToday.connectCard.prompt;
+  const connectGroupName =
+    activeGroupFromQuery?.name ?? activeGroupMock?.name ?? mockToday.connectCard.groupName;
   const connectReplyCount = Math.max(
-    activeGroup?.posts?.length ?? 0,
+    activeGroupMock?.posts?.length ?? 0,
     mockToday.connectCard.replyCount,
   );
+  const latestMemory = memoriesQuery.data?.items[0];
   const fade = useRef(new Animated.Value(0)).current;
   const { reduceMotion } = useRespectReduceMotion();
-  const stageUnknown = stageMode === "unknown";
-  const pregnancyWeek = gestationalWeekFromDueDate(mockPregnancy.dueDate);
+  const stageUnknown = resolvedStage === "unknown";
+  const pregnancyWeek = gestationalWeekFromDueDate(
+    familyQuery.data?.dueDate ?? mockPregnancy.dueDate,
+  );
   const pregnancyLabel = pregnancyWeekLabel(pregnancyWeek);
   const childBucket = ageBucketFromDob(mockProfile.dob);
   const childStageLabel = `${approximateAgeLabel(mockProfile.dob)} · ${ageBucketLabel(childBucket)}`;
@@ -89,8 +124,18 @@ export function TodayScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 700);
-  }, []);
+    void (async () => {
+      try {
+        await Promise.all([
+          todayQuery.refetch(),
+          queryClient.invalidateQueries({ queryKey: queryKeys.memories }),
+          flushDraftQueue(),
+        ]);
+      } finally {
+        setRefreshing(false);
+      }
+    })();
+  }, [flushDraftQueue, todayQuery]);
 
   return (
     <SoftScreen scroll={false} edges={["top"]}>
@@ -112,7 +157,7 @@ export function TodayScreen() {
               stageLabel={
                 stageUnknown
                   ? "Finish setup"
-                  : stageMode === "pregnancy"
+                  : resolvedStage === "pregnancy"
                     ? pregnancyLabel
                     : childStageLabel
               }
@@ -157,7 +202,7 @@ export function TodayScreen() {
             <DraftQueuePanel onOpenDraft={() => router.push(appRoutes.capture)} />
           ) : null}
 
-          {stageMode === "pregnancy" ? (
+          {resolvedStage === "pregnancy" ? (
             <Pressable onPress={() => router.push(appRoutes.pregnancy)}>
               <SoftPanel tinted style={styles.pregnancyCard}>
                 <AppText variant="caption" style={styles.pregnancyEyebrow}>
@@ -181,22 +226,20 @@ export function TodayScreen() {
 
           <CaptureHeroCard
             babyName={childDisplayName}
-            prompt={
-              stageMode === "pregnancy" ? mockPregnancy.bumpPrompt : mockToday.memoryPrompt
-            }
-            activeDays={weekProgress.activeDays}
-            goal={weekProgress.goal}
+            prompt={prompt}
+            activeDays={progress.activeDays}
+            goal={progress.goal}
             emphasized={primaryGoal === "memories"}
             onCapture={() => router.push(appRoutes.capture)}
           />
 
           <SoftPanel style={styles.progressSplit}>
             <AppText variant="caption" style={styles.peachLabel}>
-              Soft week · 4 of 7
+              Soft week · {progress.activeDays} of {progress.goal}
             </AppText>
             <AppText variant="bodySmall" tone="secondary">
-              Story days {storyDaysThisWeek}/{weekProgress.goal} · Wellness days{" "}
-              {wellnessDaysThisWeek}/{weekProgress.goal} · either counts as a calm day
+              Story days {storyDays}/{progress.goal} · Wellness days{" "}
+              {wellnessDays}/{progress.goal} · either counts as a calm day
             </AppText>
             {primaryGoal ? (
               <AppText variant="caption" style={styles.peachLabel}>
@@ -247,16 +290,16 @@ export function TodayScreen() {
               icon="wind"
               label="Care"
               title={
-                stageMode === "pregnancy"
+                resolvedStage === "pregnancy"
                   ? mockToday.pregnancyWellnessAction.title
                   : mockToday.wellnessAction.title
               }
               detail={
-                stageMode === "pregnancy"
+                resolvedStage === "pregnancy"
                   ? mockToday.pregnancyWellnessAction.duration
                   : mockToday.wellnessAction.duration
               }
-              done={loopCompletion.care}
+              done={loop.care}
               emphasized={primaryGoal === "wellness"}
               onPress={() => router.push(appRoutes.care)}
             />
@@ -264,18 +307,18 @@ export function TodayScreen() {
               icon="book-open"
               label="Learn"
               title={
-                stageMode === "pregnancy"
+                resolvedStage === "pregnancy"
                   ? mockPregnancy.weeklyTip.title
                   : mockToday.learnCard.title
               }
               detail="Stage tip"
-              done={loopCompletion.learn}
+              done={loop.learn}
               emphasized={primaryGoal === "learn"}
               onPress={() => {
                 markLearnDone();
                 router.push(
                   appRoutes.guideArticle(
-                    stageMode === "pregnancy" ? mockPregnancy.weeklyTip.id : mockToday.learnCard.id,
+                    resolvedStage === "pregnancy" ? mockPregnancy.weeklyTip.id : mockToday.learnCard.id,
                   ),
                 );
               }}
@@ -297,7 +340,7 @@ export function TodayScreen() {
             />
           )}
 
-          {loopCompletion.connect ? (
+          {loop.connect ? (
             <AppText variant="caption" tone="secondary">
               Connect touched today · counts toward your calm week
             </AppText>
@@ -328,7 +371,7 @@ export function TodayScreen() {
             </SoftPanel>
           ) : null}
 
-          {isPremiumPreview ? (
+          {premium ? (
             <Pressable
               onPress={() =>
                 router.push(onThisDayMemory ? appRoutes.memory(onThisDayMemory.id) : appRoutes.capture)
@@ -359,18 +402,20 @@ export function TodayScreen() {
                 accessibilityLabel="Unlock on this day"
               >
                 <AppText variant="caption" weight="semibold" style={styles.peachLabel}>
-                  Preview premium
+                  Unlock with Premium
                 </AppText>
                 <Feather name="arrow-up-right" size={14} color={colors.brand.peach} />
               </Pressable>
             </SoftPanel>
           )}
 
-          <MemoryPreviewCard
-            title={mockToday.latestMemory.title}
-            dateLabel={mockToday.latestMemory.dateLabel}
-            onPress={() => router.push(appRoutes.memory("1"))}
-          />
+          {latestMemory ? (
+            <MemoryPreviewCard
+              title={latestMemory.title}
+              dateLabel={latestMemory.eventDate}
+              onPress={() => router.push(appRoutes.memory(latestMemory.id))}
+            />
+          ) : null}
       </ScrollView>
 
       <Pressable

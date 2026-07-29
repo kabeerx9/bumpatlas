@@ -1,26 +1,40 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, TextInput, View } from "react-native";
+import { Alert, StyleSheet, TextInput, View } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useConvertPregnancyMutation } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 export function ConvertBirthScreen() {
   const router = useRouter();
   const { convertPregnancy } = useMockUi();
+  const convertPregnancyMutation = useConvertPregnancyMutation();
   const [childName, setChildName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [done, setDone] = useState(false);
+  const [converting, setConverting] = useState(false);
 
   const canSave = childName.trim().length > 0 && birthDate.trim().length > 0;
 
-  function handleConvert() {
-    if (!canSave) return;
-    convertPregnancy(childName.trim(), birthDate.trim());
-    setDone(true);
+  async function handleConvert() {
+    if (!canSave || converting) return;
+    setConverting(true);
+    try {
+      await convertPregnancyMutation.mutateAsync({
+        pregnancyId: "current",
+        body: { childName: childName.trim(), birthDate: birthDate.trim() },
+      });
+      convertPregnancy(childName.trim(), birthDate.trim());
+      setDone(true);
+    } catch {
+      Alert.alert("Couldn’t convert", "Check your connection and try again.");
+    } finally {
+      setConverting(false);
+    }
   }
 
   if (done) {
@@ -52,8 +66,8 @@ export function ConvertBirthScreen() {
       closeIcon="x"
       onBack={() => router.back()}
       footer={
-        <Button size="lg" disabled={!canSave} onPress={handleConvert}>
-          Convert & continue
+        <Button size="lg" disabled={!canSave || converting} onPress={() => void handleConvert()}>
+          {converting ? "Converting…" : "Convert & continue"}
         </Button>
       }
     >

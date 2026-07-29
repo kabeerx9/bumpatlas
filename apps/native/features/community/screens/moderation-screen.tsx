@@ -1,23 +1,37 @@
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { mockModerationQueue } from "@/features/mock/mock-content";
-import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useModerationActionMutation, useModerationQueueQuery } from "@/lib/api/hooks";
 
 export function ModerationScreen() {
   const router = useRouter();
-  const { moderationStatuses, resolveModerationItem } = useMockUi();
+  const moderationQuery = useModerationQueueQuery();
+  const actionMutation = useModerationActionMutation();
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
 
-  function hidePost(id: string) {
-    resolveModerationItem(id, "Hidden");
-    Alert.alert("Post hidden", "Removed from the group feed for review follow-up.");
+  const items = moderationQuery.data?.items ?? [];
+
+  async function hidePost(id: string) {
+    try {
+      const updated = await actionMutation.mutateAsync({ id, action: { action: "hide" } });
+      setStatusOverrides((current) => ({ ...current, [id]: updated.status }));
+      Alert.alert("Post hidden", "Removed from the group feed for review follow-up.");
+    } catch {
+      Alert.alert("Couldn’t hide post", "Check your connection and try again.");
+    }
   }
 
-  function markReviewed(id: string) {
-    resolveModerationItem(id, "Reviewed");
-    Alert.alert("Marked reviewed", "Logged for founder follow-up during beta.");
+  async function markReviewed(id: string) {
+    try {
+      const updated = await actionMutation.mutateAsync({ id, action: { action: "review" } });
+      setStatusOverrides((current) => ({ ...current, [id]: updated.status }));
+      Alert.alert("Marked reviewed", "Logged for founder follow-up during beta.");
+    } catch {
+      Alert.alert("Couldn’t update", "Check your connection and try again.");
+    }
   }
 
   return (
@@ -26,12 +40,15 @@ export function ModerationScreen() {
         Founder/admin only during beta. High-risk items escalate automatically.
       </AppText>
 
-      {mockModerationQueue.map((item) => {
-        const status = moderationStatuses[item.id] ?? item.status;
+      {items.map((item) => {
+        const status = statusOverrides[item.id] ?? item.status;
+        const statusLower = status.toLowerCase();
+        const hidden = statusLower === "hide" || statusLower === "hidden";
+        const reviewed = statusLower === "review" || statusLower === "reviewed";
         return (
           <View
             key={item.id}
-            style={[styles.card, item.severity === "high" && styles.cardHigh]}
+            style={[styles.card, item.priority === "high" && styles.cardHigh]}
           >
             <View style={styles.cardTop}>
               <AppText variant="caption" weight="semibold" style={styles.type}>
@@ -52,17 +69,17 @@ export function ModerationScreen() {
               <Button
                 size="sm"
                 variant="ghost"
-                disabled={status === "Hidden"}
-                onPress={() => hidePost(item.id)}
+                disabled={hidden || actionMutation.isPending}
+                onPress={() => void hidePost(item.id)}
               >
-                {status === "Hidden" ? "Hidden" : "Hide post"}
+                {hidden ? "Hidden" : "Hide post"}
               </Button>
               <Button
                 size="sm"
-                disabled={status === "Reviewed"}
-                onPress={() => markReviewed(item.id)}
+                disabled={reviewed || actionMutation.isPending}
+                onPress={() => void markReviewed(item.id)}
               >
-                {status === "Reviewed" ? "Reviewed" : "Review"}
+                {reviewed ? "Reviewed" : "Review"}
               </Button>
             </View>
           </View>

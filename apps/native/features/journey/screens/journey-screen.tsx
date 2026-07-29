@@ -2,7 +2,6 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -20,6 +19,7 @@ import { SoftHeader } from "@/features/shared/components/soft-header";
 import { SoftPanel } from "@/features/shared/components/soft-panel";
 import { SoftScreen } from "@/features/shared/components/soft-screen";
 import { SoftSkeleton } from "@/features/shared/components/soft-skeleton";
+import { useMemoriesQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 type Filter = "all" | "memories" | "milestones" | "recaps";
@@ -46,21 +46,26 @@ export function JourneyScreen() {
     journalQuery,
     setJournalQuery,
     isPremiumPreview,
-    setPremiumPreview,
     milestoneStatuses,
     recapEligible,
     childDisplayName,
-    journeyMemories,
   } = useMockUi();
+  const memoriesQuery = useMemoriesQuery();
   const [filter, setFilter] = useState<Filter>("all");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setInitialLoading(false), 450);
-    return () => clearTimeout(timer);
-  }, []);
+  const memories = useMemo(() => {
+    const items = memoriesQuery.data?.items;
+    if (!items) return [];
+    return items.map((memory) => ({
+      id: memory.id,
+      dateLabel: memory.eventDate,
+      title: memory.title,
+      body: memory.body,
+      author: memory.authorName,
+      visibility: memory.visibility,
+    }));
+  }, [memoriesQuery.data?.items]);
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -72,13 +77,13 @@ export function JourneyScreen() {
 
   const filteredMemories = useMemo(() => {
     const q = journalQuery.trim().toLowerCase();
-    if (!q) return journeyMemories;
-    if (!isPremiumPreview) return journeyMemories;
-    return journeyMemories.filter(
+    if (!q) return memories;
+    if (!isPremiumPreview) return memories;
+    return memories.filter(
       (memory) =>
         memory.title.toLowerCase().includes(q) || memory.body.toLowerCase().includes(q),
     );
-  }, [journalQuery, isPremiumPreview, journeyMemories]);
+  }, [journalQuery, isPremiumPreview, memories]);
 
   const visibleMemories = useMemo(
     () => filteredMemories.slice(0, visibleCount),
@@ -89,12 +94,8 @@ export function JourneyScreen() {
     visibleCount < filteredMemories.length && (filter === "all" || filter === "memories");
 
   function loadMore() {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    setTimeout(() => {
-      setVisibleCount((count) => count + PAGE_SIZE);
-      setLoadingMore(false);
-    }, 500);
+    if (!hasMore) return;
+    setVisibleCount((count) => count + PAGE_SIZE);
   }
 
   function onScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -103,7 +104,21 @@ export function JourneyScreen() {
     if (nearBottom) loadMore();
   }
 
-  if (showEmptyJourney || journeyMemories.length === 0) {
+  if (memoriesQuery.isLoading) {
+    return (
+      <SoftScreen>
+        <SoftHeader
+          eyebrow="Journey"
+          title={`${childDisplayName}'s story`}
+          subtitle="Loading your timeline…"
+        />
+        <SoftSkeleton lines={4} />
+        <SoftSkeleton lines={2} />
+      </SoftScreen>
+    );
+  }
+
+  if (showEmptyJourney || memories.length === 0) {
     return (
       <SoftScreen>
         <SoftHeader
@@ -119,20 +134,6 @@ export function JourneyScreen() {
           </AppText>
           <Button onPress={() => router.push(appRoutes.capture)}>Capture moment</Button>
         </SoftPanel>
-      </SoftScreen>
-    );
-  }
-
-  if (initialLoading) {
-    return (
-      <SoftScreen>
-        <SoftHeader
-          eyebrow="Journey"
-          title={`${childDisplayName}'s story`}
-          subtitle="Loading your timeline…"
-        />
-        <SoftSkeleton lines={4} />
-        <SoftSkeleton lines={2} />
       </SoftScreen>
     );
   }
@@ -186,19 +187,6 @@ export function JourneyScreen() {
               Unlock advanced journal search
             </AppText>
             <Feather name="arrow-up-right" size={14} color={colors.brand.peach} />
-          </Pressable>
-        ) : (
-          <Pressable onPress={() => setPremiumPreview(false)} hitSlop={8}>
-            <AppText variant="caption" tone="secondary">
-              Demo: exit premium search preview
-            </AppText>
-          </Pressable>
-        )}
-        {!isPremiumPreview ? (
-          <Pressable onPress={() => setPremiumPreview(true)} hitSlop={8}>
-            <AppText variant="caption" tone="secondary">
-              Demo: preview premium search
-            </AppText>
           </Pressable>
         ) : null}
       </SoftPanel>
@@ -267,7 +255,7 @@ export function JourneyScreen() {
             accessibilityLabel="Unlock on this day"
           >
             <AppText variant="caption" weight="semibold" style={styles.peachLabel}>
-              Preview premium on this day
+              Unlock on this day
             </AppText>
             <Feather name="arrow-up-right" size={14} color={colors.brand.peach} />
           </Pressable>
@@ -356,11 +344,6 @@ export function JourneyScreen() {
               </SoftPanel>
             </Pressable>
           ))}
-          {loadingMore ? (
-            <View style={styles.loadMore}>
-              <ActivityIndicator color={colors.brand.peach} />
-            </View>
-          ) : null}
           {!hasMore && filteredMemories.length > 0 ? (
             <AppText variant="caption" tone="secondary" align="center">
               End of timeline

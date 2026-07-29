@@ -1,7 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,33 +15,38 @@ import {
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useCreateCommentMutation, useGroupPostDetailQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 export function ConnectPostDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const {
-    commentsUsedToday,
-    commentsDailyLimit,
-    activeGroupId,
-    getGroupFeed,
-    addGroupComment,
-  } = useMockUi();
+  const { commentsUsedToday, commentsDailyLimit, activeGroupId } = useMockUi();
   const [comment, setComment] = useState("");
 
-  const feed = getGroupFeed(activeGroupId);
-  const post = useMemo(
-    () => feed.find((item) => item.id === id) ?? feed[0],
-    [feed, id],
-  );
+  const postQuery = useGroupPostDetailQuery(activeGroupId, id ?? "");
+  const createCommentMutation = useCreateCommentMutation(activeGroupId);
 
+  const post = postQuery.data;
   const atCommentLimit = commentsUsedToday >= commentsDailyLimit;
 
-  function submitComment() {
+  async function submitComment() {
     const trimmed = comment.trim();
     if (!trimmed || atCommentLimit || !post) return;
-    addGroupComment({ postId: post.id, body: trimmed, groupId: activeGroupId });
-    setComment("");
+    try {
+      await createCommentMutation.mutateAsync({ postId: post.id, body: trimmed });
+      setComment("");
+    } catch {
+      Alert.alert("Couldn’t reply", "Check your connection and try again.");
+    }
+  }
+
+  if (postQuery.isLoading) {
+    return (
+      <SoftStackShell title="Thread" onBack={() => router.back()} scroll={false} centered>
+        <AppText tone="secondary">Loading thread…</AppText>
+      </SoftStackShell>
+    );
   }
 
   if (!post) {
@@ -76,7 +82,7 @@ export function ConnectPostDetailScreen() {
       >
         <View style={styles.postCard}>
           <AppText variant="caption" style={styles.postMeta}>
-            {post.author}
+            {post.authorName}
           </AppText>
           <AppText variant="body" tone="inverse">
             {post.body}
@@ -91,7 +97,7 @@ export function ConnectPostDetailScreen() {
         {post.comments.map((item) => (
           <View key={item.id} style={styles.commentCard}>
             <AppText variant="caption" tone="secondary">
-              {item.author} · {item.createdAt}
+              {item.authorName} · {item.createdAt}
             </AppText>
             <AppText variant="bodySmall">{item.body}</AppText>
           </View>
@@ -117,8 +123,8 @@ export function ConnectPostDetailScreen() {
           />
           <Button
             size="sm"
-            disabled={comment.trim().length === 0 || atCommentLimit}
-            onPress={submitComment}
+            disabled={comment.trim().length === 0 || atCommentLimit || createCommentMutation.isPending}
+            onPress={() => void submitComment()}
           >
             Reply
           </Button>

@@ -217,7 +217,7 @@ export function ExpoUiShowcaseScreen() {
                 mode="date"
                 display={Platform.OS === "ios" ? "compact" : "default"}
                 onValueChange={(_, date) => setVisitDate(date)}
-                accentColor={colors.brand.purple500}
+                accentColor={colors.brand.peach}
                 style={styles.datePicker}
               />
             </ControlBlock>
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.brand.lavenderLight,
+    backgroundColor: colors.brand.peachSoft,
   },
   universalSheetHost: {
     padding: spacing.xl,

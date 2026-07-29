@@ -1,38 +1,54 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { mockGuides } from "@/features/mock/demo-data";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useBookmarkContentMutation, useContentDetailQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
-
-function formatReviewDate(iso: string) {
-  const date = new Date(iso);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 export function GuideDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { bookmarkedGuides, toggleBookmark, markLearnDone } = useMockUi();
+  const { markLearnDone } = useMockUi();
+  const guideQuery = useContentDetailQuery(id ?? "");
+  const bookmarkMutation = useBookmarkContentMutation();
+  const guide = guideQuery.data;
+  const [localBookmarked, setLocalBookmarked] = useState<boolean | null>(null);
 
-  const guide = useMemo(
-    () => mockGuides.find((item) => item.id === id) ?? mockGuides[0],
-    [id],
+  useEffect(() => {
+    setLocalBookmarked(null);
+  }, [guide?.id]);
+
+  const bookmarked = localBookmarked ?? guide?.bookmarked ?? false;
+  const paragraphs = useMemo(
+    () => (guide?.bodyMarkdown ? guide.bodyMarkdown.split(/\n{2,}/).filter(Boolean) : []),
+    [guide?.bodyMarkdown],
   );
+  const citation = guide?.citations?.[0];
 
-  const bookmarked = bookmarkedGuides[guide.id] ?? false;
+  function toggleBookmark() {
+    if (!guide) return;
+    const next = !bookmarked;
+    setLocalBookmarked(next);
+    bookmarkMutation.mutate(guide.id, {
+      onError: () => setLocalBookmarked(!next),
+    });
+  }
 
   function finishReading() {
     markLearnDone();
     router.back();
+  }
+
+  if (guideQuery.isLoading || !guide) {
+    return (
+      <SoftStackShell title="Guide" onBack={() => router.back()} centered>
+        <ActivityIndicator color={colors.brand.peach} />
+      </SoftStackShell>
+    );
   }
 
   return (
@@ -41,7 +57,7 @@ export function GuideDetailScreen() {
       onBack={() => router.back()}
       right={
         <Pressable
-          onPress={() => toggleBookmark(guide.id)}
+          onPress={toggleBookmark}
           hitSlop={12}
           style={styles.iconBtn}
           accessibilityLabel={bookmarked ? "Remove bookmark" : "Bookmark article"}
@@ -71,7 +87,7 @@ export function GuideDetailScreen() {
     >
       <View style={styles.hero}>
         <AppText variant="caption" style={styles.eyebrow}>
-          {guide.category} · {guide.readMinutes} min read
+          {(guide.stageTags[0] ?? "Guide")} · {guide.readingMinutes} min read
         </AppText>
         <AppText variant="heading" style={styles.heroTitle}>
           {guide.title}
@@ -81,21 +97,20 @@ export function GuideDetailScreen() {
         </AppText>
       </View>
 
-      <View style={styles.citationCard}>
-        <Feather name="check-circle" size={16} color={colors.brand.peach} />
-        <View style={styles.citationCopy}>
-          <AppText weight="semibold">Reviewed content</AppText>
-          <AppText variant="bodySmall" tone="secondary">
-            {guide.reviewerName} · {formatReviewDate(guide.reviewedOn)}
-          </AppText>
-          <AppText variant="caption" tone="secondary">
-            Source: {guide.sourceName}
-          </AppText>
+      {citation ? (
+        <View style={styles.citationCard}>
+          <Feather name="check-circle" size={16} color={colors.brand.peach} />
+          <View style={styles.citationCopy}>
+            <AppText weight="semibold">Reviewed content</AppText>
+            <AppText variant="caption" tone="secondary">
+              Source: {citation.source}
+            </AppText>
+          </View>
         </View>
-      </View>
+      ) : null}
 
       <View style={styles.bodyCard}>
-        {guide.body.map((paragraph, index) => (
+        {paragraphs.map((paragraph, index) => (
           <AppText key={`${guide.id}-p-${index}`} variant="body" style={styles.paragraph}>
             {paragraph}
           </AppText>

@@ -4,20 +4,23 @@ import { useMemo, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, Button, colors, spacing } from "@/design-system";
-import { mockToday } from "@/features/mock/demo-data";
-import { mockStageGroups } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftHeader } from "@/features/shared/components/soft-header";
 import { SoftPanel } from "@/features/shared/components/soft-panel";
 import { SoftScreen } from "@/features/shared/components/soft-screen";
+import {
+  useBlockUserMutation,
+  useGroupPostsQuery,
+  useGroupsQuery,
+  useReactToPostMutation,
+} from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
+
+const CONNECT_PROMPT = "What made today feel a little easier?";
 
 export function ConnectScreen() {
   const router = useRouter();
   const {
-    connectScenario,
-    likedPosts,
-    togglePostLike,
     blockedAuthorIds,
     blockAuthor,
     activeGroupId,
@@ -30,25 +33,30 @@ export function ConnectScreen() {
     markConnectRulesSeen,
     accountAgeDays,
     linksAllowed,
-    getGroupFeed,
   } = useMockUi();
+  const groupsQuery = useGroupsQuery();
+  const groupPostsQuery = useGroupPostsQuery(activeGroupId);
+  const reactMutation = useReactToPostMutation(activeGroupId);
+  const blockMutation = useBlockUserMutation();
   const [showBlockMenu, setShowBlockMenu] = useState<string | null>(null);
   const [rulesOpen, setRulesOpen] = useState(!connectRulesSeen && !communityRulesAccepted);
 
-  const activeGroup = useMemo(
-    () => mockStageGroups.find((g) => g.id === activeGroupId) ?? mockStageGroups[1],
-    [activeGroupId],
+  const activeGroup = useMemo(() => {
+    const fromApi = groupsQuery.data?.items.find((group) => group.id === activeGroupId);
+    return {
+      id: activeGroupId,
+      name: fromApi?.name ?? "Your stage group",
+      memberCount: fromApi?.memberCount ?? 0,
+    };
+  }, [activeGroupId, groupsQuery.data?.items]);
+
+  const posts = groupPostsQuery.data?.items ?? [];
+  const visiblePosts = useMemo(
+    () => posts.filter((post) => !blockedAuthorIds.includes(post.authorId)),
+    [posts, blockedAuthorIds],
   );
 
-  const groupPrompt = activeGroup.prompt ?? mockToday.connectCard.prompt;
-
-  const visiblePosts = useMemo(() => {
-    return getGroupFeed(activeGroupId).filter(
-      (post) => !blockedAuthorIds.includes(post.authorId),
-    );
-  }, [activeGroupId, blockedAuthorIds, getGroupFeed]);
-
-  const isWarming = connectScenario === "warming" || visiblePosts.length === 0;
+  const isWarming = !groupPostsQuery.isLoading && visiblePosts.length === 0;
 
   function confirmBlock(authorId: string, authorName: string) {
     Alert.alert(
@@ -61,6 +69,7 @@ export function ConnectScreen() {
           style: "destructive",
           onPress: () => {
             blockAuthor(authorId);
+            blockMutation.mutate({ userId: authorId });
             setShowBlockMenu(null);
           },
         },
@@ -151,7 +160,7 @@ export function ConnectScreen() {
               Today's prompt
             </AppText>
             <AppText variant="title" tone="inverse">
-              {groupPrompt}
+              {CONNECT_PROMPT}
             </AppText>
             <AppText variant="bodySmall" style={styles.promptMeta}>
               {visiblePosts.length} recent notes · keep it kind
@@ -169,30 +178,30 @@ export function ConnectScreen() {
           <AppText weight="semibold">From your circle</AppText>
 
           {visiblePosts.map((post) => {
-            const liked = likedPosts[post.id];
-            const reactionCount = post.reactions + (liked ? 1 : 0);
+            const liked = post.reactedByMe ?? false;
             return (
               <SoftPanel key={post.id}>
                 <Pressable onPress={() => router.push(appRoutes.connectPost(post.id))}>
                   <View style={styles.authorRow}>
                     <View style={styles.avatar}>
                       <AppText weight="semibold" tone="inverse">
-                        {post.author.slice(0, 1)}
+                        {post.authorName.slice(0, 1)}
                       </AppText>
                     </View>
                     <AppText variant="caption" tone="secondary">
-                      {post.author}
+                      {post.authorName}
                     </AppText>
                   </View>
                   <AppText>{post.body}</AppText>
                   <AppText variant="caption" tone="secondary" style={styles.commentCount}>
-                    {post.comments.length} replies
+                    {post.commentCount} replies
                   </AppText>
                 </Pressable>
                 <View style={styles.postActions}>
                   <Pressable
                     style={styles.action}
-                    onPress={() => togglePostLike(post.id)}
+                    onPress={() => reactMutation.mutate(post.id)}
+                    disabled={reactMutation.isPending}
                     accessibilityLabel={liked ? "Unlike post" : "Like post"}
                     hitSlop={8}
                   >
@@ -202,7 +211,7 @@ export function ConnectScreen() {
                       color={liked ? colors.brand.terracotta : colors.brand.peach}
                     />
                     <AppText variant="caption" tone="secondary">
-                      {reactionCount}
+                      {post.reactionCount}
                     </AppText>
                   </Pressable>
                   <Pressable
@@ -232,7 +241,7 @@ export function ConnectScreen() {
                     onPress={() =>
                       setShowBlockMenu(showBlockMenu === post.id ? null : post.id)
                     }
-                    accessibilityLabel={`Block options for ${post.author}`}
+                    accessibilityLabel={`Block options for ${post.authorName}`}
                   >
                     <Feather name="slash" size={14} color={colors.text.muted} />
                     <AppText variant="caption" tone="secondary">
@@ -243,10 +252,10 @@ export function ConnectScreen() {
                 {showBlockMenu === post.id ? (
                   <Pressable
                     style={styles.blockRow}
-                    onPress={() => confirmBlock(post.authorId, post.author)}
+                    onPress={() => confirmBlock(post.authorId, post.authorName)}
                   >
                     <AppText variant="caption" weight="semibold" style={styles.blockText}>
-                      Block {post.author.split(" · ")[0]}
+                      Block {post.authorName.split(" · ")[0]}
                     </AppText>
                   </Pressable>
                 ) : null}

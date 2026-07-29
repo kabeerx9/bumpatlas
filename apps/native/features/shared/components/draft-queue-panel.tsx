@@ -9,7 +9,8 @@ type DraftQueuePanelProps = {
 };
 
 export function DraftQueuePanel({ onOpenDraft }: DraftQueuePanelProps) {
-  const { drafts, removeDraft, clearDrafts, isOffline } = useMockUi();
+  const { drafts, removeDraft, clearDrafts, isOffline, syncingDrafts, flushDraftQueue } =
+    useMockUi();
 
   if (drafts.length === 0) return null;
 
@@ -24,7 +25,9 @@ export function DraftQueuePanel({ onOpenDraft }: DraftQueuePanelProps) {
       <AppText variant="caption" tone="secondary">
         {isOffline
           ? "Saved on this device. They’ll sync when you’re back online."
-          : "Ready to sync — open a draft to finish or clear after upload."}
+          : syncingDrafts
+            ? "Syncing drafts…"
+            : "Ready to sync — they’ll upload automatically when online."}
       </AppText>
       {drafts.map((draft) => (
         <View key={draft.id} style={styles.row}>
@@ -46,6 +49,17 @@ export function DraftQueuePanel({ onOpenDraft }: DraftQueuePanelProps) {
           </Pressable>
         </View>
       ))}
+      {!isOffline ? (
+        <Pressable
+          onPress={() => void flushDraftQueue()}
+          hitSlop={8}
+          accessibilityLabel="Sync drafts now"
+        >
+          <AppText variant="caption" weight="semibold" style={styles.clear}>
+            {syncingDrafts ? "Syncing…" : "Sync now"}
+          </AppText>
+        </Pressable>
+      ) : null}
       {drafts.length > 1 ? (
         <Pressable onPress={clearDrafts} hitSlop={8} accessibilityLabel="Clear all drafts">
           <AppText variant="caption" weight="semibold" style={styles.clear}>

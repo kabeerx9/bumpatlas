@@ -3,19 +3,21 @@ import { useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { mockGroupPosts } from "@/features/mock/demo-data";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useGroupPostsQuery } from "@/lib/api/hooks";
 
 export function ConnectBlockedScreen() {
   const router = useRouter();
-  const { blockedAuthorIds, unblockAuthor } = useMockUi();
+  const { blockedAuthorIds, unblockAuthor, activeGroupId } = useMockUi();
+  const groupPostsQuery = useGroupPostsQuery(activeGroupId);
 
-  const blocked = mockGroupPosts
-    .filter((post) => blockedAuthorIds.includes(post.authorId))
-    .map((post) => ({ id: post.authorId, name: post.author }));
-
-  const uniqueBlocked = Array.from(new Map(blocked.map((item) => [item.id, item])).values());
+  const posts = groupPostsQuery.data?.items ?? [];
+  const nameByAuthorId = new Map(posts.map((post) => [post.authorId, post.authorName]));
+  const blocked = blockedAuthorIds.map((authorId) => ({
+    id: authorId,
+    name: nameByAuthorId.get(authorId) ?? "Blocked member",
+  }));
 
   return (
     <SoftStackShell title="Blocked members" onBack={() => router.back()}>
@@ -23,7 +25,7 @@ export function ConnectBlockedScreen() {
         Blocked members cannot see your posts and you won&apos;t see theirs.
       </AppText>
 
-      {uniqueBlocked.length === 0 ? (
+      {blocked.length === 0 ? (
         <View style={styles.empty}>
           <Feather name="users" size={28} color={colors.brand.peach} />
           <AppText weight="semibold">No blocked members</AppText>
@@ -32,7 +34,7 @@ export function ConnectBlockedScreen() {
           </AppText>
         </View>
       ) : (
-        uniqueBlocked.map((member) => (
+        blocked.map((member) => (
           <View key={member.id} style={styles.row}>
             <View style={styles.copy}>
               <AppText weight="semibold">{member.name}</AppText>

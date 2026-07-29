@@ -1,11 +1,20 @@
-import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, Button, colors, radius, spacing } from "@/design-system";
 import { mockNotificationCategories } from "@/features/mock/mock-content";
-import { useMockUi, type NotificationPrefKey } from "@/features/mock/mock-ui-context";
+import type { NotificationPrefKey } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import {
+  useNotificationPreferencesQuery,
+  useUpdateNotificationPreferencesMutation,
+} from "@/lib/api/hooks";
+import {
+  enablePushAndRegister,
+  getPushPermissionStatus,
+  type PushPermissionStatus,
+} from "@/lib/notifications/push";
 
 const QUIET_HOUR_PRESETS: Array<{ start: string; end: string; label: string }> = [
   { start: "21:00", end: "08:00", label: "9pm – 8am" },
@@ -14,26 +23,82 @@ const QUIET_HOUR_PRESETS: Array<{ start: string; end: string; label: string }> =
   { start: "23:00", end: "08:00", label: "11pm – 8am" },
 ];
 
+const DEFAULT_NOTIFICATION_PREFS = Object.fromEntries(
+  mockNotificationCategories.map((category) => [category.id, category.defaultOn]),
+) as Record<NotificationPrefKey, boolean>;
+
 export function NotificationSettingsScreen() {
   const router = useRouter();
-  const {
-    quietHoursEnabled,
-    setQuietHoursEnabled,
-    quietStart,
-    quietEnd,
-    setQuietHours,
-    groupRelatedAlerts,
-    setGroupRelatedAlerts,
-    notificationPrefs,
-    setNotificationPref,
-  } = useMockUi();
+  const prefsQuery = useNotificationPreferencesQuery();
+  const updatePrefs = useUpdateNotificationPreferencesMutation();
+  const [permission, setPermission] = useState<PushPermissionStatus>("undetermined");
+  const [registering, setRegistering] = useState(false);
+
+  const [quietHoursEnabled, setQuietHoursEnabled] = useState(true);
+  const [quietStart, setQuietStart] = useState("21:00");
+  const [quietEnd, setQuietEnd] = useState("08:00");
+  const [groupRelatedAlerts, setGroupRelatedAlerts] = useState(true);
+  const [notificationPrefs, setNotificationPrefs] = useState<Record<NotificationPrefKey, boolean>>(
+    DEFAULT_NOTIFICATION_PREFS,
+  );
+
+  useEffect(() => {
+    void getPushPermissionStatus().then(setPermission);
+  }, []);
+
+  useEffect(() => {
+    const prefs = prefsQuery.data;
+    if (!prefs) return;
+    setQuietHoursEnabled(prefs.quietHoursEnabled);
+    setQuietStart(prefs.quietStart);
+    setQuietEnd(prefs.quietEnd);
+    setGroupRelatedAlerts(prefs.groupRelatedAlerts);
+    setNotificationPrefs((current) => ({ ...current, ...prefs.prefs }));
+  }, [prefsQuery.data]);
+
+  function setQuietHoursValues(start: string, end: string) {
+    setQuietStart(start);
+    setQuietEnd(end);
+  }
+
+  function setNotificationPref(key: NotificationPrefKey, value: boolean) {
+    setNotificationPrefs((current) => ({ ...current, [key]: value }));
+  }
+
+  async function persistPrefsPatch(
+    patch: Parameters<typeof updatePrefs.mutateAsync>[0],
+  ) {
+    try {
+      await updatePrefs.mutateAsync(patch);
+    } catch {
+      // Local toggles still apply; server sync retries when API is available.
+    }
+  }
+
+  async function enableSystemNotifications() {
+    if (registering) return;
+    setRegistering(true);
+    try {
+      const result = await enablePushAndRegister();
+      setPermission(result.permission);
+      if (result.permission !== "granted") {
+        Alert.alert(
+          "Notifications off",
+          "You can enable them later in system Settings if you change your mind.",
+        );
+      }
+    } finally {
+      setRegistering(false);
+    }
+  }
 
   function cycleQuietHours() {
     const currentIndex = QUIET_HOUR_PRESETS.findIndex(
       (p) => p.start === quietStart && p.end === quietEnd,
     );
     const next = QUIET_HOUR_PRESETS[(currentIndex + 1) % QUIET_HOUR_PRESETS.length];
-    setQuietHours(next.start, next.end);
+    setQuietHoursValues(next.start, next.end);
+    void persistPrefsPatch({ quietStart: next.start, quietEnd: next.end });
   }
 
   const quietLabel =
@@ -46,6 +111,18 @@ export function NotificationSettingsScreen() {
         No shame language — ever.
       </AppText>
 
+      {permission !== "granted" ? (
+        <View style={styles.permissionCard}>
+          <AppText weight="semibold">Device permission</AppText>
+          <AppText variant="bodySmall" tone="secondary">
+            BumpAtlas needs system permission to deliver quiet-hours-aware prompts.
+          </AppText>
+          <Button size="sm" disabled={registering} onPress={() => void enableSystemNotifications()}>
+            {registering ? "Requesting…" : "Allow notifications"}
+          </Button>
+        </View>
+      ) : null}
+
       <View style={styles.sectionHead}>
         <AppText weight="semibold">Quiet hours</AppText>
         <AppText variant="bodySmall" tone="secondary">
@@ -54,7 +131,11 @@ export function NotificationSettingsScreen() {
       </View>
 
       <Pressable
-        onPress={() => setQuietHoursEnabled(!quietHoursEnabled)}
+        onPress={() => {
+          const next = !quietHoursEnabled;
+          setQuietHoursEnabled(next);
+          void persistPrefsPatch({ quietHoursEnabled: next });
+        }}
         style={[styles.row, quietHoursEnabled && styles.rowOn]}
       >
         <View style={styles.copy}>
@@ -78,7 +159,11 @@ export function NotificationSettingsScreen() {
       </Pressable>
 
       <Pressable
-        onPress={() => setGroupRelatedAlerts(!groupRelatedAlerts)}
+        onPress={() => {
+          const next = !groupRelatedAlerts;
+          setGroupRelatedAlerts(next);
+          void persistPrefsPatch({ groupRelatedAlerts: next });
+        }}
         style={[styles.row, groupRelatedAlerts && styles.rowOn]}
         accessibilityRole="switch"
         accessibilityState={{ checked: groupRelatedAlerts }}
@@ -104,7 +189,13 @@ export function NotificationSettingsScreen() {
         return (
           <Pressable
             key={category.id}
-            onPress={() => setNotificationPref(key, !enabled)}
+            onPress={() => {
+              const next = !enabled;
+              setNotificationPref(key, next);
+              void persistPrefsPatch({
+                prefs: { ...notificationPrefs, [key]: next },
+              });
+            }}
             style={[styles.row, enabled && styles.rowOn]}
             accessibilityRole="switch"
             accessibilityState={{ checked: enabled }}
@@ -126,6 +217,12 @@ export function NotificationSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  permissionCard: {
+    borderRadius: radius.xl,
+    backgroundColor: colors.brand.peachSoft,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
   sectionHead: { gap: 2, marginTop: spacing.md },
   row: {
     flexDirection: "row",

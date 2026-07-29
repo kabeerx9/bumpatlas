@@ -1,12 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { mockGroupPosts } from "@/features/mock/demo-data";
+import { useMockUi } from "@/features/mock/mock-ui-context";
 import { HighRiskEscalatePanel } from "@/features/shared/components/high-risk-escalate";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useCreateReportMutation, useGroupPostDetailQuery } from "@/lib/api/hooks";
 
 const REASONS = [
   "Medical advice for my child",
@@ -23,22 +24,40 @@ const CSAM_REASON = "Child sexual exploitation / CSAM";
 export function ConnectReportScreen() {
   const router = useRouter();
   const { postId } = useLocalSearchParams<{ postId?: string }>();
+  const { activeGroupId } = useMockUi();
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [highRiskAcknowledged, setHighRiskAcknowledged] = useState(false);
 
-  const post = useMemo(
-    () => mockGroupPosts.find((item) => item.id === postId) ?? mockGroupPosts[0],
-    [postId],
-  );
+  const postQuery = useGroupPostDetailQuery(activeGroupId, postId ?? "");
+  const reportMutation = useCreateReportMutation();
+  const post = postQuery.data;
 
   const isHighRisk = selected === HIGH_RISK_REASON || selected === CSAM_REASON;
-  const canSubmit = selected && (!isHighRisk || highRiskAcknowledged);
+  const canSubmit =
+    Boolean(selected) &&
+    Boolean(postId) &&
+    (!isHighRisk || highRiskAcknowledged) &&
+    !reportMutation.isPending;
 
   function selectReason(reason: string) {
     setSelected(reason);
     if (reason !== HIGH_RISK_REASON && reason !== CSAM_REASON) {
       setHighRiskAcknowledged(false);
+    }
+  }
+
+  async function submitReport() {
+    if (!canSubmit || !selected || !postId) return;
+    try {
+      await reportMutation.mutateAsync({
+        targetType: "post",
+        targetId: postId,
+        reason: selected,
+      });
+      setSubmitted(true);
+    } catch {
+      Alert.alert("Couldn’t submit report", "Check your connection and try again.");
     }
   }
 
@@ -53,8 +72,8 @@ export function ConnectReportScreen() {
             Done
           </Button>
         ) : (
-          <Button size="lg" disabled={!canSubmit} onPress={() => setSubmitted(true)}>
-            Submit report
+          <Button size="lg" disabled={!canSubmit} onPress={() => void submitReport()}>
+            {reportMutation.isPending ? "Submitting…" : "Submit report"}
           </Button>
         )
       }
@@ -75,11 +94,11 @@ export function ConnectReportScreen() {
       ) : (
         <>
           <AppText variant="body" tone="secondary">
-            Why are you reporting this post from {post.author}?
+            Why are you reporting this post from {post?.authorName ?? "this member"}?
           </AppText>
           <View style={styles.preview}>
             <AppText variant="bodySmall" tone="secondary" numberOfLines={3}>
-              {post.body}
+              {post?.body ?? "This post"}
             </AppText>
           </View>
           {REASONS.map((reason) => (

@@ -47,10 +47,13 @@ export function createApiClient(options: ApiClientOptions) {
     const payload = (await response.json().catch(() => null)) as unknown;
     const parsed = apiErrorResponseSchema.safeParse(payload);
 
-    throw new ApiError(
-      response.status,
-      parsed.success ? parsed.data.error : response.statusText,
-    );
+    const message = parsed.success
+      ? typeof parsed.data.error === "string"
+        ? parsed.data.error
+        : parsed.data.error.message
+      : response.statusText;
+
+    throw new ApiError(response.status, message);
   }
 
   return {

@@ -1,54 +1,41 @@
 import { Feather } from "@expo/vector-icons";
-import { useAuth } from "@clerk/expo";
 import { useRouter } from "expo-router";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { SignOutButton } from "@/components/sign-out-button";
 import { AppText, Button, colors, spacing } from "@/design-system";
-import { mockHouseholdMembers, mockRecaps } from "@/features/mock/demo-data";
-import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftHeader } from "@/features/shared/components/soft-header";
 import { SoftPanel } from "@/features/shared/components/soft-panel";
 import { SoftScreen } from "@/features/shared/components/soft-screen";
+import { useFamilyQuery, useCurrentRecapQuery, useSetPremiumEntitlement } from "@/lib/api/hooks";
+import { restorePurchases } from "@/lib/purchases/revenuecat";
 import { appRoutes } from "@/navigation/routes";
 
 export function FamilyScreen() {
-  const { userId } = useAuth();
   const router = useRouter();
-  const {
-    isOffline,
-    setOffline,
-    setConnectScenario,
-    connectScenario,
-    setConnectTodayMode,
-    connectTodayMode,
-    stageMode,
-    setStageMode,
-    showEmptyJourney,
-    setShowEmptyJourney,
-    householdName,
-    childDisplayName,
-  } = useMockUi();
+  const familyQuery = useFamilyQuery();
+  const recapQuery = useCurrentRecapQuery();
+  const setPremium = useSetPremiumEntitlement();
 
-  function cycleStageMode() {
-    if (stageMode === "postpartum") setStageMode("pregnancy");
-    else if (stageMode === "pregnancy") setStageMode("unknown");
-    else setStageMode("postpartum");
+  const members = familyQuery.data?.members ?? [];
+  const familyTitle = familyQuery.data?.name ?? "Your household";
+  const childName = familyQuery.data?.childDisplayName ?? "your child";
+  const recap = recapQuery.data;
+
+  async function handleRestore() {
+    const result = await restorePurchases();
+    if (result.status === "success") {
+      setPremium(result.isPremium);
+    }
+    router.push(appRoutes.paywall());
   }
-
-  const stageDemoLabel =
-    stageMode === "pregnancy"
-      ? "Simulate UNKNOWN stage (finish onboarding)"
-      : stageMode === "unknown"
-        ? "Switch Today to postpartum mode"
-        : "Switch Today to pregnancy mode";
 
   return (
     <SoftScreen>
       <SoftHeader
         eyebrow="Family"
         title="Your household"
-        subtitle={`${householdName} · caring for ${childDisplayName}`}
+        subtitle={`${familyTitle} · caring for ${childName}`}
       />
 
       <SoftPanel>
@@ -71,19 +58,19 @@ export function FamilyScreen() {
           Members
         </AppText>
 
-        {mockHouseholdMembers.map((member) => (
+        {members.map((member) => (
           <View key={member.id} style={styles.memberRow}>
             <View style={styles.avatar}>
               <AppText weight="semibold" tone="inverse">
-                {member.name.slice(0, 1)}
+                {member.displayName.slice(0, 1)}
               </AppText>
             </View>
             <View style={styles.memberCopy}>
               <AppText weight="semibold">
-                {member.name} · {member.role}
+                {member.displayName} · {member.role}
               </AppText>
               <AppText variant="caption" tone="secondary">
-                {member.email}
+                {member.status}
               </AppText>
             </View>
           </View>
@@ -117,7 +104,9 @@ export function FamilyScreen() {
           <AppText weight="semibold">Weekly recap</AppText>
         </View>
         <AppText variant="bodySmall" tone="secondary">
-          {mockRecaps[0].title} — {mockRecaps[0].summary}
+          {recap
+            ? `${recap.title} — ${recap.weekLabel}`
+            : "Your weekly card unlocks with gentle progress."}
         </AppText>
         <Pressable
           style={styles.linkRow}
@@ -147,19 +136,7 @@ export function FamilyScreen() {
         >
           View premium
         </Button>
-        <Button
-          variant="ghost"
-          onPress={() =>
-            Alert.alert(
-              "Restore purchases",
-              "Checking App Store / Play purchases… (mock) No active premium found.",
-              [
-                { text: "Open paywall", onPress: () => router.push(appRoutes.paywall()) },
-                { text: "OK", style: "cancel" },
-              ],
-            )
-          }
-        >
+        <Button variant="ghost" onPress={() => void handleRestore()}>
           Restore purchases
         </Button>
       </SoftPanel>
@@ -188,70 +165,8 @@ export function FamilyScreen() {
         <AppText variant="bodySmall" tone="secondary">
           help@bumpatlas.app · we reply within 1 business day during beta
         </AppText>
-        <Pressable style={styles.linkRow} onPress={() => setOffline(!isOffline)}>
-          <AppText variant="caption" weight="semibold" style={styles.link}>
-            {isOffline ? "Simulate online" : "Simulate offline (preview banner)"}
-          </AppText>
-        </Pressable>
-        <Pressable
-          style={styles.linkRow}
-          onPress={() =>
-            setConnectScenario(connectScenario === "warming" ? "active" : "warming")
-          }
-        >
-          <AppText variant="caption" weight="semibold" style={styles.link}>
-            {connectScenario === "warming"
-              ? "Simulate active Connect group"
-              : "Simulate warming Connect (Parent wellbeing starts empty)"}
-          </AppText>
-        </Pressable>
-        <Pressable
-          style={styles.linkRow}
-          onPress={() =>
-            setConnectTodayMode(connectTodayMode === "alone" ? "group" : "alone")
-          }
-        >
-          <AppText variant="caption" weight="semibold" style={styles.link}>
-            {connectTodayMode === "alone"
-              ? "Show group Connect on Today"
-              : "Show invite-partner Connect on Today"}
-          </AppText>
-        </Pressable>
-        <Pressable style={styles.linkRow} onPress={cycleStageMode}>
-          <AppText variant="caption" weight="semibold" style={styles.link}>
-            {stageDemoLabel}
-          </AppText>
-        </Pressable>
-        <Pressable
-          style={styles.linkRow}
-          onPress={() => setShowEmptyJourney(!showEmptyJourney)}
-        >
-          <AppText variant="caption" weight="semibold" style={styles.link}>
-            {showEmptyJourney ? "Show Journey with content" : "Simulate empty Journey"}
-          </AppText>
-        </Pressable>
-        <Pressable
-          style={styles.linkRow}
-          onPress={() => router.push(appRoutes.sessionExpired)}
-        >
-          <AppText variant="caption" weight="semibold" style={styles.link}>
-            Preview session expired (401)
-          </AppText>
-        </Pressable>
-        <Pressable style={styles.linkRow} onPress={() => router.push(appRoutes.noAccess)}>
-          <AppText variant="caption" weight="semibold" style={styles.link}>
-            Preview no household access (403)
-          </AppText>
-        </Pressable>
-      </SoftPanel>
-
-      <SoftPanel>
-        <AppText weight="semibold">Account</AppText>
-        <AppText variant="caption" tone="secondary">
-          {userId ? "Signed in" : "Local preview"}
-        </AppText>
         <Button variant="ghost" onPress={() => router.push(appRoutes.account)}>
-          Account settings & delete
+          Account settings
         </Button>
         <SignOutButton />
       </SoftPanel>
@@ -262,27 +177,26 @@ export function FamilyScreen() {
 const styles = StyleSheet.create({
   peachLabel: {
     color: colors.brand.peach,
-    letterSpacing: 0.8,
     textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: spacing.xs,
   },
   memberRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
+    marginBottom: spacing.sm,
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.brand.peach,
     alignItems: "center",
     justifyContent: "center",
   },
   avatarOpen: {
     backgroundColor: colors.brand.peachSoft,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: colors.brand.peach,
   },
   memberCopy: { flex: 1, gap: 2 },
   recapTop: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
@@ -298,12 +212,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
+    minHeight: 44,
   },
   link: { color: colors.brand.peach },
-  planCta: {
-    marginTop: spacing.sm,
-    backgroundColor: colors.brand.peachSoft,
-    borderColor: colors.brand.peachSoft,
-  },
+  planCta: { marginTop: spacing.sm },
 });

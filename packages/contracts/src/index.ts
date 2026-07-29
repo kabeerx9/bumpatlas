@@ -6,3 +6,4 @@ export {
   type UpdateAccountInput,
 } from "./account";
 export { apiErrorResponseSchema, meResponseSchema, type MeResponse } from "./me";
+export * from "./v1";

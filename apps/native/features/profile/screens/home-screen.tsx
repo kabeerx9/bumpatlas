@@ -705,6 +705,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: radius.full,
-    backgroundColor: colors.brand.mint,
+    backgroundColor: colors.brand.sageSoft,
   },
 });

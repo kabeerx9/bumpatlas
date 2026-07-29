@@ -1,15 +1,21 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { AppText, colors, radius, spacing } from "@/design-system";
-import { mockBadges } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useBadgesQuery } from "@/lib/api/hooks";
+
+function formatEarnedDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 
 export function BadgesScreen() {
   const router = useRouter();
-  const { earnedBadgeIds, newlyEarnedBadgeId } = useMockUi();
+  const { newlyEarnedBadgeId } = useMockUi();
+  const badgesQuery = useBadgesQuery();
+  const badges = badgesQuery.data?.items ?? [];
 
   return (
     <SoftStackShell title="Badges" onBack={() => router.back()}>
@@ -17,37 +23,41 @@ export function BadgesScreen() {
         Cosmetic only — never a streak to protect. Missing a day never takes these away.
       </AppText>
 
-      {mockBadges.map((badge) => {
-        const earned = earnedBadgeIds.includes(badge.id);
-        const justEarned = newlyEarnedBadgeId === badge.id;
-        return (
-          <View
-            key={badge.id}
-            style={[styles.card, !earned && styles.cardLocked, justEarned && styles.cardFresh]}
-          >
-            <View style={[styles.icon, earned && styles.iconEarned]}>
-              <Feather
-                name={earned ? "award" : "lock"}
-                size={18}
-                color={earned ? colors.text.inverse : colors.text.muted}
-              />
+      {badgesQuery.isLoading ? (
+        <ActivityIndicator color={colors.brand.peach} />
+      ) : (
+        badges.map((badge) => {
+          const earned = Boolean(badge.earnedAt);
+          const justEarned = newlyEarnedBadgeId === badge.id;
+          return (
+            <View
+              key={badge.id}
+              style={[styles.card, !earned && styles.cardLocked, justEarned && styles.cardFresh]}
+            >
+              <View style={[styles.icon, earned && styles.iconEarned]}>
+                <Feather
+                  name={earned ? "award" : "lock"}
+                  size={18}
+                  color={earned ? colors.text.inverse : colors.text.muted}
+                />
+              </View>
+              <View style={styles.copy}>
+                <AppText weight="semibold">{badge.title}</AppText>
+                <AppText variant="bodySmall" tone="secondary">
+                  {badge.description}
+                </AppText>
+                <AppText variant="caption" style={earned ? styles.earned : undefined}>
+                  {earned
+                    ? justEarned
+                      ? "Just earned"
+                      : `Earned ${formatEarnedDate(badge.earnedAt as string)}`
+                    : "Not yet earned"}
+                </AppText>
+              </View>
             </View>
-            <View style={styles.copy}>
-              <AppText weight="semibold">{badge.title}</AppText>
-              <AppText variant="bodySmall" tone="secondary">
-                {badge.description}
-              </AppText>
-              <AppText variant="caption" style={earned ? styles.earned : undefined}>
-                {earned
-                  ? justEarned
-                    ? "Just earned"
-                    : "Earned · yours to keep"
-                  : badge.earnedLabel}
-              </AppText>
-            </View>
-          </View>
-        );
-      })}
+          );
+        })
+      )}
     </SoftStackShell>
   );
 }

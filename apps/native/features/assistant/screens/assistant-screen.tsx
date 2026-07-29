@@ -13,13 +13,13 @@ import {
 } from "react-native";
 
 import { AppText, colors, radius, spacing } from "@/design-system";
-import { mockAssistantResponses } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { CitationCard, type Citation } from "@/features/shared/components/citation-card";
 import { EscalateCard } from "@/features/shared/components/escalate-card";
 import { QuotaMeter } from "@/features/shared/components/quota-meter";
 import { SoftPanel } from "@/features/shared/components/soft-panel";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useAiUsageQuery, useSendAiChatMutation } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 const SUGGESTIONS = [
@@ -47,20 +47,19 @@ type ThreadItem =
 
 export function AssistantScreen() {
   const router = useRouter();
-  const {
-    aiMessagesUsed,
-    incrementAiUsage,
-    aiDailyLimit,
-    resetAiUsage,
-    aiHourlyUsed,
-    aiHourlyLimit,
-    weekSummaryConsent,
-    setWeekSummaryConsent,
-  } = useMockUi();
+  const { weekSummaryConsent, setWeekSummaryConsent } = useMockUi();
+  const aiUsageQuery = useAiUsageQuery();
+  const sendAi = useSendAiChatMutation();
   const [message, setMessage] = useState("");
   const [thread, setThread] = useState<ThreadItem[]>([INTRO_MESSAGE]);
   const [reportedIds, setReportedIds] = useState<string[]>([]);
   const [pendingSummary, setPendingSummary] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+
+  const aiMessagesUsed = aiUsageQuery.data?.dailyUsed ?? 0;
+  const aiDailyLimit = aiUsageQuery.data?.dailyLimit ?? 10;
+  const aiHourlyUsed = aiUsageQuery.data?.hourlyUsed ?? 0;
+  const aiHourlyLimit = aiUsageQuery.data?.hourlyLimit ?? 20;
 
   const dailyExhausted = aiMessagesUsed >= aiDailyLimit;
   const hourlyExhausted = aiHourlyUsed >= aiHourlyLimit;
@@ -71,69 +70,59 @@ export function AssistantScreen() {
       ? "Daily limit reached"
       : null;
 
-  function buildReply(trimmed: string): ThreadItem {
-    const isDosing = /dose|tylenol|ibuprofen/i.test(trimmed);
-    const isEscalate = /fever|emergency|breathing|911|urgent/i.test(trimmed);
-    const isSummary = /summarize/i.test(trimmed);
-    const isWellness = /wellness|stretch|care|tired/i.test(trimmed);
-
-    if (isDosing) {
-      return {
-        role: "assistant",
-        id: `a-${Date.now()}`,
-        text: mockAssistantResponses.dosing.text,
-        escalate: true,
-      };
-    }
-
-    if (isEscalate) {
-      return {
-        role: "assistant",
-        id: `a-${Date.now()}`,
-        text: mockAssistantResponses.escalate.text,
-        escalate: true,
-      };
-    }
-
-    if (isSummary) {
-      return {
-        role: "assistant",
-        id: `a-${Date.now()}`,
-        text: mockAssistantResponses.summary.text,
-        citation: mockAssistantResponses.summary.citation,
-      };
-    }
-
-    return {
-      role: "assistant",
-      id: `a-${Date.now()}`,
-      text: isWellness
-        ? mockAssistantResponses.wellness.text
-        : "Here's a calm, stage-aware thought based on reviewed BumpAtlas content.",
-      citation: isWellness ? mockAssistantResponses.wellness.citation : undefined,
-    };
-  }
-
-  function send(text: string) {
+  async function send(text: string) {
     const trimmed = text.trim();
-    if (!trimmed || exhausted) return;
+    if (!trimmed || exhausted || sending) return;
 
     if (/summarize/i.test(trimmed) && !weekSummaryConsent) {
       setPendingSummary(trimmed);
       return;
     }
 
-    incrementAiUsage();
-    const assistantReply = buildReply(trimmed);
-    setThread((current) => [...current, { role: "user", text: trimmed }, assistantReply]);
     setMessage("");
     setPendingSummary(null);
+    setThread((current) => [...current, { role: "user", text: trimmed }]);
+
+    setSending(true);
+    try {
+      const response = await sendAi.mutateAsync({ message: trimmed });
+      const citation = response.message.citations?.[0];
+      setThread((current) => [
+        ...current,
+        {
+          role: "assistant",
+          id: response.message.id,
+          text: response.message.body,
+          citation: citation
+            ? {
+                title: citation.title,
+                sourceName: citation.source,
+                reviewerName: "BumpAtlas",
+                reviewedOn: new Date().toISOString().slice(0, 10),
+                guideId: citation.id,
+              }
+            : undefined,
+          escalate: Boolean(response.message.escalate),
+        },
+      ]);
+    } catch {
+      setThread((current) => [
+        ...current,
+        {
+          role: "assistant",
+          id: `err-${Date.now()}`,
+          text: "I couldn’t reach the assistant just now. Try again in a moment.",
+        },
+      ]);
+    } finally {
+      setSending(false);
+    }
   }
 
   function confirmSummaryWithConsent() {
     if (!pendingSummary) return;
     setWeekSummaryConsent(true);
-    send(pendingSummary);
+    void send(pendingSummary);
   }
 
   function clearConversation() {
@@ -146,10 +135,6 @@ export function AssistantScreen() {
           setThread([INTRO_MESSAGE]);
           setReportedIds([]);
           setPendingSummary(null);
-          Alert.alert("Reset AI usage too?", "Restore your daily message count to zero.", [
-            { text: "Keep usage", style: "cancel" },
-            { text: "Reset usage", onPress: () => resetAiUsage() },
-          ]);
         },
       },
     ]);
@@ -297,7 +282,7 @@ export function AssistantScreen() {
               <Pressable
                 key={suggestion}
                 style={styles.suggestion}
-                onPress={() => send(suggestion)}
+                onPress={() => void send(suggestion)}
                 disabled={exhausted}
               >
                 <AppText variant="caption" weight="semibold" style={styles.suggestionText}>
@@ -321,9 +306,12 @@ export function AssistantScreen() {
             maxFontSizeMultiplier={1.35}
           />
           <Pressable
-            onPress={() => send(message)}
-            disabled={message.trim().length === 0 || exhausted}
-            style={[styles.sendBtn, (message.trim().length === 0 || exhausted) && styles.sendDisabled]}
+            onPress={() => void send(message)}
+            disabled={exhausted || sending || message.trim().length === 0}
+            style={[
+              styles.sendBtn,
+              (message.trim().length === 0 || exhausted || sending) && styles.sendDisabled,
+            ]}
             accessibilityLabel="Send message"
             accessibilityRole="button"
           >

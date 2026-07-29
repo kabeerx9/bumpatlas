@@ -13,5 +13,12 @@ export const meResponseSchema = z.object({
 export type MeResponse = z.infer<typeof meResponseSchema>;
 
 export const apiErrorResponseSchema = z.object({
-  error: z.string(),
+  error: z.union([
+    z.string(),
+    z.object({
+      code: z.string(),
+      message: z.string(),
+      details: z.unknown().optional(),
+    }),
+  ]),
 });

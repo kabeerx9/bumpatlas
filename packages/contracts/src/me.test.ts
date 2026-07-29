@@ -51,6 +51,17 @@ describe("apiErrorResponseSchema", () => {
     });
   });
 
+  it("accepts a structured error object", () => {
+    assert.deepEqual(
+      apiErrorResponseSchema.parse({
+        error: { code: "UNAUTHORIZED", message: "Unauthorized" },
+      }),
+      {
+        error: { code: "UNAUTHORIZED", message: "Unauthorized" },
+      },
+    );
+  });
+
   it("rejects an error payload without a string message", () => {
     assert.throws(() => apiErrorResponseSchema.parse({ error: 401 }));
     assert.throws(() => apiErrorResponseSchema.parse({ message: "Unauthorized" }));

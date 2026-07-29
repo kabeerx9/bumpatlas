@@ -14,6 +14,7 @@ import { ClerkAuthSetup } from "@/components/clerk-auth-setup";
 import { MockUiProvider } from "@/features/mock/mock-ui-context";
 import { OnboardingProvider } from "@/features/onboarding/providers/onboarding-provider";
 import { BadgeToast } from "@/features/shared/components/badge-toast";
+import { PurchasesBootstrap } from "@/features/subscription/components/purchases-bootstrap";
 import { useResetSessionOnAuthChange } from "@/hooks/useResetSessionOnAuthChange";
 import { NAV_THEME } from "@/lib/constants";
 import { useAppFonts } from "@/lib/fonts";
@@ -73,6 +74,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
                   <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
                   <FontGate>
                     <GestureHandlerRootView style={styles.container}>
+                      <PurchasesBootstrap />
                       {children}
                       <BadgeToast />
                     </GestureHandlerRootView>

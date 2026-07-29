@@ -14,6 +14,7 @@ import { getClerkAuthToken } from "@/utils/clerk-auth";
 export type { DeleteAccountInput, UpdateAccountInput };
 export { ApiError };
 
+/** @deprecated Prefer `@/lib/api/*` domain modules. Kept for account mutations. */
 const api = createApiClient({
   baseUrl: env.EXPO_PUBLIC_SERVER_URL,
   getToken: getClerkAuthToken,
@@ -34,3 +35,6 @@ export function deleteAccount(input: DeleteAccountInput) {
     body: JSON.stringify(body),
   });
 }
+
+export { apiClient, useMockData } from "./api/client";
+export * from "./api/hooks";

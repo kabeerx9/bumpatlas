@@ -1,7 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   Share,
@@ -11,62 +12,78 @@ import {
 } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import {
+  useDeleteMemoryMutation,
+  useFamilyQuery,
+  useMemoryQuery,
+  useUpdateMemoryMutation,
+} from "@/lib/api/hooks";
 
 type Mode = "view" | "edit";
 
 export function MemoryDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { childDisplayName, journeyMemories, updateJourneyMemory, deleteJourneyMemory } =
-    useMockUi();
-
-  const memory = useMemo(
-    () => journeyMemories.find((item) => item.id === id) ?? journeyMemories[0],
-    [id, journeyMemories],
-  );
+  const familyQuery = useFamilyQuery();
+  const childDisplayName = familyQuery.data?.childDisplayName ?? "your child";
+  const memoryQuery = useMemoryQuery(id ?? "");
+  const updateMemory = useUpdateMemoryMutation();
+  const deleteMemory = useDeleteMemoryMutation();
+  const memory = memoryQuery.data;
 
   const [mode, setMode] = useState<Mode>("view");
-  const [title, setTitle] = useState(memory?.title ?? "");
-  const [body, setBody] = useState(memory?.body ?? "");
-  const [savedTitle, setSavedTitle] = useState(memory?.title ?? "");
-  const [savedBody, setSavedBody] = useState(memory?.body ?? "");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
   const [deleted, setDeleted] = useState(false);
-  const [visibility, setVisibility] = useState<"household" | "private">(
-    memory?.visibility === "PRIVATE" ? "private" : "household",
-  );
+  const [deleting, setDeleting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [visibility, setVisibility] = useState<"household" | "private">("household");
+
+  useEffect(() => {
+    if (!memory) return;
+    setVisibility(memory.visibility === "PRIVATE" ? "private" : "household");
+  }, [memory?.id, memory?.visibility]);
 
   function startEdit() {
-    setTitle(savedTitle);
-    setBody(savedBody);
+    if (!memory) return;
+    setTitle(memory.title);
+    setBody(memory.body);
+    setVisibility(memory.visibility === "PRIVATE" ? "private" : "household");
     setMode("edit");
   }
 
   function cancelEdit() {
-    setTitle(savedTitle);
-    setBody(savedBody);
     setMode("view");
   }
 
-  function saveEdit() {
-    const nextTitle = title.trim() || savedTitle;
+  async function saveEdit() {
+    if (!memory || saving) return;
+    const nextTitle = title.trim() || memory.title;
     const nextBody = body.trim();
-    setSavedTitle(nextTitle);
-    setSavedBody(nextBody);
-    setTitle(nextTitle);
-    setBody(nextBody);
-    if (memory?.id) {
-      updateJourneyMemory(memory.id, {
-        title: nextTitle,
-        body: nextBody,
-        visibility: visibility === "private" ? "PRIVATE" : "HOUSEHOLD",
+    setSaving(true);
+    try {
+      await updateMemory.mutateAsync({
+        id: memory.id,
+        patch: {
+          title: nextTitle,
+          body: nextBody,
+          visibility: visibility === "private" ? "PRIVATE" : "HOUSEHOLD",
+        },
       });
+      setMode("view");
+    } catch {
+      Alert.alert(
+        "Couldn’t save",
+        "Your changes are still here. Check your connection and try again.",
+      );
+    } finally {
+      setSaving(false);
     }
-    setMode("view");
   }
 
   function confirmDelete() {
+    if (!memory) return;
     Alert.alert(
       "Remove this moment?",
       `It will leave ${childDisplayName}'s journey. You can capture a new one anytime — no pressure.`,
@@ -75,16 +92,27 @@ export function MemoryDetailScreen() {
         {
           text: "Remove",
           style: "destructive",
-          onPress: () => {
-            if (memory?.id) deleteJourneyMemory(memory.id);
-            setDeleted(true);
-          },
+          onPress: () => void handleDelete(),
         },
       ],
     );
   }
 
+  async function handleDelete() {
+    if (!memory || deleting) return;
+    setDeleting(true);
+    try {
+      await deleteMemory.mutateAsync(memory.id);
+      setDeleted(true);
+    } catch {
+      Alert.alert("Couldn’t remove", "Check your connection and try again.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   async function shareWithHousehold() {
+    if (!memory) return;
     if (visibility === "private") {
       Alert.alert(
         "Only you can see this",
@@ -93,8 +121,16 @@ export function MemoryDetailScreen() {
       return;
     }
     await Share.share({
-      message: `${savedTitle}\n\n${savedBody}\n\n— shared privately with our BumpAtlas household (not Connect)`,
+      message: `${memory.title}\n\n${memory.body}\n\n— shared privately with our BumpAtlas household (not Connect)`,
     });
+  }
+
+  if (memoryQuery.isLoading) {
+    return (
+      <SoftStackShell title="Memory" onBack={() => router.back()} centered>
+        <ActivityIndicator color={colors.brand.peach} />
+      </SoftStackShell>
+    );
   }
 
   if (!memory) {
@@ -153,8 +189,12 @@ export function MemoryDetailScreen() {
       }
       footer={
         mode === "edit" ? (
-          <Button size="lg" onPress={saveEdit} disabled={body.trim().length === 0}>
-            Save changes
+          <Button
+            size="lg"
+            onPress={() => void saveEdit()}
+            disabled={body.trim().length === 0 || saving}
+          >
+            {saving ? "Saving…" : "Save changes"}
           </Button>
         ) : (
           <>
@@ -223,14 +263,14 @@ export function MemoryDetailScreen() {
           </View>
 
           <AppText variant="caption" tone="secondary">
-            {memory.dateLabel} · {memory.author} · for {childDisplayName}
+            {memory.eventDate} · {memory.authorName} · for {childDisplayName}
           </AppText>
 
           {mode === "view" ? (
             <>
-              <AppText variant="heading">{savedTitle}</AppText>
+              <AppText variant="heading">{memory.title}</AppText>
               <AppText variant="body" style={styles.bodyText}>
-                {savedBody}
+                {memory.body}
               </AppText>
             </>
           ) : (

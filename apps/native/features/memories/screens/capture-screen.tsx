@@ -1,7 +1,11 @@
 import { Feather } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  ActionSheetIOS,
+  Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -18,27 +22,31 @@ import { useMockUi } from "@/features/mock/mock-ui-context";
 import { DraftQueuePanel } from "@/features/shared/components/draft-queue-panel";
 import { OfflineBanner } from "@/features/shared/components/offline-banner";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { queryKeys, useEntitlementsQuery, useTodayQuery } from "@/lib/api/hooks";
+import type { PreparedPhoto } from "@/lib/media/pick-and-prepare";
+import { pickAndPreparePhoto } from "@/lib/media/pick-and-prepare";
+import { saveMemoryWithOptionalUpload } from "@/lib/memories/save-memory";
 import { appRoutes } from "@/navigation/routes";
 
-type PhotoState = "none" | "selected" | "failed";
+type PhotoState = "none" | "selected" | "failed" | "denied";
 
 const BACKDATE_OPTIONS = ["Today", "Yesterday", "2 days ago", "Pick a date…"];
 
 export function CaptureScreen() {
   const router = useRouter();
-  const {
-    isOffline,
-    setOffline,
-    saveDraft,
-    completeCapture,
-    mediaUploadsUsed,
-    mediaUploadsLimit,
-    incrementMediaUpload,
-    setMediaNearLimit,
-    stageMode,
-  } = useMockUi();
+  const queryClient = useQueryClient();
+  const { isOffline, saveDraft, completeCapture, stageMode } = useMockUi();
+  const todayQuery = useTodayQuery();
+  const entitlementsQuery = useEntitlementsQuery();
+  const [localMediaBump, setLocalMediaBump] = useState(0);
+  const mediaUploadsUsed = (todayQuery.data?.mediaUploadsUsed ?? 0) + localMediaBump;
+  const mediaUploadsLimit =
+    entitlementsQuery.data?.mediaUploadsLimit ?? todayQuery.data?.mediaUploadsLimit ?? 30;
   const [body, setBody] = useState("");
   const [photoState, setPhotoState] = useState<PhotoState>("none");
+  const [photo, setPhoto] = useState<PreparedPhoto | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [savedLocally, setSavedLocally] = useState(false);
   const [eventDate, setEventDate] = useState("Today");
   const [customDate, setCustomDate] = useState("");
@@ -51,30 +59,104 @@ export function CaptureScreen() {
   const rotatingPrompt = mockMemoryPrompts[promptIndex % mockMemoryPrompts.length];
   const prompt = stageMode === "pregnancy" ? mockPregnancy.bumpPrompt : rotatingPrompt;
 
-  function pickPhoto() {
-    if (mediaExhausted) return;
+  async function runPick(source: "library" | "camera") {
+    if (mediaExhausted || picking) return;
+    setPicking(true);
+    const result = await pickAndPreparePhoto(source);
+    setPicking(false);
+
+    if (result.status === "cancelled") return;
+    if (result.status === "denied") {
+      setPhotoState("denied");
+      Alert.alert(
+        "Photo access needed",
+        "Allow photo library or camera access in Settings to attach a moment photo.",
+      );
+      return;
+    }
+    if (result.status === "failed") {
+      setPhotoState("failed");
+      setPhoto(null);
+      return;
+    }
+
+    setPhoto(result.photo);
     setPhotoState("selected");
-    incrementMediaUpload();
+    setLocalMediaBump((count) => count + 1);
   }
 
-  function saveMoment() {
+  function pickPhoto() {
+    if (mediaExhausted || picking) return;
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ["Cancel", "Photo library", "Camera"],
+          cancelButtonIndex: 0,
+        },
+        (index) => {
+          if (index === 1) void runPick("library");
+          if (index === 2) void runPick("camera");
+        },
+      );
+      return;
+    }
+
+    Alert.alert("Add a photo", undefined, [
+      { text: "Photo library", onPress: () => void runPick("library") },
+      { text: "Camera", onPress: () => void runPick("camera") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+
+  async function saveMoment() {
+    if (saving) return;
+    const resolvedDate = eventDate === "Pick a date…" ? customDate || "Custom date" : eventDate;
+    const visibilityValue = visibility === "private" ? "PRIVATE" : "HOUSEHOLD";
+
     if (isOffline) {
       saveDraft({
         body: body.trim(),
-        eventDate: eventDate === "Pick a date…" ? customDate || "Custom date" : eventDate,
+        eventDate: resolvedDate,
         hasPhoto: photoState === "selected",
+        photoUri: photo?.uri ?? null,
+        visibility: visibilityValue,
       });
       setSavedLocally(true);
       return;
     }
-    const result = completeCapture({
-      body: body.trim(),
-      eventDate: eventDate === "Pick a date…" ? customDate || "Custom date" : eventDate,
-      hasPhoto: photoState === "selected",
-      visibility: visibility === "private" ? "PRIVATE" : "HOUSEHOLD",
-    });
-    if (result.awardedBadgeId) setAwardedBadge(result.awardedBadgeId);
-    else router.back();
+
+    setSaving(true);
+    try {
+      const saved = await saveMemoryWithOptionalUpload({
+        body: body.trim(),
+        eventDate: eventDate === "Pick a date…" ? "Pick a date…" : eventDate,
+        customDate,
+        visibility: visibilityValue,
+        photo: photoState === "selected" ? photo : null,
+        idempotencyKey: `capture-${Date.now()}`,
+      });
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.memories }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.today }),
+      ]);
+
+      const result = completeCapture({
+        body: body.trim(),
+        eventDate: saved.eventDateIso,
+        hasPhoto: photoState === "selected",
+        visibility: visibilityValue,
+      });
+      if (result.awardedBadgeId) setAwardedBadge(result.awardedBadgeId);
+      else router.back();
+    } catch {
+      Alert.alert(
+        "Couldn’t save",
+        "Your note is still here. Check your connection and try again, or save a draft offline.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -83,20 +165,15 @@ export function CaptureScreen() {
       closeIcon="x"
       onBack={() => router.back()}
       scroll={false}
-      right={
-        <Pressable
-          onPress={() => setOffline(!isOffline)}
-          hitSlop={12}
-          style={styles.offlineToggle}
-          accessibilityLabel="Toggle offline preview"
-        >
-          <Feather name="wifi-off" size={16} color={colors.text.muted} />
-        </Pressable>
-      }
+      right={undefined}
       footer={
         <>
-          <Button size="lg" disabled={body.trim().length === 0} onPress={saveMoment}>
-            {isOffline ? "Save draft locally" : "Save moment"}
+          <Button
+            size="lg"
+            disabled={body.trim().length === 0 || saving || picking}
+            onPress={() => void saveMoment()}
+          >
+            {isOffline ? "Save draft locally" : saving ? "Saving…" : "Save moment"}
           </Button>
           {savedLocally ? (
             <Button size="lg" variant="ghost" onPress={() => router.back()}>
@@ -198,29 +275,36 @@ export function CaptureScreen() {
             />
           ) : null}
 
-          {photoState === "selected" ? (
+          {photoState === "selected" && photo ? (
             <View style={styles.photoPreview}>
-              <View style={styles.photoPlaceholder}>
-                <Feather name="image" size={32} color={colors.brand.peach} />
-              </View>
+              <Image source={{ uri: photo.uri }} style={styles.photoImage} />
               <View style={styles.photoMeta}>
                 <AppText weight="semibold">Photo added</AppText>
                 <AppText variant="caption" tone="secondary">
-                  Compressed for free tier · EXIF / GPS removed
+                  Compressed · EXIF / GPS stripped
                 </AppText>
                 <AppText variant="caption" tone="secondary">
                   Media uploads {mediaUploadsUsed}/{mediaUploadsLimit} this month
                 </AppText>
-                <Pressable onPress={() => setPhotoState("none")} accessibilityLabel="Remove photo">
+                <Pressable
+                  onPress={() => {
+                    setPhoto(null);
+                    setPhotoState("none");
+                    setLocalMediaBump((count) => Math.max(0, count - 1));
+                  }}
+                  accessibilityLabel="Remove photo"
+                >
                   <AppText variant="caption" weight="semibold" style={styles.removePhoto}>
                     Remove photo
                   </AppText>
                 </Pressable>
               </View>
             </View>
-          ) : photoState === "failed" ? (
+          ) : photoState === "failed" || photoState === "denied" ? (
             <View style={styles.failBox}>
-              <AppText weight="semibold">Photo didn&apos;t upload</AppText>
+              <AppText weight="semibold">
+                {photoState === "denied" ? "Photo permission needed" : "Photo didn’t prepare"}
+              </AppText>
               <AppText variant="bodySmall" tone="secondary">
                 Your note is safe. Retry the photo or save text only.
               </AppText>
@@ -228,7 +312,7 @@ export function CaptureScreen() {
                 <Button size="sm" variant="ghost" onPress={pickPhoto}>
                   Retry photo
                 </Button>
-                <Button size="sm" onPress={saveMoment}>
+                <Button size="sm" onPress={() => void saveMoment()}>
                   Save text only
                 </Button>
               </View>
@@ -238,13 +322,17 @@ export function CaptureScreen() {
               style={styles.photoBox}
               onPress={pickPhoto}
               accessibilityLabel="Add a photo"
-              disabled={mediaExhausted}
+              disabled={mediaExhausted || picking}
             >
               <View style={styles.cameraCircle}>
                 <Feather name="camera" size={22} color={colors.brand.peach} />
               </View>
               <AppText weight="semibold">
-                {mediaExhausted ? "Photo limit reached" : "Add a photo"}
+                {mediaExhausted
+                  ? "Photo limit reached"
+                  : picking
+                    ? "Preparing photo…"
+                    : "Add a photo"}
               </AppText>
               <AppText variant="caption" tone="secondary">
                 {mediaExhausted
@@ -264,16 +352,6 @@ export function CaptureScreen() {
                   </AppText>
                 </Pressable>
               ) : null}
-              <Pressable onPress={() => setPhotoState("failed")} hitSlop={8}>
-                <AppText variant="caption" tone="secondary" style={styles.demoLink}>
-                  Preview upload error
-                </AppText>
-              </Pressable>
-              <Pressable onPress={setMediaNearLimit} hitSlop={8}>
-                <AppText variant="caption" tone="secondary" style={styles.demoLink}>
-                  Preview near media limit
-                </AppText>
-              </Pressable>
             </Pressable>
           )}
 
@@ -401,13 +479,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     alignItems: "center",
   },
-  photoPlaceholder: {
+  photoImage: {
     width: 88,
     height: 88,
     borderRadius: radius.lg,
     backgroundColor: colors.brand.peachSoft,
-    alignItems: "center",
-    justifyContent: "center",
   },
   photoMeta: { flex: 1, gap: 4 },
   removePhoto: { color: colors.brand.peach, marginTop: spacing.xs },

@@ -1,15 +1,26 @@
+import type { FamilyMemberRole } from "@bumpatlas/contracts";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, colors, radius, spacing } from "@/design-system";
-import { mockHouseholdMembers } from "@/features/mock/mock-content";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useFamilyQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
+
+function permissionsForRole(role: FamilyMemberRole) {
+  return {
+    canInvite: role === "OWNER" || role === "PARENT",
+    canManageBilling: role === "OWNER",
+    canExport: role !== "VIEWER",
+  };
+}
 
 export function MemberRolesScreen() {
   const router = useRouter();
-  const adultCount = mockHouseholdMembers.length;
+  const familyQuery = useFamilyQuery();
+  const members = familyQuery.data?.members ?? [];
+  const adultCount = members.length;
   const freeSeatLimit = 2;
   const atFreeSeatLimit = adultCount >= freeSeatLimit;
 
@@ -37,30 +48,37 @@ export function MemberRolesScreen() {
         </Pressable>
       ) : null}
 
-      {mockHouseholdMembers.map((member) => (
-        <View key={member.id} style={styles.card}>
-          <View style={styles.top}>
-            <View style={styles.avatar}>
-              <AppText weight="semibold" tone="inverse">
-                {member.name.slice(0, 1)}
-              </AppText>
+      {familyQuery.isLoading ? (
+        <ActivityIndicator color={colors.brand.peach} />
+      ) : (
+        members.map((member) => {
+          const perms = permissionsForRole(member.role);
+          return (
+            <View key={member.id} style={styles.card}>
+              <View style={styles.top}>
+                <View style={styles.avatar}>
+                  <AppText weight="semibold" tone="inverse">
+                    {member.displayName.slice(0, 1)}
+                  </AppText>
+                </View>
+                <View style={styles.copy}>
+                  <AppText weight="semibold">{member.displayName}</AppText>
+                  <AppText variant="caption" style={styles.role}>
+                    {member.role}
+                  </AppText>
+                </View>
+              </View>
+              <View style={styles.perms}>
+                <AppText variant="caption" tone="secondary">
+                  {perms.canInvite ? "Can invite · " : ""}
+                  {perms.canManageBilling ? "Manages billing · " : ""}
+                  {perms.canExport ? "Can export" : "Cannot export"}
+                </AppText>
+              </View>
             </View>
-            <View style={styles.copy}>
-              <AppText weight="semibold">{member.name}</AppText>
-              <AppText variant="caption" style={styles.role}>
-                {member.role}
-              </AppText>
-            </View>
-          </View>
-          <View style={styles.perms}>
-            <AppText variant="caption" tone="secondary">
-              {member.canInvite ? "Can invite · " : ""}
-              {member.canManageBilling ? "Manages billing · " : ""}
-              {member.canExport ? "Can export" : "Cannot export"}
-            </AppText>
-          </View>
-        </View>
-      ))}
+          );
+        })
+      )}
     </SoftStackShell>
   );
 }

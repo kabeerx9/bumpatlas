@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -11,12 +12,17 @@ import {
 } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { mockToday } from "@/features/mock/demo-data";
-import { mockStageGroups } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import {
+  useCreateCommentMutation,
+  useCreateGroupPostMutation,
+  useGroupPostsQuery,
+  useGroupsQuery,
+} from "@/lib/api/hooks";
 
 const MAX_CHARS = 500;
+const CONNECT_PROMPT = "What made today a little easier?";
 
 const communityRules = [
   "Text only — no child photos in Connect.",
@@ -33,20 +39,34 @@ export function ConnectComposeScreen() {
 
   const isReply = mode === "reply" && Boolean(postId);
 
-  const { communityRulesAccepted, acceptCommunityRules, postsUsedToday, commentsUsedToday, commentsDailyLimit, linksAllowed, accountAgeDays, activeGroupId, addGroupPost, addGroupComment, getGroupFeed } =
-    useMockUi();
+  const {
+    communityRulesAccepted,
+    acceptCommunityRules,
+    postsUsedToday,
+    commentsUsedToday,
+    commentsDailyLimit,
+    linksAllowed,
+    accountAgeDays,
+    activeGroupId,
+  } = useMockUi();
+
+  const groupsQuery = useGroupsQuery();
+  const groupPostsQuery = useGroupPostsQuery(activeGroupId);
+  const createPostMutation = useCreateGroupPostMutation(activeGroupId);
+  const createCommentMutation = useCreateCommentMutation(activeGroupId);
 
   const [body, setBody] = useState("");
   const [rulesAccepted, setRulesAccepted] = useState(communityRulesAccepted);
 
-  const feed = getGroupFeed(activeGroupId);
+  const posts = groupPostsQuery.data?.items ?? [];
   const parentPost = useMemo(
-    () => feed.find((post) => post.id === postId),
-    [feed, postId],
+    () => posts.find((post) => post.id === postId),
+    [posts, postId],
   );
 
-  const activeGroup = mockStageGroups.find((group) => group.id === activeGroupId) ?? mockStageGroups[1];
-  const groupPrompt = activeGroup?.prompt ?? mockToday.connectCard.prompt;
+  const activeGroupName =
+    groupsQuery.data?.items.find((group) => group.id === activeGroupId)?.name ??
+    "Your stage group";
 
   const trimmed = body.trim();
   const effectiveRules = rulesAccepted || communityRulesAccepted;
@@ -54,23 +74,29 @@ export function ConnectComposeScreen() {
   const atCommentLimit = isReply && commentsUsedToday >= commentsDailyLimit;
   const hasLink = /https?:\/\//i.test(trimmed);
   const linkBlocked = hasLink && !linksAllowed;
+  const isSubmitting = createPostMutation.isPending || createCommentMutation.isPending;
   const canPost =
     trimmed.length > 0 &&
     effectiveRules &&
     trimmed.length <= MAX_CHARS &&
     !atPostLimit &&
     !atCommentLimit &&
-    !linkBlocked;
+    !linkBlocked &&
+    !isSubmitting;
 
-  function handlePost() {
+  async function handlePost() {
     if (!canPost) return;
     if (!communityRulesAccepted) acceptCommunityRules();
-    if (isReply && postId) {
-      addGroupComment({ postId, body: trimmed, groupId: activeGroupId });
-    } else {
-      addGroupPost({ body: trimmed, groupId: activeGroupId });
+    try {
+      if (isReply && postId) {
+        await createCommentMutation.mutateAsync({ postId, body: trimmed });
+      } else {
+        await createPostMutation.mutateAsync({ body: trimmed });
+      }
+      router.back();
+    } catch {
+      Alert.alert("Couldn’t post", "Check your connection and try again.");
     }
-    router.back();
   }
 
   function toggleRules() {
@@ -84,8 +110,8 @@ export function ConnectComposeScreen() {
       onBack={() => router.back()}
       scroll={false}
       footer={
-        <Button size="lg" disabled={!canPost} onPress={handlePost}>
-          {isReply ? "Post reply" : "Post to group"}
+        <Button size="lg" disabled={!canPost} onPress={() => void handlePost()}>
+          {isSubmitting ? "Posting…" : isReply ? "Post reply" : "Post to group"}
         </Button>
       }
     >
@@ -96,20 +122,18 @@ export function ConnectComposeScreen() {
         <View style={styles.body}>
           <View style={styles.contextPanel}>
             <AppText variant="caption" style={styles.peachLabel}>
-              {isReply ? "Replying in" : "Today’s prompt"} · {activeGroup?.name ?? mockToday.connectCard.groupName}
+              {isReply ? "Replying in" : "Today’s prompt"} · {activeGroupName}
             </AppText>
             <AppText variant="title" tone="inverse" style={styles.contextTitle}>
-              {isReply && parentPost
-                ? parentPost.body
-                : groupPrompt}
+              {isReply && parentPost ? parentPost.body : CONNECT_PROMPT}
             </AppText>
             {isReply && parentPost ? (
               <AppText variant="caption" style={styles.contextMeta}>
-                {parentPost.author} · comments {commentsUsedToday}/{commentsDailyLimit} today
+                {parentPost.authorName} · comments {commentsUsedToday}/{commentsDailyLimit} today
               </AppText>
             ) : (
               <AppText variant="caption" style={styles.contextMeta}>
-                {feed.length} notes in group · posts {postsUsedToday}/10 today · comments{" "}
+                {posts.length} notes in group · posts {postsUsedToday}/10 today · comments{" "}
                 {commentsUsedToday}/{commentsDailyLimit}
               </AppText>
             )}

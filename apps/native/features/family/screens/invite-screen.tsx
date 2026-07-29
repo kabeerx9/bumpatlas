@@ -1,7 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  Alert,
   Pressable,
   Share,
   StyleSheet,
@@ -10,27 +11,73 @@ import {
 } from "react-native";
 
 import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { mockHousehold, mockInvitePreview } from "@/features/mock/demo-data";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
-
-const inviteLink = `https://bumpatlas.app/invite/${mockInvitePreview.token}`;
+import { useCreateInviteMutation, useFamilyQuery } from "@/lib/api/hooks";
 
 export function InviteScreen() {
   const router = useRouter();
-  const { markPartnerJoined, childDisplayName } = useMockUi();
+  const { markPartnerJoined, childDisplayName: mockChildDisplayName, householdName: mockHouseholdName } =
+    useMockUi();
+  const familyQuery = useFamilyQuery();
+  const childDisplayName = familyQuery.data?.childDisplayName ?? mockChildDisplayName;
+  const householdName = familyQuery.data?.name ?? mockHouseholdName;
+  const createInvite = useCreateInviteMutation();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [linkLoading, setLinkLoading] = useState(true);
+  const [invite, setInvite] = useState<{
+    token: string;
+    inviteUrl: string;
+    expiresAt: string;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLinkLoading(true);
+    createInvite
+      .mutateAsync({ role: "CONTRIBUTOR" })
+      .then((result) => {
+        if (!cancelled) setInvite(result);
+      })
+      .catch(() => {
+        // Link generation retries when "Copy invite link" is pressed.
+      })
+      .finally(() => {
+        if (!cancelled) setLinkLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const inviteLink = invite?.inviteUrl ?? null;
 
   async function shareLink() {
+    if (!inviteLink) return;
     await Share.share({
       message: `Join our BumpAtlas household for ${childDisplayName}: ${inviteLink}`,
     });
   }
 
-  function handleSend() {
-    setSent(true);
-    markPartnerJoined();
+  async function handleSend() {
+    if (sending || email.trim().length === 0) return;
+    setSending(true);
+    try {
+      const result = await createInvite.mutateAsync({
+        role: "CONTRIBUTOR",
+        email: email.trim(),
+      });
+      setInvite(result);
+      setSent(true);
+      markPartnerJoined();
+    } catch {
+      Alert.alert("Couldn’t send invite", "Check your connection and try again.");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -44,16 +91,16 @@ export function InviteScreen() {
             <View style={styles.sentBanner}>
               <Feather name="check-circle" size={18} color={colors.brand.peach} />
               <AppText variant="bodySmall">
-                Invite sent — they&apos;ll join {mockHousehold.name} when they accept.
+                Invite sent — they&apos;ll join {householdName} when they accept.
               </AppText>
             </View>
           ) : null}
           <Button
             size="lg"
-            disabled={email.trim().length === 0}
-            onPress={handleSend}
+            disabled={email.trim().length === 0 || sending}
+            onPress={() => void handleSend()}
           >
-            Send invite
+            {sending ? "Sending…" : "Send invite"}
           </Button>
           <Button variant="ghost" size="lg" onPress={() => router.back()}>
             Not now
@@ -92,14 +139,18 @@ export function InviteScreen() {
           </AppText>
         </View>
 
-        <Pressable onPress={shareLink} style={styles.linkCard}>
+        <Pressable
+          onPress={() => void shareLink()}
+          style={styles.linkCard}
+          disabled={!inviteLink}
+        >
           <View style={styles.linkIcon}>
             <Feather name="link" size={18} color={colors.brand.peach} />
           </View>
           <View style={styles.linkCopy}>
             <AppText weight="semibold">Copy invite link</AppText>
             <AppText variant="caption" tone="secondary" numberOfLines={1}>
-              {inviteLink}
+              {linkLoading ? "Preparing your invite link…" : inviteLink ?? "Link unavailable"}
             </AppText>
           </View>
           <Feather name="share-2" size={18} color={colors.brand.peach} />

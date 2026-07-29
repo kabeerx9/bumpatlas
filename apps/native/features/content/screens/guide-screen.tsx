@@ -7,13 +7,31 @@ import { SoftHeader } from "@/features/shared/components/soft-header";
 import { SoftPanel } from "@/features/shared/components/soft-panel";
 import { SoftScreen } from "@/features/shared/components/soft-screen";
 import { mockGuides, mockToday } from "@/features/mock/demo-data";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useContentQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 export function GuideScreen() {
   const router = useRouter();
-  const { bookmarkedGuides } = useMockUi();
-  const featuredBookmarked = Boolean(bookmarkedGuides[mockToday.learnCard.id]);
+  const contentQuery = useContentQuery();
+  const guides =
+    contentQuery.data?.items.map((item) => ({
+      id: item.id,
+      slug: item.slug,
+      title: item.title,
+      summary: item.summary,
+      readMinutes: item.readingMinutes,
+      bookmarked: item.bookmarked,
+    })) ??
+    mockGuides.map((guide) => ({
+      id: guide.id,
+      slug: guide.slug,
+      title: guide.title,
+      summary: guide.summary,
+      readMinutes: guide.readMinutes ?? 4,
+      bookmarked: false,
+    }));
+  const featured = guides[0];
+  const featuredBookmarked = featured?.bookmarked ?? false;
 
   return (
     <SoftScreen>
@@ -47,11 +65,16 @@ export function GuideScreen() {
         </Button>
       </SoftPanel>
 
-      <Pressable onPress={() => router.push(appRoutes.guideArticle(mockToday.learnCard.id))}>
+      <Pressable
+        onPress={() =>
+          featured ? router.push(appRoutes.guideArticle(featured.id)) : undefined
+        }
+        disabled={!featured}
+      >
         <SoftPanel>
           <View style={styles.featuredTop}>
             <AppText variant="caption" style={styles.peachLabel}>
-              Featured for 12 weeks
+              Featured for this stage
             </AppText>
             {featuredBookmarked ? (
               <View style={styles.savedChip}>
@@ -62,9 +85,9 @@ export function GuideScreen() {
               </View>
             ) : null}
           </View>
-          <AppText weight="semibold">{mockToday.learnCard.title}</AppText>
+          <AppText weight="semibold">{featured?.title ?? mockToday.learnCard.title}</AppText>
           <AppText variant="bodySmall" tone="secondary">
-            {mockToday.learnCard.detail}
+            {featured?.summary ?? mockToday.learnCard.detail}
           </AppText>
           <View style={styles.featuredLink}>
             <AppText variant="caption" weight="semibold" style={styles.peachLabel}>
@@ -77,8 +100,8 @@ export function GuideScreen() {
 
       <AppText weight="semibold">Browse tips</AppText>
 
-      {mockGuides.map((guide) => {
-        const saved = Boolean(bookmarkedGuides[guide.id]);
+      {guides.map((guide) => {
+        const saved = guide.bookmarked;
         return (
           <Pressable
             key={guide.id}
@@ -91,7 +114,7 @@ export function GuideScreen() {
               </View>
               <View style={styles.guideCopy}>
                 <AppText variant="caption" style={styles.peachLabel}>
-                  {guide.category}
+                  {guide.readMinutes} min
                 </AppText>
                 <AppText weight="semibold">{guide.title}</AppText>
               </View>
