@@ -4,6 +4,7 @@ import { StyleSheet, Text as NativeText } from "react-native";
 
 import type { AppTheme } from "@/design-system/theme";
 import { useAppTheme } from "@/design-system/theme";
+import { resolveUiFont } from "@/lib/fonts";
 import { typography } from "@/design-system/tokens";
 
 export type TextTone = "primary" | "secondary" | "tertiary" | "muted" | "inverse" | "brand";
@@ -40,42 +41,40 @@ const variantStyle: Record<TextVariant, TextStyle> = {
   hero: {
     fontSize: typography.size.hero,
     lineHeight: typography.lineHeight.hero,
-    fontWeight: typography.weight.bold,
+    letterSpacing: -0.8,
   },
   heading: {
     fontSize: typography.size.heading,
     lineHeight: typography.lineHeight.heading,
-    fontWeight: typography.weight.bold,
+    letterSpacing: -0.6,
   },
   title: {
     fontSize: typography.size.title,
     lineHeight: typography.lineHeight.title,
-    fontWeight: typography.weight.bold,
+    letterSpacing: -0.4,
   },
   subhead: {
     fontSize: typography.size.subhead,
     lineHeight: typography.lineHeight.subhead,
-    fontWeight: typography.weight.semibold,
   },
   body: {
     fontSize: typography.size.body,
     lineHeight: typography.lineHeight.body,
-    fontWeight: typography.weight.regular,
   },
   bodySmall: {
     fontSize: typography.size.bodySmall,
     lineHeight: typography.lineHeight.bodySmall,
-    fontWeight: typography.weight.regular,
   },
   caption: {
     fontSize: typography.size.caption,
     lineHeight: typography.lineHeight.caption,
-    fontWeight: typography.weight.regular,
+    letterSpacing: 0.4,
   },
   label: {
     fontSize: typography.size.label,
     lineHeight: typography.lineHeight.label,
-    fontWeight: typography.weight.semibold,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
   },
 };
 
@@ -99,7 +98,7 @@ export function AppText({
         {
           color: toneColor(theme)[tone],
           textAlign: align,
-          fontWeight: weight ? typography.weight[weight] : variantStyle[variant].fontWeight,
+          fontFamily: resolveUiFont(weight, variant),
         },
         style,
       ]}

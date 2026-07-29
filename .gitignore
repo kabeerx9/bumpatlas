@@ -56,3 +56,8 @@ tmp
 temp
 .vercel
 .pnpm-store
+
+# Cursor / agent plan files — never commit
+.cursor/plans/
+**/*.plan.md
+*.plan.md

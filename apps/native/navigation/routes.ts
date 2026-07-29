@@ -1,5 +1,11 @@
 export const appRoutes = {
   home: "/",
+  journey: "/journey",
+  connect: "/connect",
+  guide: "/guide",
+  family: "/family",
+  capture: "/capture",
+  assistant: "/assistant",
   account: "/account",
   expoUi: "/expo-ui",
   widgets: "/widgets",

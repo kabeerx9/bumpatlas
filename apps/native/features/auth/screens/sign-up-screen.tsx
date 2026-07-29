@@ -1,20 +1,21 @@
-import { Button as ExpoButton, Host, TextInput as ExpoTextInput } from "@expo/ui";
 import { useAuth, useSignUp } from "@clerk/expo";
 import { Link, useRouter } from "expo-router";
-import React, { type ComponentProps } from "react";
+import React from "react";
 import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
-  type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   AppText,
+  Atmosphere,
   BrandWordmark,
+  Button,
   colors,
   radius,
   spacing,
@@ -22,9 +23,6 @@ import {
 import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
 import { pushDecoratedUrl } from "@/features/auth/utils/navigation";
 import { appRoutes } from "@/navigation/routes";
-
-type UniversalInputProps = ComponentProps<typeof ExpoTextInput>;
-type UniversalButtonVariant = ComponentProps<typeof ExpoButton>["variant"];
 
 export function SignUpScreen() {
   const { signUp, errors, fetchStatus } = useSignUp();
@@ -40,42 +38,26 @@ export function SignUpScreen() {
 
   const handleSubmit = async () => {
     setStatusMessage(null);
-
-    const { error } = await signUp.password({
-      emailAddress,
-      password,
-    });
-
+    const { error } = await signUp.password({ emailAddress, password });
     if (error) {
-      console.error(JSON.stringify(error, null, 2));
       setStatusMessage(error.longMessage ?? "Unable to sign up. Please try again.");
       return;
     }
-
     await signUp.verifications.sendEmailCode();
     setStatusMessage(`We sent a verification code to ${emailAddress}.`);
   };
 
   const handleVerify = async () => {
     setStatusMessage(null);
-
-    await signUp.verifications.verifyEmailCode({
-      code,
-    });
-
+    await signUp.verifications.verifyEmailCode({ code });
     if (signUp.status === "complete") {
       await signUp.finalize({
         navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) {
-            console.log(session.currentTask);
-            return;
-          }
-
+          if (session?.currentTask) return;
           pushDecoratedUrl(router, decorateUrl, appRoutes.home);
         },
       });
     } else {
-      console.error("Sign-up attempt not complete:", signUp);
       setStatusMessage("That code did not complete sign-up. Please try again.");
     }
   };
@@ -90,287 +72,188 @@ export function SignUpScreen() {
     signUp.missingFields.length === 0
   ) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.verifyContainer}>
-          <BrandWordmark size="md" style={styles.logo} />
-          <View style={styles.header}>
-            <AppText variant="subhead" align="center">
-              Verify your account
+      <Atmosphere>
+        <SafeAreaView style={styles.safe}>
+          <View style={styles.formWrap}>
+            <BrandWordmark size="md" markOnly style={styles.logo} />
+            <AppText variant="heading" align="center">
+              Verify Your Account
             </AppText>
-            <AppText variant="bodySmall" tone="secondary" align="center">
-              Enter the email code to finish creating your account.
+            <AppText variant="body" tone="secondary" align="center">
+              Enter the 6-digit code we sent to your email.
             </AppText>
-          </View>
-          {statusMessage ? <AppText style={styles.statusMessage}>{statusMessage}</AppText> : null}
-
-          <Field label="Verification code" error={errors.fields.code?.message}>
-            <UniversalTextInput
-              placeholder="Enter your verification code"
+            {statusMessage ? (
+              <AppText variant="bodySmall" tone="secondary" align="center">
+                {statusMessage}
+              </AppText>
+            ) : null}
+            <TextInput
+              style={styles.input}
+              value={code}
+              placeholder="000000"
+              placeholderTextColor={colors.text.muted}
               onChangeText={setCode}
               keyboardType="numeric"
-              returnKeyType="done"
-              onSubmitEditing={() => void handleVerify()}
+              maxLength={6}
             />
-          </Field>
-
-          <UniversalButton
-            label={isFetching ? "Verifying..." : "Verify"}
-            disabled={isFetching}
-            onPress={() => void handleVerify()}
-          />
-          <UniversalButton
-            label="I need a new code"
-            variant="text"
-            onPress={() => void signUp.verifications.sendEmailCode()}
-          />
-        </View>
-      </SafeAreaView>
+            <Button disabled={isFetching} onPress={() => void handleVerify()} size="lg">
+              {isFetching ? "Verifying..." : "Verify"}
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={isFetching}
+              onPress={() => void signUp.verifications.sendEmailCode()}
+            >
+              Resend Code
+            </Button>
+          </View>
+        </SafeAreaView>
+      </Atmosphere>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.keyboardAvoiding}
-      >
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.container}
-          showsVerticalScrollIndicator={false}
+    <Atmosphere>
+      <SafeAreaView style={styles.safe}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.flex}
         >
-          <BrandWordmark size="lg" style={styles.logo} />
-          <View style={styles.header}>
-            <AppText variant="subhead" align="center">
-              Create account
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scroll}
+          >
+            <BrandWordmark size="md" markOnly style={styles.logo} />
+            <AppText variant="heading" align="center">
+              Sign up
             </AppText>
-            <AppText variant="bodySmall" tone="secondary" align="center">
-              Start with email and password or continue with Google.
+            <AppText variant="body" tone="secondary" align="center" style={styles.subtitle}>
+              Begin Your Journey
             </AppText>
-          </View>
 
-          {statusMessage ? <AppText style={styles.statusMessage}>{statusMessage}</AppText> : null}
-
-          <GoogleSignInButton />
-
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <AppText variant="caption" tone="muted" weight="semibold">
-              OR
-            </AppText>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <Field label="Email" error={errors.fields.emailAddress?.message}>
-            <UniversalTextInput
-              autoCapitalize="none"
-              autoComplete="email"
-              placeholder="Enter your email"
-              onChangeText={setEmailAddress}
-              keyboardType="email-address"
-              returnKeyType="next"
-            />
-          </Field>
-
-          <Field label="Password" error={errors.fields.password?.message}>
-            <UniversalTextInput
-              placeholder="Enter your password"
-              secureTextEntry
-              onChangeText={setPassword}
-              autoComplete="password-new"
-              returnKeyType="done"
-              onSubmitEditing={() => {
-                if (canSubmit) {
-                  void handleSubmit();
-                }
-              }}
-            />
-          </Field>
-
-          <UniversalButton
-            label={isFetching ? "Signing up..." : "Sign up"}
-            disabled={!canSubmit}
-            onPress={() => void handleSubmit()}
-          />
-
-          <View style={styles.toggleRow}>
-            <AppText variant="caption" tone="secondary">
-              Already have an account?
-            </AppText>
-            <Link href={appRoutes.auth.signIn}>
-              <AppText variant="caption" weight="semibold" style={styles.toggleLink}>
-                Sign in
+            {statusMessage ? (
+              <AppText variant="bodySmall" tone="secondary" align="center">
+                {statusMessage}
               </AppText>
-            </Link>
-          </View>
+            ) : null}
 
-          <View nativeID="clerk-captcha" />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
-}
+            <View style={styles.field}>
+              <AppText variant="label" tone="secondary">
+                Email / Phone
+              </AppText>
+              <TextInput
+                style={styles.input}
+                autoCapitalize="none"
+                autoComplete="email"
+                value={emailAddress}
+                placeholder="Enter email or phone"
+                placeholderTextColor={colors.text.muted}
+                onChangeText={setEmailAddress}
+                keyboardType="email-address"
+              />
+              {errors.fields.emailAddress ? (
+                <AppText variant="caption" style={styles.error}>
+                  {errors.fields.emailAddress.message}
+                </AppText>
+              ) : null}
+            </View>
 
-function Field({
-  label,
-  error,
-  children,
-}: {
-  label: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={styles.fieldGroup}>
-      <AppText variant="caption" weight="semibold">
-        {label}
-      </AppText>
-      {children}
-      {error ? (
-        <AppText variant="caption" style={styles.error}>
-          {error}
-        </AppText>
-      ) : null}
-    </View>
-  );
-}
+            <View style={styles.field}>
+              <AppText variant="label" tone="secondary">
+                Password
+              </AppText>
+              <TextInput
+                style={styles.input}
+                value={password}
+                placeholder="Create a password"
+                placeholderTextColor={colors.text.muted}
+                secureTextEntry
+                onChangeText={setPassword}
+                autoComplete="password-new"
+              />
+              {errors.fields.password ? (
+                <AppText variant="caption" style={styles.error}>
+                  {errors.fields.password.message}
+                </AppText>
+              ) : null}
+            </View>
 
-function UniversalTextInput(props: UniversalInputProps) {
-  return (
-    <Host matchContents={{ vertical: true }} ignoreSafeArea="all" style={styles.nativeInputHost}>
-      <ExpoTextInput
-        placeholderTextColor={colors.text.muted}
-        cursorColor={colors.brand.purple500}
-        selectionColor={colors.brand.lavender}
-        style={styles.nativeInput}
-        textStyle={styles.nativeInputText}
-        {...props}
-      />
-    </Host>
-  );
-}
+            <Button disabled={!canSubmit} onPress={() => void handleSubmit()} size="lg">
+              {isFetching ? "Signing up..." : "Continue"}
+            </Button>
 
-function UniversalButton({
-  label,
-  disabled,
-  onPress,
-  variant = "filled",
-  style,
-}: {
-  label: string;
-  disabled?: boolean;
-  onPress: () => void;
-  variant?: UniversalButtonVariant;
-  style?: ViewStyle;
-}) {
-  return (
-    <View style={[disabled && styles.disabled, style]}>
-      <Host matchContents={{ vertical: true }} ignoreSafeArea="all" style={styles.nativeButtonHost}>
-        <ExpoButton
-          label={label}
-          variant={variant}
-          disabled={disabled}
-          onPress={onPress}
-          style={variant === "text" ? styles.nativeTextButton : styles.nativeButton}
-        />
-      </Host>
-    </View>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <AppText variant="caption" tone="muted">
+                Or continue with
+              </AppText>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <GoogleSignInButton />
+
+            <View style={styles.toggleRow}>
+              <AppText variant="bodySmall" tone="secondary">
+                Already have an Account?
+              </AppText>
+              <Link href={appRoutes.auth.signIn}>
+                <AppText variant="bodySmall" weight="semibold" style={styles.link}>
+                  Sign in
+                </AppText>
+              </Link>
+            </View>
+
+            <View nativeID="clerk-captcha" />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </Atmosphere>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.surface.card,
-  },
-  keyboardAvoiding: {
-    flex: 1,
-  },
-  container: {
+  safe: { flex: 1 },
+  flex: { flex: 1 },
+  scroll: {
     flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingHorizontal: spacing.page,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xl,
     gap: spacing.md,
   },
-  verifyContainer: {
+  logo: { alignSelf: "center", marginBottom: spacing.sm },
+  subtitle: { marginBottom: spacing.sm },
+  formWrap: {
     flex: 1,
     justifyContent: "center",
+    paddingHorizontal: spacing.page,
     gap: spacing.md,
-    paddingHorizontal: 24,
-    backgroundColor: colors.surface.card,
   },
-  logo: {
-    alignSelf: "center",
-    marginBottom: spacing.sm,
-  },
-  header: {
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  fieldGroup: {
-    gap: spacing.xs,
-  },
-  nativeInputHost: {
-    width: "100%",
-    minHeight: 48,
-  },
-  nativeInput: {
-    width: "100%",
-    height: 48,
-    borderWidth: 0.5,
-    borderColor: colors.border.subtle,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: "#F9FAFB",
-  },
-  nativeInputText: {
-    color: colors.text.primary,
+  field: { gap: spacing.xs },
+  input: {
+    minHeight: 54,
+    borderWidth: 1,
+    borderColor: colors.border.strong,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
     fontSize: 15,
-  },
-  nativeButtonHost: {
-    width: "100%",
-    minHeight: 46,
-  },
-  nativeButton: {
-    width: "100%",
-    height: 46,
-    borderRadius: radius.md,
-  },
-  nativeTextButton: {
-    width: "100%",
-    minHeight: 40,
-  },
-  disabled: {
-    opacity: 0.5,
+    color: colors.text.primary,
+    backgroundColor: colors.surface.card,
   },
   dividerRow: {
-    alignItems: "center",
     flexDirection: "row",
-    gap: spacing.sm,
-    marginVertical: spacing.xs,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border.subtle,
-  },
-  toggleRow: {
     alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border.subtle },
+  toggleRow: {
     flexDirection: "row",
     justifyContent: "center",
     gap: spacing.xs,
-    marginTop: spacing.xs,
+    marginTop: spacing.md,
   },
-  toggleLink: {
-    color: colors.brand.mint,
-  },
-  error: {
-    color: colors.status.error,
-  },
-  statusMessage: {
-    color: colors.text.secondary,
-    textAlign: "center",
-  },
+  link: { color: colors.brand.terracotta },
+  error: { color: colors.status.error },
 });

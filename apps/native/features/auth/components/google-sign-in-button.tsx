@@ -44,10 +44,10 @@ export function GoogleSignInButton() {
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 44,
-    borderWidth: 0.5,
+    minHeight: 52,
+    borderWidth: 1,
     borderColor: colors.border.subtle,
-    borderRadius: radius.md,
+    borderRadius: radius.full,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     alignItems: "center",

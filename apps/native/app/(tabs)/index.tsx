@@ -1,8 +1,5 @@
-import { LaunchHomeScreen } from "@/features/profile/screens/home-screen";
-// import { HomeScreen } from "@/features/profile/screens/home-screen";
+import { TodayScreen } from "@/features/today/screens/today-screen";
 
-export default function HomeTabRoute() {
-  // Swipe prototype is disabled for the shareable build.
-  // return <HomeScreen />;
-  return <LaunchHomeScreen />;
+export default function TodayTab() {
+  return <TodayScreen />;
 }

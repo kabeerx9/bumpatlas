@@ -36,6 +36,8 @@ function RootStack() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={canAccessMainApp}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="capture" options={{ presentation: "modal" }} />
+        <Stack.Screen name="assistant" options={{ presentation: "modal" }} />
         <Stack.Screen name="account" />
         <Stack.Screen name="expo-ui" />
         <Stack.Screen name="widgets" />

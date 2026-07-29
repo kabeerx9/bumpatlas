@@ -101,11 +101,21 @@
                       "group.com.kabeerx9.bumpatlas"
                     ]
                   }
+                },
+                {
+                  "targetName": "ExpoWidgetsTarget",
+                  "bundleIdentifier": "com.kabeerx9.bumpatlas.ExpoWidgetsTarget",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.kabeerx9.bumpatlas"
+                    ]
+                  }
                 }
               ]
             }
           }
-        }
+        },
+        "projectId": "587b81c1-91d3-40b8-9f11-b54cbace47d4"
       }
     }
   }
