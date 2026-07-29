@@ -1,13 +1,16 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, it } from "node:test";
 
-const envModule = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../../../../packages/env/src/server.ts",
-);
+// A bare Windows path such as C:\... is not a valid ESM specifier, so convert to a file:// URL.
+const envModule = pathToFileURL(
+  path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../../../packages/env/src/server.ts",
+  ),
+).href;
 
 const baseEnv: Record<string, string> = {
   DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/app_starter",
