@@ -13,6 +13,7 @@ import { registerHealthRoutes } from "@/routes/health";
 import { registerMeRoutes } from "@/routes/me";
 import { registerFamilyRoutes } from "@/routes/v1/families";
 import { registerCronRoutes } from "@/routes/cron/index";
+import { registerAiRoutes } from "@/routes/v1/ai";
 import { registerBillingRoutes } from "@/routes/v1/billing";
 import { registerContentRoutes } from "@/routes/v1/content";
 import { registerDataRequestRoutes } from "@/routes/v1/data-requests";
@@ -137,6 +138,9 @@ export function buildApp() {
   // Phase 6
   fastify.register(registerDataRequestRoutes);
   fastify.register(registerCronRoutes);
+
+  // Phase 7 — inert until FEATURE_AI and AI_ENABLED are both true and a provider is wired.
+  fastify.register(registerAiRoutes);
 
   return fastify;
 }
