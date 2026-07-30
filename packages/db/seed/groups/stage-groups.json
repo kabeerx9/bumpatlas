@@ -1,0 +1,37 @@
+[
+  {
+    "slug": "pregnancy",
+    "title": "Pregnancy",
+    "description": "For anyone expecting. Questions, small wins, and the odd 3am worry.",
+    "stageKey": "P_T2",
+    "memberLimit": 500
+  },
+  {
+    "slug": "months-0-6",
+    "title": "0–6 months",
+    "description": "The newborn stretch. Feeding, sleeping, and finding your feet.",
+    "stageKey": "NB_0_3M",
+    "memberLimit": 500
+  },
+  {
+    "slug": "months-6-18",
+    "title": "6–18 months",
+    "description": "Moving, babbling, and eating everything that is not food.",
+    "stageKey": "I_6_12M",
+    "memberLimit": 500
+  },
+  {
+    "slug": "toddler-preschool",
+    "title": "Toddler and preschool",
+    "description": "Big feelings in small people.",
+    "stageKey": "T_12_24M",
+    "memberLimit": 500
+  },
+  {
+    "slug": "parent-wellbeing",
+    "title": "Parent wellbeing",
+    "description": "For you, not the baby. Rest, help, and being a person too.",
+    "stageKey": null,
+    "memberLimit": 500
+  }
+]

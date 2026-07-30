@@ -406,6 +406,10 @@ export async function processAccountDeletion(input: {
     );
   }
 
+  // A hosted group must never be left unowned (§7.8), so archive before anything else.
+  const { archiveGroupsHostedBy } = await import("@/services/community/groups");
+  const archivedGroups = await archiveGroupsHostedBy(input.userId);
+
   // Media the user uploaded that is not attached to a surviving household memory.
   const orphanAssets = await prisma.mediaAsset.findMany({
     where: { uploaderUserId: input.userId, memoryId: null, status: { not: "DELETED" } },
@@ -419,6 +423,21 @@ export async function processAccountDeletion(input: {
     await tx.challengeCompletion.deleteMany({ where: { userId: input.userId } });
     await tx.badgeAward.deleteMany({ where: { userId: input.userId } });
     await tx.notificationPreference.deleteMany({ where: { userId: input.userId } });
+    await tx.pushDevice.deleteMany({ where: { userId: input.userId } });
+    await tx.aiConversation.deleteMany({ where: { userId: input.userId } });
+    await tx.communityReaction.deleteMany({ where: { userId: input.userId } });
+    await tx.userBlock.deleteMany({
+      where: { OR: [{ blockerUserId: input.userId }, { blockedUserId: input.userId }] },
+    });
+
+    /**
+     * Community authorship is anonymised, not deleted: a reported post is moderation
+     * evidence, and destroying it would erase the record of what was reported.
+     */
+    await tx.communityGroupMember.updateMany({
+      where: { userId: input.userId },
+      data: { status: "LEFT", removedAt: new Date() },
+    });
 
     await tx.mediaAsset.updateMany({
       where: { id: { in: orphanAssets.map((asset) => asset.id) } },
@@ -447,7 +466,7 @@ export async function processAccountDeletion(input: {
       action: "account.deleted",
       actorUserId: null,
       // No private bodies, and no email: the audit records that it happened.
-      metadata: { orphanMediaRevoked: orphanAssets.length },
+      metadata: { orphanMediaRevoked: orphanAssets.length, groupsArchived: archivedGroups },
       targetType: "user",
       targetId: input.userId,
     });

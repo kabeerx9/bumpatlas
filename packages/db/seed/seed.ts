@@ -40,6 +40,14 @@ type WellnessActionSeed = {
   isPublished: boolean;
 };
 
+type StageGroupSeed = {
+  slug: string;
+  title: string;
+  description: string;
+  stageKey: string | null;
+  memberLimit: number;
+};
+
 type MilestoneSeed = {
   slug: string;
   title: string;
@@ -159,13 +167,45 @@ async function seedMilestones(): Promise<number> {
   return milestones.length;
 }
 
+/**
+ * Community cold start: the five seeded stage cohorts.
+ *
+ * Upserted by slug and always `STAGE_DISCOVERABLE`. Member counts are never seeded — a
+ * fabricated count is a lie a user can catch, and the warm empty state exists precisely so a
+ * quiet group does not need one.
+ */
+async function seedStageGroups(): Promise<number> {
+  const groups = readJson<StageGroupSeed[]>("groups/stage-groups.json");
+
+  for (const group of groups) {
+    const data = {
+      title: group.title,
+      description: group.description,
+      kind: "STAGE" as const,
+      visibility: "STAGE_DISCOVERABLE" as const,
+      stageKey: group.stageKey,
+      memberLimit: group.memberLimit,
+      isActive: true,
+    };
+
+    await prisma.communityGroup.upsert({
+      where: { slug: group.slug },
+      create: { slug: group.slug, ...data },
+      update: data,
+    });
+  }
+
+  return groups.length;
+}
+
 async function main() {
   const prompts = await seedMemoryPrompts();
   const actions = await seedWellnessActions();
   const milestones = await seedMilestones();
+  const groups = await seedStageGroups();
 
   console.log(
-    `Seeded ${prompts} memory prompts, ${actions} wellness actions, ${milestones} milestone definitions.`,
+    `Seeded ${prompts} memory prompts, ${actions} wellness actions, ${milestones} milestone definitions, ${groups} stage groups.`,
   );
   console.log("Run `pnpm --filter @bumpatlas/db seed:validate` to check launch inventory.");
 }
