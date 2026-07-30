@@ -196,15 +196,23 @@ export async function attachDemoHousehold(
     }
   }
 
+  // Upsert, not create: completions are unique per (user, planDate, kind) regardless of
+  // family, so re-attaching a household to a user who already has one would collide. The
+  // update repoints surviving rows at the new family so its streak screens still render.
   for (const completion of DEMO_COMPLETIONS) {
     for (const kind of completion.kinds) {
-      await prisma.challengeCompletion.create({
-        data: {
+      const planDate = daysAgo(completion.daysAgo);
+      await prisma.challengeCompletion.upsert({
+        where: {
+          userId_planDate_kind: { userId: ownerUserId, planDate, kind },
+        },
+        create: {
           userId: ownerUserId,
           familyId: family.id,
-          planDate: daysAgo(completion.daysAgo),
+          planDate,
           kind,
         },
+        update: { familyId: family.id },
       });
     }
   }
