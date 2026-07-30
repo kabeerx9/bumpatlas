@@ -1,3 +1,10 @@
+// Datasource and generator only.
+//
+// Models live in per-domain files in this directory (identity, family, profiles,
+// operations, ...). Prisma treats every .prisma file here as one schema, so
+// splitting costs nothing at runtime and keeps unrelated domains out of each
+// other's diffs.
+
 generator client {
   provider     = "prisma-client"
   output       = "../generated"
@@ -7,15 +14,4 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-}
-
-model User {
-  id       String  @id @default(cuid())
-  clerkId  String  @unique
-  email    String? @unique
-  name     String?
-  imageUrl String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }

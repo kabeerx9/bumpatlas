@@ -1,0 +1,134 @@
+// Cross-cutting operational tables: audit, idempotency, webhook dedupe, and
+// first-party product events. None of these store user-authored text.
+
+/// Security and administrative trail. Records that something happened and to
+/// which IDs — never memory bodies, child names, community text, or tokens.
+/// Retained 12 months.
+model AuditEvent {
+  id String @id @default(cuid())
+
+  familyId String?
+  family   Family? @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  actorUserId String?
+  actor       User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  /// Dotted action key, e.g. "family.created", "invite.accepted".
+  action String
+
+  targetType String?
+  targetId   String?
+
+  /// IDs, enums, booleans, and numbers only.
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([familyId, createdAt])
+  @@index([action, createdAt])
+}
+
+/// Replay protection for retryable POSTs (§5.7).
+///
+/// Same key + same request returns the stored response; same key + a different
+/// request is a 409 IDEMPOTENCY_CONFLICT. The business row and this row are
+/// written in one transaction, business row first — never this row first, or a
+/// crash between the two would swallow a real write.
+model IdempotencyRecord {
+  id     String @id @default(cuid())
+  userId String
+
+  /// Route identity, e.g. "POST /api/v1/memories". Scopes keys so the same client
+  /// key on two different routes cannot collide.
+  routeKey       String
+  idempotencyKey String
+
+  /// Hash of the canonical request body, used to detect a reused key carrying
+  /// different data.
+  requestHash String
+
+  statusCode   Int
+  responseJson Json
+
+  createdAt DateTime @default(now())
+
+  /// Purged by cron. At least 24h for user actions; longer for webhooks.
+  expiresAt DateTime
+
+  @@unique([userId, routeKey, idempotencyKey])
+  @@index([expiresAt])
+}
+
+enum WebhookProvider {
+  CLERK
+  REVENUECAT
+}
+
+/// Provider event dedupe. Providers retry, deliver out of order, and occasionally
+/// duplicate; processing an event twice must be harmless.
+///
+/// No payload column: webhook bodies contain emails and billing detail, and this
+/// table exists only to answer "have we already handled this event?".
+model WebhookEvent {
+  id       String          @id @default(cuid())
+  provider WebhookProvider
+
+  providerEventId String
+  eventType       String
+
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+
+  /// Error class or code only — never the provider payload.
+  failureCode String?
+
+  /// Compound rather than unique on providerEventId alone: two providers could
+  /// legitimately issue the same event ID, and a collision there would silently
+  /// drop a real event.
+  @@unique([provider, providerEventId])
+  @@index([processedAt])
+}
+
+/// First-party analytics (§13.6). No external SDK.
+enum ProductEventName {
+  ONBOARDING_COMPLETED
+  MEMORY_CREATED
+  WELLNESS_COMPLETED
+  TODAY_VIEWED
+  INVITE_SENT
+  INVITE_ACCEPTED
+  RECAP_OPENED
+  RECAP_SHARED
+  AI_MESSAGE_SENT
+  AI_ESCALATED
+  GROUP_JOINED
+  GROUP_CREATED
+  GROUP_INVITE_CREATED
+  POST_CREATED
+  REPORT_CREATED
+  PAYWALL_VIEWED
+  PURCHASE_COMPLETED
+  EXPORT_REQUESTED
+  ACCOUNT_DELETED
+}
+
+/// Emitted from successful services. Stores an event enum, actor/family IDs, and
+/// safe numeric/boolean metadata — never user-authored text, which is what makes
+/// it safe to query for launch metrics.
+model ProductEvent {
+  id   String           @id @default(cuid())
+  name ProductEventName
+
+  actorUserId String?
+  familyId    String?
+
+  /// Numbers and booleans only. Adding a string field here is a privacy decision.
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  /// Weekly-Active-Families reads (name, day) ranges per family.
+  @@index([familyId, createdAt])
+  @@index([name, createdAt])
+  @@index([actorUserId, createdAt])
+}

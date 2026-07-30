@@ -1,5 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type {
+  Child,
+  EntitlementsResponse,
+  FamilySummary,
+  Memory,
+  Recap,
+  StageResponse,
+  TodayResponse,
+} from "@bumpatlas/contracts";
+
 import * as aiApi from "@/lib/api/ai";
 import * as billingApi from "@/lib/api/billing";
 import { useMockData } from "@/lib/api/client";
@@ -13,7 +23,13 @@ import * as notificationsApi from "@/lib/api/notifications";
 import * as profilesApi from "@/lib/api/profiles";
 import * as recapsApi from "@/lib/api/recaps";
 import * as todayApi from "@/lib/api/today";
-import { mockGuides, mockGroupPosts, mockMemories, mockRecaps } from "@/features/mock/demo-data";
+import {
+  mockGuides,
+  mockGroupPosts,
+  mockMemories,
+  mockRecaps,
+  mockToday as mockTodayContent,
+} from "@/features/mock/demo-data";
 import { mockBadges, mockModerationQueue, mockStageGroups } from "@/features/mock/mock-content";
 
 export const queryKeys = {
@@ -34,10 +50,44 @@ export const queryKeys = {
   moderation: ["moderation", "queue"] as const,
 };
 
-function mockToday() {
+/**
+ * The mock builders are annotated with the contract types on purpose: a contract
+ * change then fails to compile *here*, at the fixture, instead of surfacing as an
+ * unrelated `{}` inference failure inside every screen's useQuery call.
+ */
+const mockChild: Child = {
+  id: "child-mock",
+  displayName: "Ava",
+  dateOfBirth: "2026-05-01",
+  birthOrder: 0,
+  isActive: true,
+  archivedAt: null,
+};
+
+function mockToday(): TodayResponse {
+  const prompt = "What made today feel like yours?";
   return {
     date: new Date().toISOString().slice(0, 10),
-    prompt: "What made today feel like yours?",
+    prompt,
+    cards: {
+      capture: { promptId: "prompt-mock", prompt },
+      care: mockTodayContent.wellnessAction,
+      learn: {
+        id: mockTodayContent.learnCard.id,
+        slug: mockTodayContent.learnCard.id,
+        title: mockTodayContent.learnCard.title,
+        summary: mockTodayContent.learnCard.detail,
+        readingMinutes: 3,
+        stageTags: ["postpartum"],
+      },
+      connect: {
+        mode: mockTodayContent.connectCard.mode,
+        groupId: null,
+        groupName: mockTodayContent.connectCard.groupName,
+        prompt: mockTodayContent.connectCard.prompt,
+        replyCount: mockTodayContent.connectCard.replyCount,
+      },
+    },
     loopCompletion: { capture: true, care: false, learn: false, connect: false },
     weekProgress: { storyDays: 3, wellnessDays: 2, activeDays: 3, goal: 4 },
     mediaUploadsUsed: 8,
@@ -48,7 +98,7 @@ function mockToday() {
   };
 }
 
-function mockMemoryItems() {
+function mockMemoryItems(): Memory[] {
   return mockMemories.map((memory) => ({
     id: memory.id,
     title: memory.title,
@@ -56,18 +106,21 @@ function mockMemoryItems() {
     eventDate: memory.dateLabel,
     authorName: memory.author,
     visibility: memory.visibility,
-    mediaStorageKey: null as string | null,
+    childId: mockChild.id,
+    pregnancyId: null,
+    mediaStorageKey: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }));
 }
 
-function mockFamily() {
+function mockFamily(): FamilySummary {
   return {
     id: "fam-mock",
     name: "The Rivera household",
     stageMode: "postpartum" as const,
     childDisplayName: "Ava",
+    children: [mockChild],
     dueDate: null as string | null,
     members: [
       {
@@ -160,12 +213,15 @@ export function useStageQuery() {
     queryFn: async () => {
       if (useMockData) {
         const family = mockFamily();
-        return {
+        const stage: StageResponse = {
           stageMode: family.stageMode,
           childDisplayName: family.childDisplayName,
+          activeChildId: family.children.find((child) => child.isActive)?.id ?? null,
+          children: family.children,
           dueDate: family.dueDate,
-          gestationalWeek: null as number | null,
+          gestationalWeek: null,
         };
+        return stage;
       }
       return familiesApi.getStage();
     },
@@ -175,13 +231,14 @@ export function useStageQuery() {
 export function useEntitlementsQuery() {
   return useQuery({
     queryKey: queryKeys.entitlements,
-    queryFn: () =>
+    queryFn: (): Promise<EntitlementsResponse> =>
       useMockData
         ? Promise.resolve({
             isPremium: false,
             planId: null,
             renewsAt: null,
             mediaUploadsLimit: 30,
+            maxChildren: 2,
             aiDailyLimit: 10,
             source: "free" as const,
           })
@@ -199,7 +256,13 @@ export function useGroupsQuery() {
               id: group.id,
               name: group.name,
               stageLabel: group.name,
+              description: null,
+              kind: "stage" as const,
+              role: "member" as const,
               memberCount: group.memberCount ?? 12,
+              memberLimit: 200,
+              postingEnabled: true,
+              archived: false,
               joined: true,
             })),
           })
@@ -304,7 +367,7 @@ export function useContentDetailQuery(slugOrId: string) {
 export function useCurrentRecapQuery() {
   return useQuery({
     queryKey: queryKeys.recap,
-    queryFn: () =>
+    queryFn: (): Promise<Recap> =>
       useMockData
         ? Promise.resolve({
             id: mockRecaps[0].id,
@@ -312,7 +375,8 @@ export function useCurrentRecapQuery() {
             title: mockRecaps[0].title,
             highlights: mockRecaps[0].highlights,
             eligible: true,
-            childDisplayName: "Ava",
+            childId: mockChild.id,
+            childDisplayName: mockChild.displayName,
           })
         : recapsApi.getCurrentRecap(),
   });
@@ -387,6 +451,8 @@ export function useModerationQueueQuery() {
               reporter: item.reporter,
               priority: item.severity === "high" ? ("high" as const) : ("normal" as const),
               status: item.status,
+              groupId: null,
+              groupKind: null,
               createdAt: item.createdAt,
             })),
           })
@@ -403,17 +469,20 @@ export function useCreateMemoryMutation() {
     }) => {
       if (useMockData) {
         const now = new Date().toISOString();
-        return {
+        const memory: Memory = {
           id: `mem-${Date.now()}`,
           title: input.body.body.slice(0, 48),
           body: input.body.body,
           eventDate: input.body.eventDate,
           authorName: "You",
           visibility: input.body.visibility ?? "HOUSEHOLD",
+          childId: input.body.childId ?? mockChild.id,
+          pregnancyId: input.body.pregnancyId ?? null,
           mediaStorageKey: input.body.mediaStorageKey ?? null,
           createdAt: now,
           updatedAt: now,
         };
+        return memory;
       }
       return memoriesApi.createMemory(input.body, input.idempotencyKey);
     },
@@ -630,6 +699,8 @@ export function useModerationActionMutation() {
           reporter: "You",
           priority: "normal" as const,
           status: input.action.action,
+          groupId: null,
+          groupKind: null,
           createdAt: new Date().toISOString(),
         };
       }
@@ -665,11 +736,24 @@ export function useConvertPregnancyMutation() {
       body: Parameters<typeof profilesApi.convertPregnancy>[1];
     }) => {
       if (useMockData) {
-        return {
-          id: `child-${Date.now()}`,
-          displayName: input.body.childName,
+        // The convert contract is a union: one baby, or several sharing a birth
+        // date (twins). Mock mode has to handle both branches now that the
+        // contract can express them.
+        const babies =
+          "babies" in input.body
+            ? input.body.babies.map((baby) => baby.displayName)
+            : [input.body.childName];
+
+        const children: Child[] = babies.map((displayName, index) => ({
+          id: `child-${Date.now()}-${index}`,
+          displayName,
           dateOfBirth: input.body.birthDate,
-        };
+          birthOrder: index,
+          isActive: index === 0,
+          archivedAt: null,
+        }));
+
+        return { ...children[0], children };
       }
       return profilesApi.convertPregnancy(input.pregnancyId, input.body);
     },

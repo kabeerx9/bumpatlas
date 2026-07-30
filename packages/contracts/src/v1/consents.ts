@@ -9,10 +9,14 @@ export const consentTypeSchema = z.enum([
 ]);
 export type ConsentType = z.infer<typeof consentTypeSchema>;
 
+/**
+ * Correction 11: no client-supplied `acceptedAt`. A consent record is legal
+ * evidence, so the server stamps its own clock. Upserted by
+ * (userId, policyKey, version).
+ */
 export const createConsentInputSchema = z.object({
   type: consentTypeSchema,
   version: z.string().min(1),
-  acceptedAt: z.string().optional(),
 });
 export type CreateConsentInput = z.infer<typeof createConsentInputSchema>;
 

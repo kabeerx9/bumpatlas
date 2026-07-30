@@ -1,4 +1,6 @@
 export * from "./common";
+export * from "./errors";
+export * from "./pagination";
 export * from "./memories";
 export * from "./today";
 export * from "./families";
@@ -8,7 +10,9 @@ export * from "./content";
 export * from "./recaps";
 export * from "./billing";
 export * from "./notifications";
+export * from "./preferences";
 export * from "./profiles";
+export * from "./milestones";
 export * from "./consents";
 export * from "./data-requests";
 export * from "./moderation";

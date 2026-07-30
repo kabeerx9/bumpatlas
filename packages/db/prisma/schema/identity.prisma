@@ -1,0 +1,79 @@
+// Identity: the local mirror of a Clerk user, plus consent evidence.
+
+enum PrimaryGoal {
+  MEMORIES
+  WELLNESS
+  CONNECT
+  LEARN
+}
+
+model User {
+  id       String  @id @default(cuid())
+  clerkId  String  @unique
+  email    String? @unique
+  name     String?
+  imageUrl String?
+
+  /// Household this user is currently reading. Re-resolved by
+  /// resolveCurrentFamily() on every request: a pointer with no active
+  /// membership is corrected, never trusted. SetNull on family delete.
+  defaultFamilyId String?
+  defaultFamily   Family? @relation("UserDefaultFamily", fields: [defaultFamilyId], references: [id], onDelete: SetNull)
+
+  /// Which sibling this user is focused on (§6.2.1). Per-user, not per-household:
+  /// two co-parents may legitimately point at different children. Selects *which
+  /// child*, never the stage — computeStage() puts an active pregnancy first.
+  /// A stale pointer at another family's child is a cross-family leak, so
+  /// resolveActiveChild() revalidates family and archived state on every read.
+  activeChildId String?
+  activeChild   ChildProfile? @relation("UserActiveChild", fields: [activeChildId], references: [id], onDelete: SetNull)
+
+  /// Validated IANA identifier, e.g. "Asia/Kolkata". Null until the client sends
+  /// X-Time-Zone; "today", gestational week, quiet hours, and weekly boundaries
+  /// all depend on it, so UTC is only a temporary fallback.
+  timeZone String?
+
+  primaryGoal           PrimaryGoal?
+  onboardingCompletedAt DateTime?
+
+  /// Community and member-created groups require an adult-attested account.
+  isAdultAttested Boolean   @default(false)
+  adultAttestedAt DateTime?
+
+  ownedFamilies  Family[]        @relation("FamilyOwner")
+  memberships    FamilyMember[]
+  createdInvites FamilyInvite[]  @relation("InviteCreatedBy")
+  acceptedInvite FamilyInvite[]  @relation("InviteAcceptedBy")
+  consents       ConsentRecord[]
+  auditEvents    AuditEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([defaultFamilyId])
+}
+
+enum ConsentPolicyKey {
+  TERMS
+  PRIVACY
+  COMMUNITY
+  AGE_ATTESTATION
+  WEEK_SUMMARY
+}
+
+/// Legal evidence that a specific policy version was accepted. The server stamps
+/// acceptedAt from its own clock; the client cannot supply it (correction 11).
+model ConsentRecord {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  policyKey ConsentPolicyKey
+  version   String
+
+  acceptedAt DateTime @default(now())
+
+  /// Upsert target: re-accepting the same version is idempotent, while a new
+  /// version creates a new row so the acceptance history survives.
+  @@unique([userId, policyKey, version])
+  @@index([userId, policyKey])
+}

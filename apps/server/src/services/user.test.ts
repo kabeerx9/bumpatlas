@@ -16,6 +16,16 @@ describe("serializeUser", () => {
       email: "user@example.com",
       name: "Ada Lovelace",
       imageUrl: "https://example.com/avatar.png",
+      // Household context and preferences exist on User but are deliberately not
+      // part of the identity response: /api/me stays identity-only (correction 17),
+      // and this assertion is what keeps it that way.
+      defaultFamilyId: null,
+      activeChildId: null,
+      timeZone: null,
+      primaryGoal: null,
+      onboardingCompletedAt: null,
+      isAdultAttested: false,
+      adultAttestedAt: null,
       createdAt,
       updatedAt,
     });

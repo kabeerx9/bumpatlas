@@ -12,6 +12,11 @@ export const meResponseSchema = z.object({
 
 export type MeResponse = z.infer<typeof meResponseSchema>;
 
+/**
+ * Transport-level error envelope the client tolerates. The legacy string form is
+ * what `/api/me` and `/api/account` still return; every `/api/v1` route returns
+ * the structured form (`v1ErrorResponseSchema`).
+ */
 export const apiErrorResponseSchema = z.object({
   error: z.union([
     z.string(),
@@ -19,6 +24,7 @@ export const apiErrorResponseSchema = z.object({
       code: z.string(),
       message: z.string(),
       details: z.unknown().optional(),
+      requestId: z.string().optional(),
     }),
   ]),
 });

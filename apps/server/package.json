@@ -6,6 +6,8 @@
     "build": "tsdown",
     "check-types": "tsc -b",
     "test": "node --env-file=.env.example --import tsx --test src/**/*.test.ts",
+    "test:integration": "node --env-file=.env.test --import tsx --test --test-concurrency=1 src/**/*.itest.ts",
+    "db:push:test": "node --import tsx scripts/push-test-schema.ts",
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/main.ts --outfile server",
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.mjs"
@@ -16,6 +18,8 @@
     "@bumpatlas/env": "workspace:*",
     "@clerk/fastify": "^3.1.3",
     "@fastify/cors": "^11.0.1",
+    "@fastify/helmet": "^13.1.0",
+    "@fastify/rate-limit": "^11.2.0",
     "dotenv": "catalog:",
     "fastify": "^5.3.3",
     "zod": "catalog:"
