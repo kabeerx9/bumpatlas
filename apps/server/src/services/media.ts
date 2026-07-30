@@ -241,11 +241,30 @@ export async function claimPendingAsset(input: {
   return asset;
 }
 
+/**
+ * Demo-seed escape hatch: a storage key that is already an absolute URL is returned
+ * as-is instead of being signed.
+ *
+ * This exists so `seed:demo` can populate memories with public placeholder images without
+ * anyone provisioning a bucket. It is gated on `NODE_ENV !== "production"` rather than on a
+ * feature flag, so no amount of env misconfiguration can switch it on in production — the
+ * one place where returning an unsigned, unexpiring, externally-hosted URL for what is
+ * supposed to be a private family photo would be a real problem.
+ *
+ * Real uploads are unaffected: `buildStorageKey` only ever produces `families/…` keys, which
+ * do not match this and go through the signed path as normal.
+ */
+function isExternalDemoUrl(storageKey: string): boolean {
+  return env.NODE_ENV !== "production" && /^https?:\/\//i.test(storageKey);
+}
+
 /** Signed, short-lived, and generated per read — never stored on the memory row. */
 export async function createDownloadUrl(
   storageKey: string,
   signer: StorageSigner,
 ): Promise<string | null> {
+  if (isExternalDemoUrl(storageKey)) return storageKey;
+
   try {
     return await signer.createDownloadUrl({
       storageKey,

@@ -19,7 +19,8 @@
     "postinstall": "prisma generate",
     "db:studio": "prisma studio",
     "seed:content": "node --env-file=../../apps/server/.env --import tsx seed/seed.ts",
-    "seed:validate": "node --env-file=../../apps/server/.env --import tsx seed/validate.ts"
+    "seed:validate": "node --env-file=../../apps/server/.env --import tsx seed/validate.ts",
+    "seed:demo": "node --env-file=../../apps/server/.env --import tsx seed/demo.ts"
   },
   "dependencies": {
     "@bumpatlas/env": "workspace:*",
