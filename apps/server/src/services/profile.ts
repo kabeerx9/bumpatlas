@@ -175,6 +175,19 @@ export async function createChild(input: {
       },
     });
 
+    /**
+     * Focus follows the child you just added.
+     *
+     * §6.2.1's fallback would otherwise keep an existing `activeChildId` — so a
+     * parent adding a newborn to a household that already has a toddler would stay
+     * focused on the toddler, and Today would keep talking about the wrong child.
+     * Pregnancy conversion already does this; manual creation matches it.
+     */
+    await tx.user.update({
+      where: { id: input.actorUserId },
+      data: { activeChildId: child.id },
+    });
+
     await writeAuditEventTx(tx, {
       action: "child.created",
       actorUserId: input.actorUserId,

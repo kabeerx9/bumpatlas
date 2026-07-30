@@ -48,6 +48,8 @@ model User {
   auditEvents    AuditEvent[]
 
   notificationPreference NotificationPreference?
+  authoredMemories       MemoryEntry[]           @relation("MemoryAuthor")
+  uploadedMedia          MediaAsset[]            @relation("MediaUploader")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

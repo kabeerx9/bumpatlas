@@ -30,6 +30,10 @@ model PregnancyProfile {
   /// fails on the constraint instead of racing through a read-then-write check.
   activeFamilyKey String? @unique
 
+  /// Memories captured during the pregnancy stay attached here after conversion:
+  /// with twins there is no correct child to reassign them to.
+  memories MemoryEntry[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -60,7 +64,8 @@ model ChildProfile {
   archivedAt DateTime?
 
   /// Back-relation for User.activeChildId.
-  activeForUsers User[] @relation("UserActiveChild")
+  activeForUsers User[]        @relation("UserActiveChild")
+  memories       MemoryEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
