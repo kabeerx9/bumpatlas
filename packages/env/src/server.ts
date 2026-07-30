@@ -113,6 +113,17 @@ export const env = createEnv({
     /** Member-created groups. Stays off until their moderation coverage is real. */
     FEATURE_USER_GROUPS: boolFromString(false),
 
+    /**
+     * Give every newly provisioned user a populated demo household on their first
+     * authenticated request, so a fresh sign-in lands on a filled-in app instead of
+     * empty-state screens.
+     *
+     * Development affordance only. Defaults off, and the service refuses to run when
+     * NODE_ENV is production regardless of this value — a flag flipped by accident in a
+     * real environment would write fake children and memories into real accounts.
+     */
+    DEMO_SEED_NEW_USERS: boolFromString(false),
+
     // --- Numeric limits (env so launch tuning needs no code deploy) ---
     FREE_MEDIA_UPLOADS_PER_MONTH: intWithDefault(100),
     PREMIUM_MEDIA_UPLOADS_PER_MONTH: intWithDefault(1000),

@@ -29,14 +29,29 @@ export function SignInScreen() {
   const [code, setCode] = React.useState("");
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
 
+  /**
+   * Whether *this* screen sent a code and is waiting on it.
+   *
+   * Deliberately local state rather than a read of `signIn.status`. Clerk persists the
+   * in-progress sign-in on the client, and the Expo token cache is backed by expo-secure-store
+   * — the iOS Keychain, which survives deleting the app. Rendering the code step straight off
+   * `signIn.status` therefore meant a half-finished sign-in stranded the user on "Verify Your
+   * Account" on every subsequent cold start, with reinstalling the app powerless to clear it.
+   * Gating on something that resets with the component guarantees a launch always starts here.
+   */
+  const [awaitingCode, setAwaitingCode] = React.useState(false);
+
   const isFetching = fetchStatus === "fetching";
   const canSubmit = Boolean(emailAddress && password) && !isFetching;
   const emailCodeFactor = signIn.supportedSecondFactors.find(
     (factor) => factor.strategy === "email_code",
   );
-  const requiresEmailCode =
-    signIn.status === "needs_client_trust" ||
-    (signIn.status === "needs_second_factor" && !!emailCodeFactor);
+
+  const returnToCredentials = () => {
+    setAwaitingCode(false);
+    setCode("");
+    setStatusMessage(null);
+  };
 
   const handleSubmit = async () => {
     setStatusMessage(null);
@@ -54,12 +69,24 @@ export function SignInScreen() {
         },
       });
     } else if (signIn.status === "needs_second_factor" || signIn.status === "needs_client_trust") {
-      if (emailCodeFactor) {
-        await signIn.mfa.sendEmailCode();
-        setStatusMessage(`We sent a verification code to ${emailCodeFactor.safeIdentifier}.`);
-      } else {
-        setStatusMessage("Email verification is required, but unavailable right now.");
+      if (!emailCodeFactor) {
+        // No factor means no code can ever arrive. Staying on the credentials form with an
+        // explanation beats advancing to a code field that nothing will ever satisfy.
+        setStatusMessage(
+          "This account needs email verification, but no verification method is available. " +
+            "Try another sign-in method or contact support.",
+        );
+        return;
       }
+
+      const { error: codeError } = (await signIn.mfa.sendEmailCode()) ?? {};
+      if (codeError) {
+        setStatusMessage(codeError.longMessage ?? "Could not send a verification code.");
+        return;
+      }
+
+      setAwaitingCode(true);
+      setStatusMessage(`We sent a verification code to ${emailCodeFactor.safeIdentifier}.`);
     }
   };
 
@@ -78,7 +105,7 @@ export function SignInScreen() {
     }
   };
 
-  if (requiresEmailCode) {
+  if (awaitingCode) {
     return (
       <SoftScreen scroll={false} edges={["top", "bottom"]}>
         <View style={styles.formWrap}>
@@ -106,6 +133,18 @@ export function SignInScreen() {
             <Button disabled={isFetching} onPress={() => void handleVerify()} size="lg">
               {isFetching ? "Verifying..." : "Verify"}
             </Button>
+            {/* Without this there is no way out of the code step short of deleting the app —
+                and even that does not help, because the Keychain outlives it. */}
+            <Pressable
+              accessibilityRole="button"
+              disabled={isFetching}
+              onPress={returnToCredentials}
+              style={styles.secondaryAction}
+            >
+              <AppText variant="bodySmall" tone="secondary" align="center">
+                Use a different account
+              </AppText>
+            </Pressable>
           </View>
       </SoftScreen>
     );
@@ -214,6 +253,7 @@ const styles = StyleSheet.create({
   },
   logo: { alignSelf: "center", marginBottom: spacing.sm },
   subtitle: { marginBottom: spacing.sm },
+  secondaryAction: { paddingVertical: spacing.sm },
   formWrap: {
     flex: 1,
     justifyContent: "center",
