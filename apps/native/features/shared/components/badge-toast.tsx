@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, colors, radius, shadows, spacing } from "@/design-system";
 import { mockBadges } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 
@@ -28,8 +28,8 @@ export function BadgeToast() {
       accessibilityRole="alert"
       accessibilityLabel={`Badge earned: ${badge.title}`}
     >
-      <Feather name="award" size={16} color={colors.text.inverse} />
-      <AppText variant="caption" weight="semibold" tone="inverse" style={styles.copy}>
+      <Feather name="award" size={16} color={colors.brand.ink} />
+      <AppText variant="caption" weight="semibold" tone="primary" style={styles.copy}>
         Badge earned · {badge.title}
       </AppText>
     </Pressable>
@@ -46,11 +46,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    backgroundColor: colors.brand.peach,
+    backgroundColor: colors.brand.honey,
     borderRadius: radius.full,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     minHeight: 48,
+    ...shadows.card,
   },
   copy: { flex: 1 },
 });

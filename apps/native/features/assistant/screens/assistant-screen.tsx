@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, IconButton, borderWidth, radius, spacing, useAppTheme } from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { CitationCard, type Citation } from "@/features/shared/components/citation-card";
 import { EscalateCard } from "@/features/shared/components/escalate-card";
@@ -47,6 +47,8 @@ type ThreadItem =
 
 export function AssistantScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
+  const dynamicStyles = themedStyles(theme);
   const { weekSummaryConsent, setWeekSummaryConsent } = useMockUi();
   const aiUsageQuery = useAiUsageQuery();
   const sendAi = useSendAiChatMutation();
@@ -152,14 +154,9 @@ export function AssistantScreen() {
       onBack={() => router.back()}
       scroll={false}
       right={
-        <Pressable
-          onPress={clearConversation}
-          hitSlop={12}
-          style={styles.iconBtn}
-          accessibilityLabel="Clear conversation"
-        >
-          <Feather name="trash-2" size={18} color={colors.brand.ink} />
-        </Pressable>
+        <IconButton accessibilityLabel="Clear conversation" onPress={clearConversation} tone="card">
+          <Feather name="trash-2" size={18} color={theme.colors.text} />
+        </IconButton>
       }
     >
       <AppText variant="caption" tone="secondary" align="center">
@@ -205,7 +202,7 @@ export function AssistantScreen() {
               <View
                 style={[
                   styles.bubble,
-                  item.role === "user" ? styles.userBubble : styles.aiBubble,
+                  item.role === "user" ? dynamicStyles.userBubble : dynamicStyles.aiBubble,
                 ]}
               >
                 <AppText
@@ -240,7 +237,7 @@ export function AssistantScreen() {
                   style={styles.reportRow}
                   disabled={reportedIds.includes(item.id)}
                 >
-                  <Feather name="flag" size={12} color={colors.text.muted} />
+                  <Feather name="flag" size={12} color={theme.colors.textMuted} />
                   <AppText variant="caption" tone="secondary">
                     {reportedIds.includes(item.id) ? "Reported" : "Report answer"}
                   </AppText>
@@ -256,9 +253,14 @@ export function AssistantScreen() {
                 style={styles.consentRow}
                 onPress={() => setWeekSummaryConsent(!weekSummaryConsent)}
               >
-                <View style={[styles.checkbox, weekSummaryConsent && styles.checkboxOn]}>
+                <View
+                  style={[
+                    dynamicStyles.checkbox,
+                    weekSummaryConsent && dynamicStyles.checkboxOn,
+                  ]}
+                >
                   {weekSummaryConsent ? (
-                    <Feather name="check" size={12} color={colors.text.inverse} />
+                    <Feather name="check" size={12} color={theme.colors.primaryText} />
                   ) : null}
                 </View>
                 <AppText variant="bodySmall" style={styles.consentCopy}>
@@ -266,11 +268,11 @@ export function AssistantScreen() {
                 </AppText>
               </Pressable>
               <Pressable
-                style={[styles.consentBtn, !weekSummaryConsent && styles.consentBtnDisabled]}
+                style={[dynamicStyles.consentBtn, !weekSummaryConsent && styles.consentBtnDisabled]}
                 onPress={confirmSummaryWithConsent}
                 disabled={!weekSummaryConsent}
               >
-                <AppText variant="caption" weight="semibold" tone="inverse">
+                <AppText variant="caption" weight="semibold" tone="primary" style={{ color: theme.colors.primaryText }}>
                   Continue with summary
                 </AppText>
               </Pressable>
@@ -281,25 +283,34 @@ export function AssistantScreen() {
             {SUGGESTIONS.map((suggestion) => (
               <Pressable
                 key={suggestion}
-                style={styles.suggestion}
                 onPress={() => void send(suggestion)}
                 disabled={exhausted}
+                style={({ pressed }) => [
+                  dynamicStyles.suggestion,
+                  pressed && dynamicStyles.suggestionPressed,
+                ]}
               >
-                <AppText variant="caption" weight="semibold" style={styles.suggestionText}>
-                  {suggestion}
-                </AppText>
+                {({ pressed }) => (
+                  <AppText
+                    variant="caption"
+                    weight="semibold"
+                    style={pressed ? { color: theme.colors.secondaryText } : { color: theme.colors.text }}
+                  >
+                    {suggestion}
+                  </AppText>
+                )}
               </Pressable>
             ))}
           </View>
         </ScrollView>
 
-        <View style={styles.composer}>
+        <View style={dynamicStyles.composer}>
           <TextInput
             value={message}
             onChangeText={setMessage}
             placeholder={limitReason ?? "Ask something calm..."}
-            placeholderTextColor={colors.text.muted}
-            style={styles.input}
+            placeholderTextColor={theme.colors.textMuted}
+            style={dynamicStyles.input}
             editable={!exhausted}
             accessibilityLabel="Ask BumpAtlas"
             allowFontScaling
@@ -309,13 +320,13 @@ export function AssistantScreen() {
             onPress={() => void send(message)}
             disabled={exhausted || sending || message.trim().length === 0}
             style={[
-              styles.sendBtn,
+              dynamicStyles.sendBtn,
               (message.trim().length === 0 || exhausted || sending) && styles.sendDisabled,
             ]}
             accessibilityLabel="Send message"
             accessibilityRole="button"
           >
-            <Feather name="arrow-up" size={20} color={colors.text.inverse} />
+            <Feather name="arrow-up" size={20} color={theme.colors.primaryText} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -324,14 +335,6 @@ export function AssistantScreen() {
 }
 
 const styles = StyleSheet.create({
-  iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   flex: { flex: 1 },
   quotaWrap: { paddingBottom: spacing.sm, gap: spacing.sm },
   thread: {
@@ -344,8 +347,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  userBubble: { alignSelf: "flex-end", backgroundColor: colors.brand.peach },
-  aiBubble: { alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.78)" },
   reportRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -357,58 +358,81 @@ const styles = StyleSheet.create({
   },
   consentPanel: { gap: spacing.sm, marginTop: spacing.sm },
   consentRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: colors.brand.peach,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 1,
-  },
-  checkboxOn: { backgroundColor: colors.brand.peach },
   consentCopy: { flex: 1, lineHeight: 20 },
-  consentBtn: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.brand.peach,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
   consentBtnDisabled: { opacity: 0.4 },
   suggestions: { gap: spacing.sm, marginTop: spacing.md },
-  suggestion: {
-    borderRadius: radius.full,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    alignSelf: "flex-start",
-  },
-  suggestionText: { color: colors.brand.peach },
-  composer: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    paddingBottom: spacing.sm,
-    paddingTop: spacing.sm,
-    alignItems: "center",
-  },
-  input: {
-    flex: 1,
-    minHeight: 48,
-    borderRadius: radius.full,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    paddingHorizontal: spacing.lg,
-    color: colors.text.primary,
-    fontFamily: "Poppins_400Regular",
-  },
-  sendBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.brand.peach,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   sendDisabled: { opacity: 0.4 },
 });
+
+/** Theme-dependent styles: bubbles, chips, and the composer need light/dark aware tokens. */
+function themedStyles(theme: ReturnType<typeof useAppTheme>) {
+  return StyleSheet.create({
+    userBubble: {
+      alignSelf: "flex-end",
+      backgroundColor: theme.colors.primary,
+    },
+    aiBubble: {
+      alignSelf: "flex-start",
+      backgroundColor: theme.colors.surface,
+      borderWidth: borderWidth.hairline,
+      borderColor: theme.colors.border,
+    },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: borderWidth.emphasis,
+      borderColor: theme.colors.secondary,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 1,
+    },
+    checkboxOn: { backgroundColor: theme.colors.secondary },
+    consentBtn: {
+      alignSelf: "flex-start",
+      backgroundColor: theme.colors.secondary,
+      borderRadius: radius.full,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+    },
+    suggestion: {
+      borderRadius: radius.full,
+      backgroundColor: theme.colors.surface,
+      borderWidth: borderWidth.hairline,
+      borderColor: theme.colors.border,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      alignSelf: "flex-start",
+    },
+    suggestionPressed: {
+      backgroundColor: theme.colors.secondary,
+      borderColor: theme.colors.secondary,
+    },
+    composer: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      paddingBottom: spacing.sm,
+      paddingTop: spacing.sm,
+      alignItems: "center",
+    },
+    input: {
+      flex: 1,
+      minHeight: 48,
+      borderRadius: radius.full,
+      backgroundColor: theme.colors.surface,
+      borderWidth: borderWidth.hairline,
+      borderColor: theme.colors.border,
+      paddingHorizontal: spacing.lg,
+      color: theme.colors.text,
+      fontFamily: "Poppins_400Regular",
+    },
+    sendBtn: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: theme.colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  });
+}

@@ -3,7 +3,7 @@ import { Animated, StyleSheet, View } from "react-native";
 
 import { colors, radius } from "@/design-system";
 
-/** Soft parent + baby mark for the Today hero — cream/peach only. */
+/** Soft parent + baby mark for the Today hero — warm nursery palette only. */
 export function TodayHeroIllustration() {
   const float = useRef(new Animated.Value(0)).current;
 
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     width: 108,
     height: 108,
     borderRadius: 54,
-    backgroundColor: "rgba(255,255,255,0.35)",
+    backgroundColor: colors.pastel.lemon,
     top: 8,
   },
   parentBody: {
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 36,
     borderBottomLeftRadius: 18,
     borderBottomRightRadius: 18,
-    backgroundColor: colors.brand.peach,
+    backgroundColor: colors.brand.honey,
   },
   parentHead: {
     position: "absolute",
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 30,
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.55)",
+    backgroundColor: colors.pastel.mint,
     marginTop: -6,
   },
   babyHead: {
@@ -114,6 +114,6 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: radius.full,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: colors.pastel.petal,
   },
 });

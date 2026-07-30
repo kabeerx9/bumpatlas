@@ -1,14 +1,22 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import {
+  AppText,
+  Button,
+  IconButton,
+  Screen,
+  Surface,
+  spacing,
+  useAppTheme,
+} from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
-import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useGroupPostsQuery } from "@/lib/api/hooks";
 
 export function ConnectBlockedScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const { blockedAuthorIds, unblockAuthor, activeGroupId } = useMockUi();
   const groupPostsQuery = useGroupPostsQuery(activeGroupId);
 
@@ -20,53 +28,71 @@ export function ConnectBlockedScreen() {
   }));
 
   return (
-    <SoftStackShell title="Blocked members" onBack={() => router.back()}>
-      <AppText variant="bodySmall" tone="secondary">
-        Blocked members cannot see your posts and you won&apos;t see theirs.
-      </AppText>
+    <Screen padded={false}>
+      <View style={styles.header}>
+        <IconButton accessibilityLabel="Go back" onPress={() => router.back()}>
+          <Feather name="arrow-left" size={20} color={theme.colors.text} />
+        </IconButton>
+        <AppText variant="title">Blocked members</AppText>
+        <View style={styles.headerSpacer} />
+      </View>
 
-      {blocked.length === 0 ? (
-        <View style={styles.empty}>
-          <Feather name="users" size={28} color={colors.brand.peach} />
-          <AppText weight="semibold">No blocked members</AppText>
-          <AppText variant="bodySmall" tone="secondary" align="center">
-            You can block someone from any post menu in Connect.
-          </AppText>
-        </View>
-      ) : (
-        blocked.map((member) => (
-          <View key={member.id} style={styles.row}>
-            <View style={styles.copy}>
-              <AppText weight="semibold">{member.name}</AppText>
-              <AppText variant="caption" tone="secondary">
-                Blocked
-              </AppText>
-            </View>
-            <Button size="sm" variant="ghost" onPress={() => unblockAuthor(member.id)}>
-              Unblock
-            </Button>
-          </View>
-        ))
-      )}
-    </SoftStackShell>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <AppText variant="bodySmall" tone="secondary">
+          Blocked members cannot see your posts and you won&apos;t see theirs.
+        </AppText>
+
+        {blocked.length === 0 ? (
+          <Surface tone="lavender" radiusSize="xl" style={styles.empty}>
+            <Feather name="users" size={28} color={theme.colors.brandText} />
+            <AppText weight="semibold">No blocked members</AppText>
+            <AppText variant="bodySmall" tone="secondary" align="center">
+              You can block someone from any post menu in Connect.
+            </AppText>
+          </Surface>
+        ) : (
+          blocked.map((member) => (
+            <Surface key={member.id} radiusSize="xl" style={styles.row}>
+              <View style={styles.copy}>
+                <AppText weight="semibold">{member.name}</AppText>
+                <AppText variant="caption" tone="secondary">
+                  Blocked
+                </AppText>
+              </View>
+              <Button size="sm" variant="ghost" onPress={() => unblockAuthor(member.id)}>
+                Unblock
+              </Button>
+            </Surface>
+          ))
+        )}
+      </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.page,
+    paddingVertical: spacing.md,
+  },
+  headerSpacer: { width: 44 },
+  scroll: {
+    paddingHorizontal: spacing.page,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
+  },
   empty: {
     alignItems: "center",
     gap: spacing.sm,
     padding: spacing.xl,
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.lg,
   },
   copy: { gap: 2 },
 });

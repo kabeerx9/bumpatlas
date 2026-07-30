@@ -16,10 +16,12 @@ import {
   BrandWordmark,
   Button,
   Screen,
+  borderWidth,
   colors,
   radius,
   shadows,
   spacing,
+  useAppTheme,
 } from "@/design-system";
 
 type SwipeDirection = "left" | "right";
@@ -184,18 +186,27 @@ export function LaunchHomeScreen() {
 }
 
 function LogoMark() {
+  const theme = useAppTheme();
   return (
-    <View accessibilityLabel="BumpAtlas logo" style={styles.logoBadge}>
-      <View style={[styles.logoBuilding, styles.logoBuildingLeft]} />
-      <View style={[styles.logoBuilding, styles.logoBuildingCenter]} />
-      <View style={[styles.logoBuilding, styles.logoBuildingRight]} />
-      <View style={styles.logoBase} />
-      <View style={styles.logoDot} />
+    <View
+      accessibilityLabel="BumpAtlas logo"
+      style={[
+        styles.logoBadge,
+        { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+      ]}
+    >
+      <View style={[styles.logoBuilding, styles.logoBuildingLeft, { backgroundColor: theme.colors.text }]} />
+      <View style={[styles.logoBuilding, styles.logoBuildingCenter, { backgroundColor: theme.colors.text }]} />
+      <View style={[styles.logoBuilding, styles.logoBuildingRight, { backgroundColor: theme.colors.text }]} />
+      <View style={[styles.logoBase, { backgroundColor: theme.colors.text }]} />
+      <View style={[styles.logoDot, { backgroundColor: colors.brand.honey }]} />
     </View>
   );
 }
 
 export function HomeScreen() {
+  const theme = useAppTheme();
+  const dynamicStyles = themedStyles(theme);
   const [activeIndex, setActiveIndex] = useState(0);
   const [result, setResult] = useState<SwipeResult | null>(null);
   const pan = useRef(new Animated.ValueXY()).current;
@@ -343,7 +354,7 @@ export function HomeScreen() {
 
   return (
     <Screen padded={false}>
-      <View style={styles.swipeRoot}>
+      <View style={[styles.swipeRoot, { backgroundColor: theme.colors.background }]}>
         <View style={styles.topBar}>
           <AppText variant="bodySmall" weight="semibold">
             Swipe logic prototype
@@ -361,13 +372,17 @@ export function HomeScreen() {
               style={[styles.animatedCard, activeCardStyle]}
             >
               <SwipeDeckCard card={activeCard} />
-              <Animated.View style={[styles.swipeCue, styles.passCue, { opacity: passCueOpacity }]}>
-                <AppText variant="heading">
+              <Animated.View
+                style={[styles.swipeCue, dynamicStyles.passCue, { opacity: passCueOpacity }]}
+              >
+                <AppText variant="heading" style={{ color: theme.colors.secondaryText }}>
                   PASS
                 </AppText>
               </Animated.View>
-              <Animated.View style={[styles.swipeCue, styles.failCue, { opacity: failCueOpacity }]}>
-                <AppText variant="heading">
+              <Animated.View
+                style={[styles.swipeCue, dynamicStyles.failCue, { opacity: failCueOpacity }]}
+              >
+                <AppText variant="heading" style={{ color: theme.colors.danger }}>
                   FAIL
                 </AppText>
               </Animated.View>
@@ -393,9 +408,9 @@ export function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Fail current card"
               onPress={() => flingCard("left")}
-              style={[styles.actionButton, styles.failAction]}
+              style={[styles.actionButton, dynamicStyles.failAction]}
             >
-              <AppText variant="title">
+              <AppText variant="title" style={{ color: theme.colors.danger }}>
                 FAIL
               </AppText>
             </Pressable>
@@ -403,9 +418,9 @@ export function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel="Pass current card"
               onPress={() => flingCard("right")}
-              style={[styles.actionButton, styles.passAction]}
+              style={[styles.actionButton, dynamicStyles.passAction]}
             >
-              <AppText variant="title">
+              <AppText variant="title" style={{ color: theme.colors.primaryText }}>
                 PASS
               </AppText>
             </Pressable>
@@ -417,11 +432,11 @@ export function HomeScreen() {
             pointerEvents="auto"
             style={[
               styles.resultOverlay,
-              result === "pass" ? styles.passOverlay : styles.failOverlay,
+              dynamicStyles.resultOverlay,
               resultOverlayStyle,
             ]}
           >
-            <View style={styles.resultBadge}>
+            <View style={[styles.resultBadge, dynamicStyles.resultBadge]}>
               <AppText variant="hero" align="center">
                 {result.toUpperCase()}
               </AppText>
@@ -443,11 +458,19 @@ function SwipeDeckCard({
   card: SwipeCard;
   style?: StyleProp<ViewStyle>;
 }) {
+  const theme = useAppTheme();
+
   return (
-    <View style={[styles.card, style]}>
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+        style,
+      ]}
+    >
       <View style={styles.cardHeader}>
-        <View style={styles.areaPill}>
-          <AppText variant="caption" weight="bold" style={styles.areaText}>
+        <View style={[styles.areaPill, { backgroundColor: theme.colors.secondary }]}>
+          <AppText variant="caption" weight="bold" style={{ color: theme.colors.secondaryText }}>
             {card.area}
           </AppText>
         </View>
@@ -470,7 +493,10 @@ function SwipeDeckCard({
 
       <View style={styles.statsRow}>
         {card.stats.map((stat) => (
-          <View key={stat.label} style={styles.stat}>
+          <View
+            key={stat.label}
+            style={[styles.stat, { backgroundColor: theme.colors.surfaceWarm, borderColor: theme.colors.border }]}
+          >
             <AppText variant="caption" tone="secondary" style={styles.statLabel}>
               {stat.label}
             </AppText>
@@ -487,7 +513,6 @@ function SwipeDeckCard({
 const styles = StyleSheet.create({
   swipeRoot: {
     flex: 1,
-    backgroundColor: colors.surface.app,
     paddingHorizontal: spacing.page,
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
@@ -517,10 +542,8 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     justifyContent: "space-between",
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    backgroundColor: colors.surface.card,
+    borderRadius: radius.xl,
+    borderWidth: borderWidth.hairline,
     padding: spacing.xl,
     overflow: "hidden",
     ...shadows.card,
@@ -539,13 +562,7 @@ const styles = StyleSheet.create({
     minHeight: 30,
     justifyContent: "center",
     borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    backgroundColor: colors.surface.cool,
     paddingHorizontal: spacing.md,
-  },
-  areaText: {
-    color: colors.text.primary,
   },
   cardCopy: {
     gap: spacing.md,
@@ -565,10 +582,8 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 78,
     justifyContent: "space-between",
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    backgroundColor: colors.surface.warm,
+    borderRadius: radius.lg,
+    borderWidth: borderWidth.hairline,
     padding: spacing.md,
   },
   statLabel: {
@@ -577,22 +592,10 @@ const styles = StyleSheet.create({
   swipeCue: {
     position: "absolute",
     top: spacing.xl,
-    borderRadius: radius.sm,
-    borderWidth: 2,
+    borderRadius: radius.lg,
+    borderWidth: borderWidth.emphasis,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-  },
-  passCue: {
-    right: spacing.xl,
-    borderColor: colors.border.subtle,
-    backgroundColor: "rgba(255,255,255,0.92)",
-    transform: [{ rotate: "10deg" }],
-  },
-  failCue: {
-    left: spacing.xl,
-    borderColor: colors.border.subtle,
-    backgroundColor: "rgba(255,255,255,0.92)",
-    transform: [{ rotate: "-10deg" }],
   },
   actionRow: {
     minHeight: 72,
@@ -605,16 +608,8 @@ const styles = StyleSheet.create({
     minHeight: 54,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    backgroundColor: colors.surface.card,
-  },
-  failAction: {
-    backgroundColor: colors.surface.card,
-  },
-  passAction: {
-    backgroundColor: colors.surface.card,
+    borderRadius: radius.full,
+    borderWidth: borderWidth.hairline,
   },
   resultOverlay: {
     position: "absolute",
@@ -625,21 +620,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  passOverlay: {
-    backgroundColor: "rgba(250,250,248,0.96)",
-  },
-  failOverlay: {
-    backgroundColor: "rgba(250,250,248,0.96)",
-  },
   resultBadge: {
     minWidth: 220,
     minHeight: 220,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    backgroundColor: colors.surface.card,
+    borderWidth: borderWidth.hairline,
     gap: spacing.sm,
     padding: spacing.xl,
   },
@@ -666,9 +653,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    backgroundColor: colors.surface.card,
+    borderWidth: borderWidth.hairline,
     ...shadows.soft,
   },
   logoBuilding: {
@@ -705,6 +690,39 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: radius.full,
-    backgroundColor: colors.brand.sageSoft,
+    backgroundColor: colors.brand.honey,
   },
 });
+
+/** Theme-dependent bits: swipe cues, action buttons, and the result overlay. */
+function themedStyles(theme: ReturnType<typeof useAppTheme>) {
+  return StyleSheet.create({
+    passCue: {
+      right: spacing.xl,
+      borderColor: theme.colors.secondary,
+      backgroundColor: theme.colors.surface,
+      transform: [{ rotate: "10deg" }],
+    },
+    failCue: {
+      left: spacing.xl,
+      borderColor: theme.colors.dangerBorder,
+      backgroundColor: theme.colors.surface,
+      transform: [{ rotate: "-10deg" }],
+    },
+    failAction: {
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.dangerBorder,
+    },
+    passAction: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    resultOverlay: {
+      backgroundColor: theme.colors.background,
+    },
+    resultBadge: {
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.border,
+    },
+  });
+}

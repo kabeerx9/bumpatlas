@@ -37,7 +37,7 @@ export function GenderStep({ gender, onSelect }: GenderStepProps) {
             >
               {selected ? (
                 <View style={styles.check}>
-                  <Feather name="check" size={13} color={colors.text.inverse} />
+                  <Feather name="check" size={13} color={colors.brand.ink} />
                 </View>
               ) : null}
 
@@ -81,8 +81,8 @@ const styles = StyleSheet.create({
     ...shadows.soft,
   },
   cardSelected: {
-    borderColor: colors.brand.terracotta,
-    backgroundColor: colors.surface.warm,
+    borderColor: colors.brand.honey,
+    backgroundColor: colors.brand.honeySoft,
   },
   check: {
     position: "absolute",
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.brand.terracotta,
+    backgroundColor: colors.brand.honey,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 2,
@@ -111,6 +111,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   labelSelected: {
-    color: colors.brand.terracotta,
+    color: colors.brand.ink,
   },
 });

@@ -10,13 +10,23 @@ import {
   View,
 } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import {
+  AppText,
+  Button,
+  Surface,
+  borderWidth,
+  colors,
+  radius,
+  spacing,
+  useAppTheme,
+} from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useCreateInviteMutation, useFamilyQuery } from "@/lib/api/hooks";
 
 export function InviteScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const { markPartnerJoined, childDisplayName: mockChildDisplayName, householdName: mockHouseholdName } =
     useMockUi();
   const familyQuery = useFamilyQuery();
@@ -89,7 +99,7 @@ export function InviteScreen() {
         <>
           {sent ? (
             <View style={styles.sentBanner}>
-              <Feather name="check-circle" size={18} color={colors.brand.peach} />
+              <Feather name="check-circle" size={18} color={colors.brand.honeyDeep} />
               <AppText variant="bodySmall">
                 Invite sent — they&apos;ll join {householdName} when they accept.
               </AppText>
@@ -110,54 +120,52 @@ export function InviteScreen() {
     >
       <>
         <View style={styles.hero}>
-          <AppText variant="caption" style={styles.heroEyebrow}>
+          <AppText variant="caption" tone="brand" style={styles.heroEyebrow}>
             Free · 2 adults included
           </AppText>
-          <AppText variant="heading" style={styles.heroTitle}>
+          <AppText variant="heading" weight="semibold">
             Bring your partner into {childDisplayName}&apos;s story
           </AppText>
-          <AppText variant="bodySmall" style={styles.heroCopy}>
+          <AppText variant="bodySmall" tone="secondary">
             They can capture moments, see the weekly recap, and help — memories stay private to
             your household.
           </AppText>
         </View>
 
-        <View style={styles.fieldCard}>
+        <Surface tone="card" elevated radiusSize="xl" style={styles.fieldCard}>
           <AppText weight="semibold">Partner email</AppText>
           <TextInput
             value={email}
             onChangeText={setEmail}
             placeholder="partner@email.com"
-            placeholderTextColor={colors.text.muted}
+            placeholderTextColor={theme.colors.textMuted}
             keyboardType="email-address"
             autoCapitalize="none"
-            style={styles.input}
+            style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border }]}
           />
           <AppText variant="caption" tone="secondary">
             Or share a link if email isn&apos;t handy. Links are single-use, expire in 7 days, and
             require an adult (18+) account.
           </AppText>
-        </View>
+        </Surface>
 
-        <Pressable
-          onPress={() => void shareLink()}
-          style={styles.linkCard}
-          disabled={!inviteLink}
-        >
-          <View style={styles.linkIcon}>
-            <Feather name="link" size={18} color={colors.brand.peach} />
-          </View>
-          <View style={styles.linkCopy}>
-            <AppText weight="semibold">Copy invite link</AppText>
-            <AppText variant="caption" tone="secondary" numberOfLines={1}>
-              {linkLoading ? "Preparing your invite link…" : inviteLink ?? "Link unavailable"}
-            </AppText>
-          </View>
-          <Feather name="share-2" size={18} color={colors.brand.peach} />
+        <Pressable onPress={() => void shareLink()} disabled={!inviteLink}>
+          <Surface tone="card" elevated radiusSize="xl" style={styles.linkCard}>
+            <View style={styles.linkIcon}>
+              <Feather name="link" size={18} color={colors.brand.honeyDeep} />
+            </View>
+            <View style={styles.linkCopy}>
+              <AppText weight="semibold">Copy invite link</AppText>
+              <AppText variant="caption" tone="secondary" numberOfLines={1}>
+                {linkLoading ? "Preparing your invite link…" : inviteLink ?? "Link unavailable"}
+              </AppText>
+            </View>
+            <Feather name="share-2" size={18} color={theme.colors.text} />
+          </Surface>
         </Pressable>
 
         <View style={styles.note}>
-          <Feather name="shield" size={16} color={colors.brand.peach} />
+          <Feather name="shield" size={16} color={colors.brand.honeyDeep} />
           <AppText variant="bodySmall" tone="secondary" style={styles.noteCopy}>
             Invites expire after 7 days. You can revoke access anytime from Family.
           </AppText>
@@ -169,52 +177,31 @@ export function InviteScreen() {
 
 const styles = StyleSheet.create({
   hero: {
-    borderRadius: 28,
-    backgroundColor: colors.brand.peach,
-    padding: spacing.xl,
     gap: spacing.sm,
   },
   heroEyebrow: {
-    color: "rgba(255,255,255,0.78)",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
-  heroTitle: {
-    color: colors.text.inverse,
-    lineHeight: 34,
-  },
-  heroCopy: {
-    color: "rgba(255,255,255,0.88)",
-    lineHeight: 20,
-  },
-  fieldCard: {
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
+  fieldCard: { gap: spacing.sm },
   input: {
     borderRadius: radius.lg,
-    backgroundColor: colors.surface.card,
+    borderWidth: borderWidth.hairline,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     fontSize: 16,
-    color: colors.text.primary,
     fontFamily: "Poppins_400Regular",
   },
   linkCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.lg,
   },
   linkIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.brand.honeySoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -237,7 +224,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     borderRadius: radius.lg,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.brand.honeySoft,
     padding: spacing.md,
   },
 });

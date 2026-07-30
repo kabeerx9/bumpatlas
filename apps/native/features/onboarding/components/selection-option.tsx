@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, colors, radius, shadows, spacing } from "@/design-system";
+import { AppText, borderWidth, colors, radius, shadows, spacing, useAppTheme } from "@/design-system";
 
 type SelectionOptionProps = {
   label: string;
@@ -18,22 +18,35 @@ export function SelectionOption({
   selected,
   onPress,
 }: SelectionOptionProps) {
+  const theme = useAppTheme();
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={[styles.card, selected && styles.cardSelected]}
+      style={[
+        styles.card,
+        {
+          borderColor: selected ? colors.brand.honey : theme.colors.border,
+          backgroundColor: selected ? colors.brand.honey : theme.colors.surface,
+        },
+      ]}
     >
       {selected ? (
         <View style={styles.check}>
-          <Feather name="check" size={13} color={colors.text.inverse} />
+          <Feather name="check" size={13} color={colors.brand.ink} />
         </View>
       ) : null}
 
       {icon ? (
-        <View style={styles.iconWrap}>
-          <Feather name={icon} size={18} color={selected ? colors.brand.peach : colors.text.secondary} />
+        <View
+          style={[
+            styles.iconWrap,
+            { backgroundColor: selected ? "rgba(33,29,21,0.12)" : colors.brand.honeySoft },
+          ]}
+        >
+          <Feather name={icon} size={18} color={colors.brand.ink} />
         </View>
       ) : null}
 
@@ -42,7 +55,11 @@ export function SelectionOption({
           {label}
         </AppText>
         {description ? (
-          <AppText variant="bodySmall" tone="secondary">
+          <AppText
+            variant="bodySmall"
+            tone={selected ? "primary" : "secondary"}
+            style={selected ? styles.descriptionSelected : undefined}
+          >
             {description}
           </AppText>
         ) : null}
@@ -53,19 +70,14 @@ export function SelectionOption({
 
 const styles = StyleSheet.create({
   card: {
+    width: "100%",
     borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: colors.border.subtle,
-    backgroundColor: colors.surface.card,
+    borderWidth: borderWidth.emphasis,
     padding: spacing.lg,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
     ...shadows.soft,
-  },
-  cardSelected: {
-    borderColor: colors.brand.peach,
-    backgroundColor: colors.surface.warm,
   },
   check: {
     position: "absolute",
@@ -74,7 +86,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.brand.peach,
+    backgroundColor: "rgba(33,29,21,0.14)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -82,7 +94,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.brand.peachSoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -92,6 +103,9 @@ const styles = StyleSheet.create({
     paddingRight: spacing.lg,
   },
   labelSelected: {
-    color: colors.brand.peach,
+    color: colors.brand.ink,
+  },
+  descriptionSelected: {
+    color: "rgba(33,29,21,0.72)",
   },
 });

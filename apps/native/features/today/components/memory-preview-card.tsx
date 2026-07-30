@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, colors, radius, spacing, useAppTheme } from "@/design-system";
 
 type MemoryPreviewCardProps = {
   title: string;
@@ -10,15 +10,21 @@ type MemoryPreviewCardProps = {
 };
 
 export function MemoryPreviewCard({ title, dateLabel, onPress }: MemoryPreviewCardProps) {
+  const theme = useAppTheme();
+
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+        pressed && styles.pressed,
+      ]}
     >
       <View style={styles.photo}>
         <View style={styles.photoInner}>
-          <Feather name="image" size={22} color={colors.brand.peach} />
+          <Feather name="image" size={22} color={colors.brand.honeyDeep} />
         </View>
       </View>
       <View style={styles.copy}>
@@ -32,7 +38,7 @@ export function MemoryPreviewCard({ title, dateLabel, onPress }: MemoryPreviewCa
           <AppText variant="caption" weight="semibold" style={styles.link}>
             Open moment
           </AppText>
-          <Feather name="arrow-up-right" size={14} color={colors.brand.peach} />
+          <Feather name="arrow-up-right" size={14} color={colors.brand.honeyDeep} />
         </View>
       </View>
     </Pressable>
@@ -45,7 +51,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    borderWidth: 1,
   },
   pressed: {
     opacity: 0.92,
@@ -54,13 +60,13 @@ const styles = StyleSheet.create({
     width: 92,
     height: 92,
     borderRadius: radius.lg,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.pastel.lemon,
     padding: 4,
   },
   photoInner: {
     flex: 1,
     borderRadius: radius.md,
-    backgroundColor: "rgba(255,255,255,0.55)",
+    backgroundColor: colors.brand.honeySoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -70,7 +76,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   eyebrow: {
-    color: colors.brand.peach,
+    color: colors.brand.honeyDeep,
   },
   linkRow: {
     flexDirection: "row",
@@ -79,6 +85,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   link: {
-    color: colors.brand.peach,
+    color: colors.brand.honeyDeep,
   },
 });

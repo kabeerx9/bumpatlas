@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     minHeight: 72,
   },
   rowEnabled: {
-    borderColor: colors.brand.peachSoft,
+    borderColor: colors.brand.honey,
     backgroundColor: colors.surface.warm,
   },
   copy: {
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   toggleOn: {
-    backgroundColor: colors.brand.peach,
+    backgroundColor: colors.brand.honey,
   },
   knob: {
     width: 22,

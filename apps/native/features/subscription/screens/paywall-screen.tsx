@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import { AppText, Button, Pill, borderWidth, radius, spacing, useAppTheme } from "@/design-system";
 import { mockPaywall } from "@/features/mock/demo-data";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useSetPremiumEntitlement } from "@/lib/api/hooks";
@@ -21,6 +21,7 @@ type BillingCycle = "annual" | "monthly";
 
 export function PaywallScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const { userId } = useAuth();
   const setPremiumEntitlement = useSetPremiumEntitlement();
   const { source } = useLocalSearchParams<{ source?: string }>();
@@ -130,7 +131,7 @@ export function PaywallScreen() {
             style={styles.restoreBtn}
             accessibilityLabel="Restore purchases"
           >
-            <AppText variant="caption" weight="semibold" style={styles.restoreCopy}>
+            <AppText variant="caption" weight="semibold" tone="secondary">
               {restoring ? "Restoring..." : "Restore purchases"}
             </AppText>
           </Pressable>
@@ -141,112 +142,115 @@ export function PaywallScreen() {
       }
     >
       <View style={styles.hero}>
-        <AppText variant="caption" style={styles.heroEyebrow}>
-          Household plan
-        </AppText>
+        <Pill tone="selected">Household plan</Pill>
         <AppText variant="heading" style={styles.heroTitle}>
           {headline}
         </AppText>
-        <AppText variant="bodySmall" style={styles.heroCopy}>
+        <AppText variant="bodySmall" tone="secondary" style={styles.heroCopy}>
           One subscription covers everyone in your household — partners, grandparents, and
           caregivers you invite.
         </AppText>
       </View>
 
-      <View style={styles.cycleRow}>
-        <Pressable
-          onPress={() => setCycle("annual")}
-          style={[styles.cycleChip, cycle === "annual" && styles.cycleChipActive]}
-        >
-          <AppText
-            variant="caption"
-            weight="semibold"
-            style={cycle === "annual" ? styles.cycleTextActive : styles.cycleText}
-          >
-            Annual · best value
-          </AppText>
-        </Pressable>
-        <Pressable
-          onPress={() => setCycle("monthly")}
-          style={[styles.cycleChip, cycle === "monthly" && styles.cycleChipActive]}
-        >
-          <AppText
-            variant="caption"
-            weight="semibold"
-            style={cycle === "monthly" ? styles.cycleTextActive : styles.cycleText}
-          >
-            Monthly
-          </AppText>
-        </Pressable>
-      </View>
-
-      <View style={styles.priceCard}>
-        <AppText variant="heading">{price}</AppText>
-        <AppText variant="bodySmall" tone="secondary">
-          {priceDetail}
-        </AppText>
-        {!storeReady ? (
-          <AppText variant="caption" tone="secondary">
-            Store billing connects when EXPO_PUBLIC_REVENUECAT_API_KEY is set and the app is rebuilt.
-          </AppText>
-        ) : null}
-      </View>
-
       <View style={styles.perks}>
         {mockPaywall.premiumIncludes.map((perk) => (
           <View key={perk} style={styles.perkRow}>
-            <Feather name="check" size={16} color={colors.brand.peach} />
+            <View style={[styles.checkChip, { backgroundColor: theme.colors.secondary }]}>
+              <Feather name="check" size={12} color={theme.colors.secondaryText} />
+            </View>
             <AppText variant="bodySmall" style={styles.perkText}>
               {perk}
             </AppText>
           </View>
         ))}
       </View>
+
+      <View style={styles.plans}>
+        <Pressable
+          onPress={() => setCycle("annual")}
+          accessibilityRole="button"
+          accessibilityLabel="Annual plan, best value"
+          style={[
+            styles.planCard,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: cycle === "annual" ? theme.colors.secondary : theme.colors.border,
+              borderWidth: cycle === "annual" ? borderWidth.emphasis : borderWidth.hairline,
+            },
+          ]}
+        >
+          <View style={styles.planHeaderRow}>
+            <AppText weight="semibold">Annual</AppText>
+            <Pill tone="selected">Best value</Pill>
+          </View>
+          <AppText variant="heading">{mockPaywall.foundingAnnualPrice}</AppText>
+          <AppText variant="bodySmall" tone="secondary">
+            {mockPaywall.foundingLabel} · then {mockPaywall.annualPrice}/yr
+          </AppText>
+        </Pressable>
+
+        <Pressable
+          onPress={() => setCycle("monthly")}
+          accessibilityRole="button"
+          accessibilityLabel="Monthly plan"
+          style={[
+            styles.planCard,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: cycle === "monthly" ? theme.colors.secondary : theme.colors.border,
+              borderWidth: cycle === "monthly" ? borderWidth.emphasis : borderWidth.hairline,
+            },
+          ]}
+        >
+          <View style={styles.planHeaderRow}>
+            <AppText weight="semibold">Monthly</AppText>
+          </View>
+          <AppText variant="heading">{mockPaywall.monthlyPrice}</AppText>
+          <AppText variant="bodySmall" tone="secondary">
+            Cancel anytime in your store settings
+          </AppText>
+        </Pressable>
+
+        {!storeReady ? (
+          <AppText variant="caption" tone="secondary" align="center">
+            Store billing connects when EXPO_PUBLIC_REVENUECAT_API_KEY is set and the app is rebuilt.
+          </AppText>
+        ) : null}
+      </View>
     </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { gap: spacing.sm, marginBottom: spacing.md },
-  heroEyebrow: {
-    color: colors.brand.peach,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
+  hero: { gap: spacing.sm, marginBottom: spacing.md, alignItems: "flex-start" },
   heroTitle: { lineHeight: 34 },
   heroCopy: { lineHeight: 22 },
-  cycleRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md },
-  cycleChip: {
-    flex: 1,
-    minHeight: 44,
+  perks: { gap: spacing.sm, marginBottom: spacing.lg },
+  perkRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  perkText: { flex: 1, lineHeight: 20 },
+  checkChip: {
+    width: 24,
+    height: 24,
     borderRadius: radius.full,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.78)",
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
   },
-  cycleChipActive: {
-    backgroundColor: colors.brand.peachSoft,
-    borderColor: colors.brand.peach,
-  },
-  cycleText: { color: colors.text.secondary },
-  cycleTextActive: { color: colors.brand.peach },
-  priceCard: {
+  plans: { gap: spacing.md },
+  planCard: {
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    padding: spacing.xl,
+    padding: spacing.lg,
     gap: spacing.xs,
-    marginBottom: spacing.md,
   },
-  perks: { gap: spacing.sm },
-  perkRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
-  perkText: { flex: 1, lineHeight: 20 },
+  planHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.xs,
+  },
   restoreBtn: {
     alignItems: "center",
     justifyContent: "center",
     minHeight: 44,
   },
-  restoreCopy: { color: colors.brand.peach },
   legal: { textAlign: "center", lineHeight: 18 },
 });

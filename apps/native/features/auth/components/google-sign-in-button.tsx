@@ -3,12 +3,13 @@ import * as AuthSession from "expo-auth-session";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, borderWidth, radius, spacing, useAppTheme } from "@/design-system";
 import { appRoutes } from "@/navigation/routes";
 
 export function GoogleSignInButton() {
   const { startSSOFlow } = useSSO();
   const router = useRouter();
+  const theme = useAppTheme();
 
   const onPress = async () => {
     try {
@@ -27,9 +28,18 @@ export function GoogleSignInButton() {
   };
 
   return (
-    <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]} onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Continue with Google"
+      style={({ pressed }) => [
+        styles.button,
+        { borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
+        pressed && styles.pressed,
+      ]}
+      onPress={onPress}
+    >
       <View style={styles.content}>
-        <View style={styles.googleMark}>
+        <View style={[styles.googleMark, { backgroundColor: theme.colors.surfaceWarm }]}>
           <AppText variant="caption" weight="bold">
             G
           </AppText>
@@ -45,14 +55,12 @@ export function GoogleSignInButton() {
 const styles = StyleSheet.create({
   button: {
     minHeight: 52,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderWidth: borderWidth.thin,
     borderRadius: radius.full,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.surface.card,
   },
   content: {
     alignItems: "center",
@@ -65,7 +73,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radius.full,
-    backgroundColor: colors.surface.warm,
   },
   pressed: {
     opacity: 0.7,

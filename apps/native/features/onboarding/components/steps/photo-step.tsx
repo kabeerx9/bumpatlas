@@ -22,7 +22,7 @@ export function PhotoStep({ onAddPhoto }: PhotoStepProps) {
         style={styles.photoCircle}
       >
         <View style={styles.cameraBadge}>
-          <Feather name="camera" size={24} color={colors.brand.terracotta} />
+          <Feather name="camera" size={24} color={colors.brand.honeyDeep} />
         </View>
         <AppText variant="label" tone="secondary">
           Add Photo
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.brand.honeySoft,
     alignItems: "center",
     justifyContent: "center",
   },

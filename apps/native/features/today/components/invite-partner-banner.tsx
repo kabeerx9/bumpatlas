@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, colors, radius, spacing, useAppTheme } from "@/design-system";
 
 type InvitePartnerBannerProps = {
   childName: string;
@@ -9,21 +9,30 @@ type InvitePartnerBannerProps = {
 };
 
 export function InvitePartnerBanner({ childName, onInvite }: InvitePartnerBannerProps) {
+  const theme = useAppTheme();
+
   return (
-    <Pressable onPress={onInvite} style={styles.banner}>
+    <Pressable
+      onPress={onInvite}
+      accessibilityRole="button"
+      accessibilityLabel={`Invite your partner to ${childName}'s story`}
+      style={styles.banner}
+    >
       <View style={styles.iconWrap}>
-        <Feather name="user-plus" size={18} color={colors.text.inverse} />
+        <Feather name="user-plus" size={18} color={colors.brand.ink} />
       </View>
       <View style={styles.copy}>
-        <AppText variant="caption" style={styles.eyebrow}>
+        <AppText variant="caption" weight="semibold" style={styles.eyebrow}>
           Connect · Just you for now
         </AppText>
         <AppText weight="semibold">Invite your partner to {childName}&apos;s story</AppText>
-        <AppText variant="caption" style={styles.meta}>
+        <AppText variant="caption" tone="secondary">
           Free includes 2 adults · shared journal & recap
         </AppText>
       </View>
-      <Feather name="chevron-right" size={20} color={colors.brand.peach} />
+      <View style={[styles.cta, { backgroundColor: theme.colors.primary }]}>
+        <Feather name="chevron-right" size={16} color={theme.colors.primaryText} />
+      </View>
     </Pressable>
   );
 }
@@ -35,13 +44,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: colors.pastel.mint,
   },
   iconWrap: {
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: colors.brand.peach,
+    backgroundColor: colors.brand.honeySoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -50,10 +59,15 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   eyebrow: {
-    color: colors.brand.peach,
+    color: colors.brand.honeyDeep,
     letterSpacing: 0.4,
+    textTransform: "uppercase",
   },
-  meta: {
-    color: colors.text.secondary,
+  cta: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

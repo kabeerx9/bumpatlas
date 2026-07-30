@@ -1,11 +1,22 @@
+import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import {
+  AppText,
+  Button,
+  IconButton,
+  Pill,
+  Screen,
+  Surface,
+  colors,
+  radius,
+  spacing,
+  useAppTheme,
+} from "@/design-system";
 import { mockMilestoneDetails } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
-import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { appRoutes } from "@/navigation/routes";
 
 type MilestoneStatus = "NOT_OBSERVED" | "EMERGING" | "OBSERVED" | "SKIPPED";
@@ -19,6 +30,7 @@ const STATUSES: Array<{ id: MilestoneStatus; label: string }> = [
 
 export function MilestoneDetailScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { milestoneStatuses, setMilestoneStatus } = useMockUi();
 
@@ -34,20 +46,34 @@ export function MilestoneDetailScreen() {
   const [linked, setLinked] = useState(false);
 
   return (
-    <SoftStackShell title="Milestone" onBack={() => router.back()}>
-      <View style={styles.hero}>
-          <AppText variant="caption" style={styles.eyebrow}>
+    <Screen padded={false} contentStyle={styles.screenFlex}>
+      <View style={styles.header}>
+        <IconButton accessibilityLabel="Go back" onPress={() => router.back()}>
+          <Feather name="arrow-left" size={20} color={theme.colors.text} />
+        </IconButton>
+        <AppText variant="title" weight="semibold">
+          Milestone
+        </AppText>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={[styles.hero, { backgroundColor: colors.pastel.lemon }]}>
+          <View style={styles.agePillFloating}>
+            <AppText variant="caption" weight="semibold">
+              {milestone.window}
+            </AppText>
+          </View>
+          <View style={styles.iconChip}>
+            <Feather name="star" size={22} color={theme.colors.text} />
+          </View>
+          <AppText variant="heading">{milestone.title}</AppText>
+          <Pill tone="selected">
             {STATUSES.find((s) => s.id === currentStatus)?.label ?? milestone.status}
-          </AppText>
-          <AppText variant="heading" tone="inverse">
-            {milestone.title}
-          </AppText>
-          <AppText variant="bodySmall" style={styles.meta}>
-            {milestone.window}
-          </AppText>
+          </Pill>
         </View>
 
-        <View style={styles.card}>
+        <Surface style={styles.card} radiusSize="xl">
           <AppText weight="semibold">Observation status</AppText>
           <AppText variant="bodySmall" tone="secondary">
             Non-diagnostic windows only — never a measure of health or delay.
@@ -59,29 +85,22 @@ export function MilestoneDetailScreen() {
                 <Pressable
                   key={status.id}
                   onPress={() => setMilestoneStatus(milestone.id, status.id)}
-                  style={[styles.statusChip, active && styles.statusChipActive]}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
                 >
-                  <AppText
-                    variant="caption"
-                    weight="semibold"
-                    style={active ? styles.statusTextActive : undefined}
-                  >
-                    {status.label}
-                  </AppText>
+                  <Pill tone={active ? "selected" : "neutral"}>{status.label}</Pill>
                 </Pressable>
               );
             })}
           </View>
-        </View>
+        </Surface>
 
-        <View style={styles.card}>
+        <Surface style={styles.card} radiusSize="xl">
           <AppText weight="semibold">What this means</AppText>
           <AppText variant="bodySmall" tone="secondary" style={styles.note}>
             {milestone.note}
           </AppText>
-        </View>
+        </Surface>
 
         {milestone.canLinkMemory ? (
           <>
@@ -101,44 +120,53 @@ export function MilestoneDetailScreen() {
             ) : null}
           </>
         ) : null}
-    </SoftStackShell>
+      </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  screenFlex: { flex: 1 },
+  header: {
+    paddingHorizontal: spacing.page,
+    paddingTop: spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerSpacer: { width: 44, height: 44 },
+  scrollContent: {
+    paddingHorizontal: spacing.page,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
+  },
   hero: {
-    borderRadius: 28,
-    backgroundColor: colors.brand.peach,
+    borderRadius: radius.xl,
     padding: spacing.xl,
     gap: spacing.sm,
+    alignItems: "flex-start",
+    position: "relative",
   },
-  eyebrow: {
-    color: "rgba(255,255,255,0.78)",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
-  meta: { color: "rgba(255,255,255,0.88)" },
-  card: {
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  note: { lineHeight: 20 },
-  statusRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  statusChip: {
+  iconChip: {
+    width: 56,
+    height: 56,
     borderRadius: radius.full,
     backgroundColor: colors.surface.card,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    minHeight: 44,
+    alignItems: "center",
     justifyContent: "center",
+    marginBottom: spacing.xs,
   },
-  statusChipActive: {
-    backgroundColor: colors.brand.peach,
-    borderColor: colors.brand.peach,
+  agePillFloating: {
+    position: "absolute",
+    top: spacing.md,
+    right: spacing.md,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface.card,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
-  statusTextActive: { color: colors.text.inverse },
+  card: { gap: spacing.sm },
+  note: { lineHeight: 20 },
+  statusRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
 });

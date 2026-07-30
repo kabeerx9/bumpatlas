@@ -1,12 +1,19 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import {
+  AppText,
+  Button,
+  IconButton,
+  Screen,
+  Surface,
+  spacing,
+  useAppTheme,
+} from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { HighRiskEscalatePanel } from "@/features/shared/components/high-risk-escalate";
-import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useCreateReportMutation, useGroupPostDetailQuery } from "@/lib/api/hooks";
 
 const REASONS = [
@@ -23,6 +30,7 @@ const CSAM_REASON = "Child sexual exploitation / CSAM";
 
 export function ConnectReportScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const { postId } = useLocalSearchParams<{ postId?: string }>();
   const { activeGroupId } = useMockUi();
   const [selected, setSelected] = useState<string | null>(null);
@@ -62,12 +70,78 @@ export function ConnectReportScreen() {
   }
 
   return (
-    <SoftStackShell
-      title="Report"
-      closeIcon="x"
-      onBack={() => router.back()}
-      footer={
-        submitted ? (
+    <Screen padded={false}>
+      <View style={styles.header}>
+        <IconButton accessibilityLabel="Close" onPress={() => router.back()}>
+          <Feather name="x" size={20} color={theme.colors.text} />
+        </IconButton>
+        <AppText variant="title">Report</AppText>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        {submitted ? (
+          <Surface tone="mint" radiusSize="xl" style={styles.success}>
+            <Feather name="check-circle" size={24} color={theme.colors.brandText} />
+            <AppText weight="semibold">Report received</AppText>
+            <AppText variant="bodySmall" tone="secondary" align="center">
+              Founders review reports during beta — usually within a few hours.
+              {selected === CSAM_REASON
+                ? " CSAM reports are escalated immediately for priority review and platform action."
+                : isHighRisk
+                  ? " This report was flagged for priority safety review."
+                  : ""}
+            </AppText>
+          </Surface>
+        ) : (
+          <>
+            <AppText variant="body" tone="secondary">
+              Why are you reporting this post from {post?.authorName ?? "this member"}?
+            </AppText>
+            <Surface radiusSize="lg" style={styles.preview}>
+              <AppText variant="bodySmall" tone="secondary" numberOfLines={3}>
+                {post?.body ?? "This post"}
+              </AppText>
+            </Surface>
+            {REASONS.map((reason) => {
+              const active = selected === reason;
+              return (
+                <Pressable
+                  key={reason}
+                  onPress={() => selectReason(reason)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Surface
+                    radiusSize="lg"
+                    style={[
+                      styles.reason,
+                      active && {
+                        backgroundColor: theme.colors.secondary,
+                        borderColor: theme.colors.secondary,
+                      },
+                    ]}
+                  >
+                    <AppText variant="bodySmall" weight={active ? "semibold" : "regular"}>
+                      {reason}
+                    </AppText>
+                  </Surface>
+                </Pressable>
+              );
+            })}
+
+            {isHighRisk ? (
+              <HighRiskEscalatePanel
+                onAcknowledge={() => setHighRiskAcknowledged(true)}
+                onKeepReporting={() => setHighRiskAcknowledged(true)}
+              />
+            ) : null}
+          </>
+        )}
+      </ScrollView>
+
+      <View style={styles.footer}>
+        {submitted ? (
           <Button size="lg" onPress={() => router.back()}>
             Done
           </Button>
@@ -75,76 +149,36 @@ export function ConnectReportScreen() {
           <Button size="lg" disabled={!canSubmit} onPress={() => void submitReport()}>
             {reportMutation.isPending ? "Submitting…" : "Submit report"}
           </Button>
-        )
-      }
-    >
-      {submitted ? (
-        <View style={styles.success}>
-          <Feather name="check-circle" size={24} color={colors.brand.peach} />
-          <AppText weight="semibold">Report received</AppText>
-          <AppText variant="bodySmall" tone="secondary" align="center">
-            Founders review reports during beta — usually within a few hours.
-            {selected === CSAM_REASON
-              ? " CSAM reports are escalated immediately for priority review and platform action."
-              : isHighRisk
-                ? " This report was flagged for priority safety review."
-                : ""}
-          </AppText>
-        </View>
-      ) : (
-        <>
-          <AppText variant="body" tone="secondary">
-            Why are you reporting this post from {post?.authorName ?? "this member"}?
-          </AppText>
-          <View style={styles.preview}>
-            <AppText variant="bodySmall" tone="secondary" numberOfLines={3}>
-              {post?.body ?? "This post"}
-            </AppText>
-          </View>
-          {REASONS.map((reason) => (
-            <Pressable
-              key={reason}
-              onPress={() => selectReason(reason)}
-              style={[styles.reason, selected === reason && styles.reasonActive]}
-            >
-              <AppText variant="bodySmall">{reason}</AppText>
-            </Pressable>
-          ))}
-
-          {isHighRisk ? (
-            <HighRiskEscalatePanel
-              onAcknowledge={() => setHighRiskAcknowledged(true)}
-              onKeepReporting={() => setHighRiskAcknowledged(true)}
-            />
-          ) : null}
-        </>
-      )}
-    </SoftStackShell>
+        )}
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  preview: {
-    borderRadius: radius.lg,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.md,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.page,
+    paddingVertical: spacing.md,
   },
-  reason: {
-    borderRadius: radius.lg,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
+  headerSpacer: { width: 44 },
+  scroll: {
+    paddingHorizontal: spacing.page,
+    paddingBottom: spacing.xl,
+    gap: spacing.md,
   },
-  reasonActive: {
-    borderColor: colors.brand.peach,
-    backgroundColor: colors.brand.peachSoft,
-  },
+  preview: { gap: 0 },
+  reason: { gap: 0 },
   success: {
     alignItems: "center",
     gap: spacing.sm,
     padding: spacing.xl,
-    borderRadius: radius.xl,
-    backgroundColor: colors.brand.peachSoft,
+  },
+  footer: {
+    paddingHorizontal: spacing.page,
+    paddingBottom: spacing.xl,
+    paddingTop: spacing.md,
   },
 });

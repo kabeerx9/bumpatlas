@@ -1,13 +1,22 @@
+import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import {
+  AppText,
+  Button,
+  IconButton,
+  Screen,
+  Surface,
+  spacing,
+  useAppTheme,
+} from "@/design-system";
 import { useModerationActionMutation, useModerationQueueQuery } from "@/lib/api/hooks";
 
 export function ModerationScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const moderationQuery = useModerationQueueQuery();
   const actionMutation = useModerationActionMutation();
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
@@ -35,72 +44,93 @@ export function ModerationScreen() {
   }
 
   return (
-    <SoftStackShell title="Moderation queue" onBack={() => router.back()}>
-      <AppText variant="bodySmall" tone="secondary">
-        Founder/admin only during beta. High-risk items escalate automatically.
-      </AppText>
+    <Screen padded={false}>
+      <View style={styles.header}>
+        <IconButton accessibilityLabel="Go back" onPress={() => router.back()}>
+          <Feather name="arrow-left" size={20} color={theme.colors.text} />
+        </IconButton>
+        <AppText variant="title">Moderation queue</AppText>
+        <View style={styles.headerSpacer} />
+      </View>
 
-      {items.map((item) => {
-        const status = statusOverrides[item.id] ?? item.status;
-        const statusLower = status.toLowerCase();
-        const hidden = statusLower === "hide" || statusLower === "hidden";
-        const reviewed = statusLower === "review" || statusLower === "reviewed";
-        return (
-          <View
-            key={item.id}
-            style={[styles.card, item.priority === "high" && styles.cardHigh]}
-          >
-            <View style={styles.cardTop}>
-              <AppText variant="caption" weight="semibold" style={styles.type}>
-                {item.type}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <AppText variant="bodySmall" tone="secondary">
+          Founder/admin only during beta. High-risk items escalate automatically.
+        </AppText>
+
+        {items.map((item) => {
+          const status = statusOverrides[item.id] ?? item.status;
+          const statusLower = status.toLowerCase();
+          const hidden = statusLower === "hide" || statusLower === "hidden";
+          const reviewed = statusLower === "review" || statusLower === "reviewed";
+          const isHighPriority = item.priority === "high";
+          return (
+            <Surface
+              key={item.id}
+              radiusSize="xl"
+              style={[
+                styles.card,
+                isHighPriority && {
+                  borderColor: theme.colors.dangerBorder,
+                  borderWidth: 1.5,
+                },
+              ]}
+            >
+              <View style={styles.cardTop}>
+                <AppText variant="caption" weight="semibold" tone="brand">
+                  {item.type}
+                </AppText>
+                <AppText variant="caption" tone="secondary">
+                  {item.createdAt}
+                </AppText>
+              </View>
+              <AppText weight="semibold">{item.summary}</AppText>
+              <AppText variant="bodySmall" tone="secondary" numberOfLines={2}>
+                {item.postPreview}
               </AppText>
               <AppText variant="caption" tone="secondary">
-                {item.createdAt}
+                {item.reporter} · {status}
               </AppText>
-            </View>
-            <AppText weight="semibold">{item.summary}</AppText>
-            <AppText variant="bodySmall" tone="secondary" numberOfLines={2}>
-              {item.postPreview}
-            </AppText>
-            <AppText variant="caption" tone="secondary">
-              {item.reporter} · {status}
-            </AppText>
-            <View style={styles.actions}>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={hidden || actionMutation.isPending}
-                onPress={() => void hidePost(item.id)}
-              >
-                {hidden ? "Hidden" : "Hide post"}
-              </Button>
-              <Button
-                size="sm"
-                disabled={reviewed || actionMutation.isPending}
-                onPress={() => void markReviewed(item.id)}
-              >
-                {reviewed ? "Reviewed" : "Review"}
-              </Button>
-            </View>
-          </View>
-        );
-      })}
-    </SoftStackShell>
+              <View style={styles.actions}>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={hidden || actionMutation.isPending}
+                  onPress={() => void hidePost(item.id)}
+                >
+                  {hidden ? "Hidden" : "Hide post"}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={reviewed || actionMutation.isPending}
+                  onPress={() => void markReviewed(item.id)}
+                >
+                  {reviewed ? "Reviewed" : "Review"}
+                </Button>
+              </View>
+            </Surface>
+          );
+        })}
+      </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.lg,
-    gap: spacing.sm,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.page,
+    paddingVertical: spacing.md,
   },
-  cardHigh: {
-    borderWidth: 1.5,
-    borderColor: colors.brand.terracotta,
+  headerSpacer: { width: 44 },
+  scroll: {
+    paddingHorizontal: spacing.page,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
   },
+  card: { gap: spacing.sm },
   cardTop: { flexDirection: "row", justifyContent: "space-between" },
-  type: { color: colors.brand.peach },
   actions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs },
 });

@@ -2,7 +2,17 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import {
+  AppText,
+  Button,
+  CardStack,
+  Pill,
+  Surface,
+  colors,
+  radius,
+  spacing,
+  useAppTheme,
+} from "@/design-system";
 import { mockPregnancy } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import {
@@ -13,8 +23,33 @@ import {
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { appRoutes } from "@/navigation/routes";
 
+// Presentational only — a friendly "size of a ..." cue per week, not clinical data.
+const sizeOfWeek: Record<number, string> = {
+  8: "a raspberry",
+  12: "a lime",
+  16: "an avocado",
+  20: "a banana",
+  24: "an ear of corn",
+  28: "an eggplant",
+  32: "a pineapple",
+  36: "a honeydew melon",
+  39: "a small pumpkin",
+};
+
+function sizeOfLabel(week: number) {
+  const knownWeeks = Object.keys(sizeOfWeek)
+    .map(Number)
+    .sort((a, b) => a - b);
+  let closest = knownWeeks[0];
+  for (const knownWeek of knownWeeks) {
+    if (knownWeek <= week) closest = knownWeek;
+  }
+  return sizeOfWeek[closest] ?? "a growing little one";
+}
+
 export function PregnancyScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const {
     checklistDone,
     toggleChecklistItem,
@@ -29,6 +64,7 @@ export function PregnancyScreen() {
   const computedWeek = gestationalWeekFromDueDate(dueDate);
   const weekLabel = pregnancyWeekLabel(computedWeek);
   const trimester = trimesterFromWeek(computedWeek);
+  const progress = Math.min(1, Math.max(0, computedWeek / 40));
 
   const categories = Array.from(new Set(mockPregnancy.checklist.map((item) => item.category)));
 
@@ -39,7 +75,7 @@ export function PregnancyScreen() {
         onBack={() => router.back()}
         centered
       >
-        <Feather name="heart" size={28} color={colors.brand.peach} />
+        <Feather name="heart" size={28} color={colors.brand.honeyDeep} />
         <AppText variant="heading" align="center">
           Converted to {pregnancyChildName}&apos;s story
         </AppText>
@@ -55,50 +91,64 @@ export function PregnancyScreen() {
 
   return (
     <SoftStackShell title="Pregnancy" onBack={() => router.back()}>
-      <View style={styles.hero}>
-        <AppText variant="caption" style={styles.eyebrow}>
-          {trimester}
-        </AppText>
-        <AppText variant="heading" tone="inverse">
-          {weekLabel}
-        </AppText>
-        <AppText variant="bodySmall" style={styles.heroMeta}>
-          Due {dueDate} · week {computedWeek} computed from due date (40-week model)
-        </AppText>
-      </View>
+      <CardStack style={styles.heroStack}>
+        <Surface elevated radiusSize="xl" padding="xl" style={styles.hero}>
+          <Pill tone="selected">{trimester}</Pill>
+          <AppText
+            variant="hero"
+            weight="semibold"
+            style={styles.heroWeek}
+          >
+            {weekLabel}
+          </AppText>
+          <AppText variant="bodySmall" tone="secondary">
+            Baby is about the size of {sizeOfLabel(computedWeek)}
+          </AppText>
 
-      <View style={styles.card}>
-        <AppText variant="caption" style={styles.peach}>
-          This week&apos;s tip
-        </AppText>
+          <View style={[styles.progressTrack, { backgroundColor: theme.colors.background }]}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${progress * 100}%`, backgroundColor: colors.brand.honey },
+              ]}
+            />
+          </View>
+          <AppText variant="caption" tone="tertiary">
+            Due {dueDate} · computed from a 40-week model
+          </AppText>
+        </Surface>
+      </CardStack>
+
+      <Surface elevated radiusSize="lg" style={styles.card}>
+        <Pill tone="lavender">This week&apos;s tip</Pill>
         <AppText weight="semibold">{mockPregnancy.weeklyTip.title}</AppText>
         <AppText variant="bodySmall" tone="secondary">
           {mockPregnancy.weeklyTip.summary}
         </AppText>
-        <AppText variant="caption" tone="secondary">
+        <AppText variant="caption" tone="tertiary">
           {mockPregnancy.weeklyTip.reviewerName} · {mockPregnancy.weeklyTip.reviewedOn}
         </AppText>
-      </View>
+      </Surface>
 
-      <View style={styles.card}>
+      <Surface elevated radiusSize="lg" style={styles.card}>
         <AppText weight="semibold">Nearby week cards</AppText>
         <AppText variant="bodySmall" tone="secondary">
           Stage tips sample — full inventory ships with content ops.
         </AppText>
         {mockPregnancy.weekCards.map((card) => (
           <View key={card.week} style={styles.weekRow}>
-            <AppText variant="caption" weight="semibold" style={styles.peach}>
-              Week {card.week}
+            <Pill tone="mint">Week {card.week}</Pill>
+            <AppText weight="semibold" style={styles.weekTitle}>
+              {card.title}
             </AppText>
-            <AppText weight="semibold">{card.title}</AppText>
             <AppText variant="bodySmall" tone="secondary">
               {card.summary}
             </AppText>
           </View>
         ))}
-      </View>
+      </Surface>
 
-      <View style={styles.card}>
+      <Surface elevated radiusSize="lg" style={styles.card}>
         <AppText weight="semibold">Bump journal prompt</AppText>
         <AppText variant="bodySmall" tone="secondary">
           {mockPregnancy.bumpPrompt}
@@ -111,9 +161,9 @@ export function PregnancyScreen() {
         >
           Capture a bump moment
         </Button>
-      </View>
+      </Surface>
 
-      <View style={styles.card}>
+      <Surface elevated radiusSize="lg" style={styles.card}>
         <AppText weight="semibold">How are you feeling?</AppText>
         <AppText variant="bodySmall" tone="secondary">
           Optional reflection — not a clinical mood tracker.
@@ -125,22 +175,15 @@ export function PregnancyScreen() {
               <Pressable
                 key={mood.id}
                 onPress={() => setSelectedMood(active ? null : mood.id)}
-                style={[styles.moodChip, active && styles.moodChipActive]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
               >
-                <AppText
-                  variant="caption"
-                  weight="semibold"
-                  style={active ? styles.moodTextActive : undefined}
-                >
-                  {mood.label}
-                </AppText>
+                <Pill tone={active ? "selected" : "neutral"}>{mood.label}</Pill>
               </Pressable>
             );
           })}
         </View>
-      </View>
+      </Surface>
 
       <AppText weight="semibold">Your checklist</AppText>
       <AppText variant="bodySmall" tone="secondary">
@@ -148,10 +191,8 @@ export function PregnancyScreen() {
       </AppText>
 
       {categories.map((category) => (
-        <View key={category} style={styles.card}>
-          <AppText variant="caption" style={styles.peach}>
-            {category}
-          </AppText>
+        <Surface key={category} elevated radiusSize="lg" style={styles.card}>
+          <Pill tone="mint">{category}</Pill>
           {mockPregnancy.checklist
             .filter((item) => item.category === category)
             .map((item) => {
@@ -164,10 +205,14 @@ export function PregnancyScreen() {
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: done }}
                 >
-                  <View style={[styles.checkbox, done && styles.checkboxOn]}>
-                    {done ? (
-                      <Feather name="check" size={14} color={colors.text.inverse} />
-                    ) : null}
+                  <View
+                    style={[
+                      styles.checkbox,
+                      { borderColor: colors.brand.honeyDeep },
+                      done && { backgroundColor: colors.brand.honey, borderColor: colors.brand.honey },
+                    ]}
+                  >
+                    {done ? <Feather name="check" size={14} color={colors.brand.ink} /> : null}
                   </View>
                   <AppText
                     variant="bodySmall"
@@ -178,11 +223,11 @@ export function PregnancyScreen() {
                 </Pressable>
               );
             })}
-        </View>
+        </Surface>
       ))}
 
-      <View style={styles.convertCard}>
-        <Feather name="sunrise" size={20} color={colors.brand.peach} />
+      <Surface tone="warm" elevated={false} bordered={false} radiusSize="xl" style={styles.card}>
+        <Feather name="sunrise" size={20} color={colors.brand.honeyDeep} />
         <AppText weight="semibold">Baby arrived?</AppText>
         <AppText variant="bodySmall" tone="secondary">
           Convert this pregnancy journal into a child profile. Memories stay with you.
@@ -190,54 +235,51 @@ export function PregnancyScreen() {
         <Button size="lg" onPress={() => router.push(appRoutes.convertBirth)}>
           Convert to child profile
         </Button>
-      </View>
+      </Surface>
     </SoftStackShell>
   );
 }
 
 const styles = StyleSheet.create({
+  heroStack: {
+    marginBottom: spacing.xs,
+  },
   hero: {
-    borderRadius: 28,
-    backgroundColor: colors.brand.peach,
-    padding: spacing.xl,
     gap: spacing.sm,
+    alignItems: "flex-start",
   },
-  eyebrow: {
-    color: "rgba(255,255,255,0.78)",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
+  heroWeek: {
+    fontSize: 56,
+    lineHeight: 60,
   },
-  heroMeta: { color: "rgba(255,255,255,0.88)" },
+  progressTrack: {
+    alignSelf: "stretch",
+    height: 10,
+    borderRadius: radius.full,
+    overflow: "hidden",
+    marginTop: spacing.xs,
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: radius.full,
+  },
   card: {
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.lg,
     gap: spacing.sm,
   },
-  peach: { color: colors.brand.peach, textTransform: "uppercase", letterSpacing: 0.4 },
-  softBtn: { backgroundColor: colors.brand.peachSoft, borderColor: colors.brand.peachSoft },
   weekRow: {
-    gap: 2,
+    gap: spacing.xs,
     paddingVertical: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: "rgba(44,36,32,0.06)",
+    borderTopColor: colors.border.hairline,
+  },
+  weekTitle: {
+    marginTop: 2,
+  },
+  softBtn: {
+    backgroundColor: colors.brand.honeySoft,
+    borderColor: colors.brand.honeySoft,
   },
   moodRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  moodChip: {
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface.card,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  moodChipActive: {
-    backgroundColor: colors.brand.peachSoft,
-    borderColor: colors.brand.peach,
-  },
-  moodTextActive: { color: colors.brand.peach },
   checkRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -249,16 +291,8 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: colors.brand.peach,
     alignItems: "center",
     justifyContent: "center",
   },
-  checkboxOn: { backgroundColor: colors.brand.peach },
   checkDone: { textDecorationLine: "line-through", opacity: 0.6 },
-  convertCard: {
-    borderRadius: radius.xl,
-    backgroundColor: colors.brand.peachSoft,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
 });

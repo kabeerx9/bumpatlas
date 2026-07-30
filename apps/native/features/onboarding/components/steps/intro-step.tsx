@@ -1,24 +1,25 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AppText, Atmosphere, BrandWordmark, Button, colors, spacing } from "@/design-system";
-import { IntroIllustration } from "@/features/onboarding/components/intro-illustration";
+import { AppText, Atmosphere, BrandWordmark, Button, colors, radius, spacing } from "@/design-system";
 
 type IntroStepProps = {
   onContinue: () => void;
   onSkip: () => void;
 };
 
+const HERO_IMAGE_URL = "https://images.unsplash.com/photo-1519689680058-324335c77eba?w=1200&q=80";
+
 export function IntroStep({ onContinue, onSkip }: IntroStepProps) {
   return (
     <Atmosphere>
       <SafeAreaView style={styles.safe}>
         <View style={styles.body}>
-          <IntroIllustration />
+          <Image source={{ uri: HERO_IMAGE_URL }} style={styles.hero} accessibilityLabel="Baby on a pool float" />
 
           <View style={styles.copy}>
             <BrandWordmark size="md" markOnly style={styles.logo} />
-            <AppText variant="heading" align="center">
+            <AppText variant="heading" weight="semibold" align="center">
               Smart guidance at every step
             </AppText>
             <AppText variant="body" tone="secondary" align="center" style={styles.subtitle}>
@@ -72,7 +73,12 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     width: 22,
-    backgroundColor: colors.brand.peach,
+    backgroundColor: colors.brand.honey,
+  },
+  hero: {
+    width: "100%",
+    height: 220,
+    borderRadius: radius.xl,
   },
   footer: {
     paddingHorizontal: spacing.page,

@@ -1,16 +1,44 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import {
+  AppText,
+  Button,
+  borderWidth,
+  radius,
+  shadows,
+  spacing,
+  useAppTheme,
+} from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useBookmarkContentMutation, useContentDetailQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
+const heroImages = [
+  "https://images.unsplash.com/photo-1546015720-b8b30df5aa27",
+  "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4",
+  "https://images.unsplash.com/photo-1519689680058-324335c77eba",
+  "https://images.unsplash.com/photo-1457342813143-a1ae27448a82",
+];
+
+function hashId(id: string) {
+  let hash = 0;
+  for (let index = 0; index < id.length; index += 1) {
+    hash = (hash * 31 + id.charCodeAt(index)) % 997;
+  }
+  return Math.abs(hash);
+}
+
+function heroImageForId(id: string) {
+  return `${heroImages[hashId(id) % heroImages.length]}?w=1200&q=80`;
+}
+
 export function GuideDetailScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { markLearnDone } = useMockUi();
   const guideQuery = useContentDetailQuery(id ?? "");
@@ -46,7 +74,7 @@ export function GuideDetailScreen() {
   if (guideQuery.isLoading || !guide) {
     return (
       <SoftStackShell title="Guide" onBack={() => router.back()} centered>
-        <ActivityIndicator color={colors.brand.peach} />
+        <ActivityIndicator color={theme.colors.primary} />
       </SoftStackShell>
     );
   }
@@ -59,13 +87,17 @@ export function GuideDetailScreen() {
         <Pressable
           onPress={toggleBookmark}
           hitSlop={12}
-          style={styles.iconBtn}
+          style={[
+            styles.iconBtn,
+            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+          ]}
+          accessibilityRole="button"
           accessibilityLabel={bookmarked ? "Remove bookmark" : "Bookmark article"}
         >
           <Feather
             name="bookmark"
             size={18}
-            color={bookmarked ? colors.brand.peach : colors.brand.ink}
+            color={bookmarked ? theme.colors.brandText : theme.colors.text}
           />
         </Pressable>
       }
@@ -78,28 +110,40 @@ export function GuideDetailScreen() {
             size="lg"
             variant="ghost"
             onPress={() => router.push(appRoutes.assistant)}
-            style={styles.assistantBtn}
           >
             Ask about this topic
           </Button>
         </>
       }
     >
-      <View style={styles.hero}>
-        <AppText variant="caption" style={styles.eyebrow}>
-          {(guide.stageTags[0] ?? "Guide")} · {guide.readingMinutes} min read
-        </AppText>
-        <AppText variant="heading" style={styles.heroTitle}>
-          {guide.title}
-        </AppText>
-        <AppText variant="body" style={styles.heroSummary}>
-          {guide.summary}
-        </AppText>
+      <View
+        style={[
+          styles.heroCard,
+          { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+        ]}
+      >
+        <Image source={{ uri: heroImageForId(guide.id) }} style={styles.heroImage} />
+        <View style={styles.heroBody}>
+          <AppText variant="caption" tone="brand" weight="semibold" style={styles.eyebrow}>
+            {(guide.stageTags[0] ?? "Guide")} · {guide.readingMinutes} min read
+          </AppText>
+          <AppText variant="heading" style={styles.heroTitle}>
+            {guide.title}
+          </AppText>
+          <AppText variant="body" tone="secondary" style={styles.heroSummary}>
+            {guide.summary}
+          </AppText>
+        </View>
       </View>
 
       {citation ? (
-        <View style={styles.citationCard}>
-          <Feather name="check-circle" size={16} color={colors.brand.peach} />
+        <View
+          style={[
+            styles.citationCard,
+            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+          ]}
+        >
+          <Feather name="check-circle" size={16} color={theme.colors.brandText} />
           <View style={styles.citationCopy}>
             <AppText weight="semibold">Reviewed content</AppText>
             <AppText variant="caption" tone="secondary">
@@ -109,7 +153,12 @@ export function GuideDetailScreen() {
         </View>
       ) : null}
 
-      <View style={styles.bodyCard}>
+      <View
+        style={[
+          styles.bodyCard,
+          { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+        ]}
+      >
         {paragraphs.map((paragraph, index) => (
           <AppText key={`${guide.id}-p-${index}`} variant="body" style={styles.paragraph}>
             {paragraph}
@@ -117,8 +166,8 @@ export function GuideDetailScreen() {
         ))}
       </View>
 
-      <View style={styles.disclaimer}>
-        <Feather name="info" size={16} color={colors.brand.peach} />
+      <View style={[styles.disclaimer, { backgroundColor: theme.colors.accent }]}>
+        <Feather name="info" size={16} color={theme.colors.brandText} />
         <AppText variant="bodySmall" tone="secondary" style={styles.disclaimerCopy}>
           Educational only — not medical advice. If something worries you about your baby or
           pregnancy, contact a qualified clinician.
@@ -132,36 +181,41 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    borderRadius: radius.full,
+    borderWidth: borderWidth.hairline,
     alignItems: "center",
     justifyContent: "center",
   },
-  hero: {
-    borderRadius: 28,
-    backgroundColor: colors.brand.peach,
+  heroCard: {
+    borderRadius: radius.xl,
+    borderWidth: borderWidth.hairline,
+    overflow: "hidden",
+    ...shadows.card,
+  },
+  heroImage: {
+    width: "100%",
+    height: 220,
+  },
+  heroBody: {
     padding: spacing.xl,
     gap: spacing.sm,
   },
   eyebrow: {
-    color: "rgba(255,255,255,0.78)",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
   heroTitle: {
-    color: colors.text.inverse,
-    lineHeight: 34,
+    lineHeight: 36,
   },
   heroSummary: {
-    color: "rgba(255,255,255,0.9)",
-    lineHeight: 22,
+    lineHeight: 24,
   },
   citationCard: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: spacing.sm,
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    borderWidth: borderWidth.hairline,
     padding: spacing.lg,
   },
   citationCopy: {
@@ -170,27 +224,22 @@ const styles = StyleSheet.create({
   },
   bodyCard: {
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    borderWidth: borderWidth.hairline,
     padding: spacing.xl,
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   paragraph: {
-    lineHeight: 24,
+    lineHeight: 26,
   },
   disclaimer: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: spacing.sm,
     borderRadius: radius.lg,
-    backgroundColor: colors.brand.peachSoft,
     padding: spacing.lg,
   },
   disclaimerCopy: {
     flex: 1,
     lineHeight: 20,
-  },
-  assistantBtn: {
-    backgroundColor: colors.surface.card,
-    borderColor: colors.surface.card,
   },
 });

@@ -23,7 +23,7 @@ export function CitationCard({ citation, onOpen }: CitationCardProps) {
       disabled={!onOpen}
       style={[styles.card, !onOpen && styles.cardStatic]}
     >
-      <Feather name="book-open" size={14} color={colors.brand.peach} />
+      <Feather name="book-open" size={14} color={colors.brand.honeyDeep} />
       <View style={styles.copy}>
         <AppText variant="caption" weight="semibold" style={styles.title}>
           {citation.title}
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     borderRadius: radius.lg,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.brand.honeySoft,
     padding: spacing.sm,
     marginTop: spacing.sm,
   },

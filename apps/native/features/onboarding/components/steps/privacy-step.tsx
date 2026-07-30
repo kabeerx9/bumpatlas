@@ -50,7 +50,7 @@ export function PrivacyStep({
       >
         <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
           {termsAccepted ? (
-            <AppText variant="caption" tone="inverse">
+            <AppText variant="caption" style={styles.checkMark}>
               ✓
             </AppText>
           ) : null}
@@ -81,7 +81,7 @@ export function PrivacyStep({
       >
         <View style={[styles.checkbox, privacyAccepted && styles.checkboxChecked]}>
           {privacyAccepted ? (
-            <AppText variant="caption" tone="inverse">
+            <AppText variant="caption" style={styles.checkMark}>
               ✓
             </AppText>
           ) : null}
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   lead: { maxWidth: 340, lineHeight: 24 },
   summaryCard: {
     borderRadius: radius.xl,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.brand.honeySoft,
     padding: spacing.lg,
     gap: spacing.sm,
     marginTop: spacing.sm,
@@ -133,19 +133,22 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: colors.brand.peach,
+    borderColor: colors.brand.honeyDeep,
     alignItems: "center",
     justifyContent: "center",
   },
   checkboxChecked: {
-    backgroundColor: colors.brand.peach,
-    borderColor: colors.brand.peach,
+    backgroundColor: colors.brand.honey,
+    borderColor: colors.brand.honey,
+  },
+  checkMark: {
+    color: colors.brand.ink,
   },
   acceptCopy: {
     flex: 1,
     gap: 4,
   },
   link: {
-    color: colors.brand.peach,
+    color: colors.text.link,
   },
 });

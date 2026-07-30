@@ -34,7 +34,10 @@ export function useAppFonts() {
 
 export function resolveUiFont(weight?: string, variant?: string) {
   if (variant === "heading" || variant === "title" || variant === "hero") {
-    return weight === "semibold" ? fontFamilies.editorialSemibold : fontFamilies.editorial;
+    if (weight === "bold") return fontFamilies.uiBold;
+    if (weight === "medium") return fontFamilies.uiMedium;
+    if (weight === "regular") return fontFamilies.ui;
+    return fontFamilies.uiSemibold;
   }
 
   if (variant === "label" || variant === "subhead") {

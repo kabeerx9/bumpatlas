@@ -12,10 +12,10 @@ export type TodayHintWidgetProps = {
 
 const todayHintWidgetLayout = String.raw`
 function TodayHintWidget(props, environment) {
-  const brand = "#26215C";
-  const mint = "#8EE3C1";
-  const lavender = "#EDE8FF";
-  const muted = "#6B7280";
+  const brand = "#211D15";
+  const mint = "#F2C878";
+  const lavender = "#F8E8C4";
+  const muted = "#9A9078";
   const progressText = String(Math.round(props.progress)) + "%";
   const deepLink = "bumpatlas://widgets";
 
@@ -103,7 +103,7 @@ function TodayHintWidget(props, environment) {
   return jsxs(HStack, {
     alignment: "center",
     spacing: 12,
-    modifiers: [padding({ all: 16 }), background("#FAFAF8"), widgetURL(deepLink)],
+    modifiers: [padding({ all: 16 }), background("#F4EDDA"), widgetURL(deepLink)],
     children: [
       jsxs(VStack, {
         alignment: "center",
@@ -139,7 +139,7 @@ function TodayHintWidget(props, environment) {
             spacing: 6,
             children: [
               jsx(Text, {
-                modifiers: [font({ weight: "semibold", size: 12 }), foregroundStyle("#1D9E75")],
+                modifiers: [font({ weight: "semibold", size: 12 }), foregroundStyle("#A96F1F")],
                 children: props.area
               }),
               jsx(Text, {

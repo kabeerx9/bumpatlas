@@ -1,20 +1,23 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, BrandWordmark, colors, radius, spacing } from "@/design-system";
-import { IntroIllustration } from "@/features/onboarding/components/intro-illustration";
+import { AppText, CardStack, colors, radius, spacing } from "@/design-system";
 
 type WelcomeStepProps = {
   attested: boolean;
   onToggleAttestation: () => void;
 };
 
+const HERO_IMAGE_URL = "https://images.unsplash.com/photo-1522771930-78848d9293e8?w=1200&q=80";
+
 export function WelcomeStep({ attested, onToggleAttestation }: WelcomeStepProps) {
   return (
     <View style={styles.block}>
-      <IntroIllustration />
+      <CardStack radiusSize="xl" style={styles.stack}>
+        <Image source={{ uri: HERO_IMAGE_URL }} style={styles.hero} accessibilityLabel="Baby in a soft onesie" />
+      </CardStack>
+
       <View style={styles.copy}>
-        <BrandWordmark size="md" markOnly style={styles.logo} />
-        <AppText variant="heading" align="center">
+        <AppText variant="hero" weight="semibold" align="center">
           Welcome to BumpAtlas
         </AppText>
         <AppText variant="body" tone="secondary" align="center" style={styles.lead}>
@@ -31,7 +34,7 @@ export function WelcomeStep({ attested, onToggleAttestation }: WelcomeStepProps)
       >
         <View style={[styles.checkbox, attested && styles.checkboxChecked]}>
           {attested ? (
-            <AppText variant="caption" tone="inverse">
+            <AppText variant="caption" style={styles.checkMark}>
               ✓
             </AppText>
           ) : null}
@@ -49,7 +52,15 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
     alignItems: "center",
   },
-  logo: { alignSelf: "center" },
+  stack: {
+    width: "100%",
+    maxWidth: 280,
+  },
+  hero: {
+    width: "100%",
+    height: 200,
+    borderRadius: radius.xl,
+  },
   copy: { gap: spacing.md, alignItems: "center" },
   lead: { maxWidth: 320, lineHeight: 24 },
   attestRow: {
@@ -68,14 +79,17 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: colors.brand.peach,
+    borderColor: colors.brand.honeyDeep,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 2,
   },
   checkboxChecked: {
-    backgroundColor: colors.brand.peach,
-    borderColor: colors.brand.peach,
+    backgroundColor: colors.brand.honey,
+    borderColor: colors.brand.honey,
+  },
+  checkMark: {
+    color: colors.brand.ink,
   },
   attestCopy: {
     flex: 1,

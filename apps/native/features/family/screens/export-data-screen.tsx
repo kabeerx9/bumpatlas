@@ -3,12 +3,21 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import {
+  AppText,
+  Button,
+  Surface,
+  colors,
+  radius,
+  spacing,
+  useAppTheme,
+} from "@/design-system";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useCreateDataRequestMutation } from "@/lib/api/hooks";
 
 export function ExportDataScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const createDataRequest = useCreateDataRequestMutation();
   const [status, setStatus] = useState<"idle" | "preparing" | "ready" | "failed">("idle");
   const [requestId, setRequestId] = useState<string | null>(null);
@@ -45,17 +54,19 @@ export function ExportDataScreen() {
       }
     >
       <View style={styles.hero}>
-        <Feather name="download" size={28} color={colors.text.inverse} />
-        <AppText variant="heading" tone="inverse" align="center">
+        <View style={styles.heroIcon}>
+          <Feather name="download" size={24} color={colors.brand.honeyDeep} />
+        </View>
+        <AppText variant="heading" weight="semibold" align="center">
           Your household data
         </AppText>
-        <AppText variant="bodySmall" style={styles.heroCopy} align="center">
+        <AppText variant="bodySmall" tone="secondary" style={styles.heroCopy} align="center">
           Export includes memories, milestones, wellness history, and account metadata. Free
           forever — never paywalled.
         </AppText>
       </View>
 
-      <View style={styles.list}>
+      <Surface tone="card" elevated radiusSize="xl" style={styles.list}>
         {[
           "Journal memories (text + photos)",
           "Milestones & recaps",
@@ -63,26 +74,38 @@ export function ExportDataScreen() {
           "Account & consent records",
         ].map((item) => (
           <View key={item} style={styles.row}>
-            <Feather name="check" size={16} color={colors.brand.peach} />
+            <Feather name="check" size={16} color={colors.brand.honeyDeep} />
             <AppText variant="bodySmall">{item}</AppText>
           </View>
         ))}
-      </View>
+      </Surface>
 
       {status === "ready" ? (
-        <View style={styles.ready}>
+        <Surface tone="card" elevated radiusSize="lg" style={styles.ready}>
           <AppText weight="semibold">Export requested</AppText>
           <AppText variant="bodySmall" tone="secondary">
             {requestId
               ? `Request ${requestId}. A download link will arrive by email within 48 hours.`
               : "A download link will arrive by email within 48 hours."}
           </AppText>
-        </View>
+        </Surface>
       ) : null}
 
       {status === "failed" ? (
-        <View style={styles.ready}>
-          <AppText weight="semibold">Couldn’t start export</AppText>
+        <View
+          style={[
+            styles.ready,
+            {
+              backgroundColor: theme.colors.dangerSurface,
+              borderColor: theme.colors.dangerBorder,
+              borderWidth: 1,
+              borderRadius: radius.lg,
+            },
+          ]}
+        >
+          <AppText weight="semibold" style={{ color: theme.colors.danger }}>
+            Couldn’t start export
+          </AppText>
           <AppText variant="bodySmall" tone="secondary">
             Check your connection and try again.
           </AppText>
@@ -94,24 +117,24 @@ export function ExportDataScreen() {
 
 const styles = StyleSheet.create({
   hero: {
-    borderRadius: radius.xl,
-    backgroundColor: colors.brand.peach,
-    padding: spacing.xl,
     gap: spacing.sm,
     alignItems: "center",
+    paddingVertical: spacing.md,
   },
-  heroCopy: { color: "rgba(255,255,255,0.88)", maxWidth: 300 },
+  heroIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.lg,
+    backgroundColor: colors.brand.honeySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroCopy: { maxWidth: 300 },
   list: {
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.lg,
     gap: spacing.sm,
   },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   ready: {
-    borderRadius: radius.lg,
-    backgroundColor: colors.brand.peachSoft,
-    padding: spacing.lg,
     gap: spacing.xs,
   },
 });

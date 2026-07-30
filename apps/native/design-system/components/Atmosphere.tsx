@@ -12,7 +12,7 @@ type AtmosphereProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-/** Soft clay-blue atmosphere blobs (no native gradient module). */
+/** Soft butter-light atmosphere blobs (no native gradient module). */
 export function Atmosphere({ children, variant = "cream", style }: AtmosphereProps) {
   const base =
     variant === "brand" ? colors.brand.peachSoft : colors.surface.app;
@@ -55,14 +55,14 @@ const styles = StyleSheet.create({
     height: 200,
     top: 180,
     left: -80,
-    backgroundColor: "rgba(106,143,168,0.16)",
+    backgroundColor: "rgba(242,200,120,0.20)",
   },
   blobSageBottom: {
     width: 280,
     height: 280,
     bottom: -120,
     right: -40,
-    backgroundColor: "rgba(197,216,228,0.28)",
+    backgroundColor: "rgba(255,255,255,0.45)",
   },
   blobCreamOnly: {
     position: "absolute",
@@ -71,6 +71,6 @@ const styles = StyleSheet.create({
     top: -80,
     right: -60,
     borderRadius: radius.full,
-    backgroundColor: "rgba(106,143,168,0.12)",
+    backgroundColor: "rgba(242,200,120,0.16)",
   },
 });

@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import type { ComponentProps } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, colors, radius, spacing, useAppTheme } from "@/design-system";
 
 type IconName = ComponentProps<typeof Feather>["name"];
 
@@ -25,6 +25,8 @@ export function TodayActionTile({
   emphasized,
   onPress,
 }: TodayActionTileProps) {
+  const theme = useAppTheme();
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -32,13 +34,14 @@ export function TodayActionTile({
       onPress={onPress}
       style={({ pressed }) => [
         styles.tile,
+        { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
         emphasized && styles.emphasized,
         pressed && styles.pressed,
       ]}
     >
       <View style={styles.top}>
         <View style={[styles.iconWrap, emphasized && styles.iconEmphasized]}>
-          <Feather name={icon} size={18} color={emphasized ? colors.text.inverse : colors.brand.peach} />
+          <Feather name={icon} size={18} color={emphasized ? colors.text.inverse : colors.brand.honeyDeep} />
         </View>
         {emphasized ? (
           <AppText variant="caption" weight="semibold" style={styles.focusChip}>
@@ -71,14 +74,13 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 150,
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    borderWidth: 1,
     padding: spacing.lg,
     gap: 4,
   },
   emphasized: {
     borderWidth: 1.5,
-    borderColor: colors.brand.peach,
-    backgroundColor: "rgba(247,249,251,0.95)",
+    borderColor: colors.brand.honey,
   },
   pressed: {
     opacity: 0.92,
@@ -94,15 +96,15 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.brand.honeySoft,
     alignItems: "center",
     justifyContent: "center",
   },
   iconEmphasized: {
-    backgroundColor: colors.brand.peach,
+    backgroundColor: colors.brand.honey,
   },
   focusChip: {
-    color: colors.brand.peach,
+    color: colors.brand.honeyDeep,
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
@@ -110,12 +112,12 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: colors.brand.peach,
+    backgroundColor: colors.brand.honey,
     alignItems: "center",
     justifyContent: "center",
   },
   label: {
-    color: colors.brand.peach,
+    color: colors.brand.honeyDeep,
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },

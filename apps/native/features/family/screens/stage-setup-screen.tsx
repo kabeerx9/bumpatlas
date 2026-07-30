@@ -3,7 +3,15 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import {
+  AppText,
+  Button,
+  Surface,
+  colors,
+  radius,
+  spacing,
+  useAppTheme,
+} from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { appRoutes } from "@/navigation/routes";
@@ -13,6 +21,7 @@ type Mode = "choose" | "pregnancy" | "parent";
 /** Reachable after onboarding when stage is UNKNOWN — finishes profile setup. */
 export function StageSetupScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const { applyOnboardingProfile, stageMode } = useMockUi();
   const [mode, setMode] = useState<Mode>("choose");
   const [dueDate, setDueDate] = useState("");
@@ -52,37 +61,45 @@ export function StageSetupScreen() {
       {mode === "choose" ? (
         <View style={styles.chooseColumn}>
           <View style={styles.hero}>
-            <AppText variant="caption" style={styles.eyebrow}>
+            <AppText variant="caption" tone="brand" style={styles.eyebrow}>
               Stage is {stageMode === "unknown" ? "unknown" : stageMode}
             </AppText>
-            <AppText variant="heading" tone="inverse">
+            <AppText variant="heading" weight="semibold">
               Tell us where you are
             </AppText>
-            <AppText variant="bodySmall" style={styles.heroCopy}>
+            <AppText variant="bodySmall" tone="secondary">
               Care, Guide, and Connect need a pregnancy week or child age to stay calm and relevant.
             </AppText>
           </View>
 
-          <Pressable style={styles.card} onPress={() => setMode("pregnancy")}>
-            <Feather name="sunrise" size={20} color={colors.brand.peach} />
-            <View style={styles.cardCopy}>
-              <AppText weight="semibold">I&apos;m expecting</AppText>
-              <AppText variant="bodySmall" tone="secondary">
-                Add a due date · pregnancy journal
-              </AppText>
-            </View>
-            <Feather name="chevron-right" size={18} color={colors.text.muted} />
+          <Pressable onPress={() => setMode("pregnancy")}>
+            <Surface tone="card" elevated radiusSize="xl" style={styles.card}>
+              <View style={styles.cardIcon}>
+                <Feather name="sunrise" size={20} color={colors.brand.honeyDeep} />
+              </View>
+              <View style={styles.cardCopy}>
+                <AppText weight="semibold">I&apos;m expecting</AppText>
+                <AppText variant="bodySmall" tone="secondary">
+                  Add a due date · pregnancy journal
+                </AppText>
+              </View>
+              <Feather name="chevron-right" size={18} color={theme.colors.textMuted} />
+            </Surface>
           </Pressable>
 
-          <Pressable style={styles.card} onPress={() => setMode("parent")}>
-            <Feather name="heart" size={20} color={colors.brand.peach} />
-            <View style={styles.cardCopy}>
-              <AppText weight="semibold">I have a baby / child</AppText>
-              <AppText variant="bodySmall" tone="secondary">
-                Add name + date of birth
-              </AppText>
-            </View>
-            <Feather name="chevron-right" size={18} color={colors.text.muted} />
+          <Pressable onPress={() => setMode("parent")}>
+            <Surface tone="card" elevated radiusSize="xl" style={styles.card}>
+              <View style={styles.cardIcon}>
+                <Feather name="heart" size={20} color={colors.brand.honeyDeep} />
+              </View>
+              <View style={styles.cardCopy}>
+                <AppText weight="semibold">I have a baby / child</AppText>
+                <AppText variant="bodySmall" tone="secondary">
+                  Add name + date of birth
+                </AppText>
+              </View>
+              <Feather name="chevron-right" size={18} color={theme.colors.textMuted} />
+            </Surface>
           </Pressable>
         </View>
       ) : null}
@@ -94,8 +111,8 @@ export function StageSetupScreen() {
             value={dueDate}
             onChangeText={setDueDate}
             placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.text.muted}
-            style={styles.input}
+            placeholderTextColor={theme.colors.textMuted}
+            style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
             accessibilityLabel="Due date"
           />
           <Button size="lg" disabled={!canSavePregnancy} onPress={savePregnancy}>
@@ -111,8 +128,8 @@ export function StageSetupScreen() {
             value={childName}
             onChangeText={setChildName}
             placeholder="Name"
-            placeholderTextColor={colors.text.muted}
-            style={styles.input}
+            placeholderTextColor={theme.colors.textMuted}
+            style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
             accessibilityLabel="Child name"
           />
           <AppText weight="semibold">Date of birth</AppText>
@@ -120,8 +137,8 @@ export function StageSetupScreen() {
             value={childDob}
             onChangeText={setChildDob}
             placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.text.muted}
-            style={styles.input}
+            placeholderTextColor={theme.colors.textMuted}
+            style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
             accessibilityLabel="Child date of birth"
           />
           <Button size="lg" disabled={!canSaveParent} onPress={saveParent}>
@@ -136,34 +153,32 @@ export function StageSetupScreen() {
 const styles = StyleSheet.create({
   chooseColumn: { gap: spacing.md },
   hero: {
-    borderRadius: 28,
-    backgroundColor: colors.brand.peach,
-    padding: spacing.xl,
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },
   eyebrow: {
-    color: "rgba(255,255,255,0.78)",
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
-  heroCopy: { color: "rgba(255,255,255,0.9)", lineHeight: 20 },
   card: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    padding: spacing.lg,
     minHeight: 72,
+  },
+  cardIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.lg,
+    backgroundColor: colors.brand.honeySoft,
+    alignItems: "center",
+    justifyContent: "center",
   },
   cardCopy: { flex: 1, gap: 2 },
   input: {
     minHeight: 52,
     borderRadius: radius.lg,
-    backgroundColor: "rgba(255,255,255,0.9)",
     paddingHorizontal: spacing.lg,
-    color: colors.text.primary,
     fontFamily: "Poppins_400Regular",
   },
 });

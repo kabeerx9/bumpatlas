@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, borderWidth, colors, radius, shadows, spacing } from "@/design-system";
 
 type QuotaMeterProps = {
   used: number;
@@ -39,7 +39,7 @@ export function QuotaMeter({
           <AppText variant="caption" weight="semibold" style={styles.upgrade}>
             {exhaustedLabel}
           </AppText>
-          <Feather name="arrow-up-right" size={12} color={colors.brand.peach} />
+          <Feather name="arrow-up-right" size={12} color={colors.brand.honeyDeep} />
         </Pressable>
       ) : null}
     </View>
@@ -50,8 +50,11 @@ const styles = StyleSheet.create({
   wrap: {
     gap: spacing.xs,
     borderRadius: radius.lg,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: colors.surface.card,
+    borderWidth: borderWidth.hairline,
+    borderColor: colors.border.hairline,
     padding: spacing.md,
+    ...shadows.soft,
   },
   row: {
     flexDirection: "row",
@@ -59,18 +62,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   exhausted: {
-    color: colors.brand.peach,
+    color: colors.brand.honeyDeep,
   },
   track: {
     height: 6,
     borderRadius: radius.full,
-    backgroundColor: "rgba(44,36,32,0.1)",
+    backgroundColor: colors.surface.mist,
     overflow: "hidden",
   },
   fill: {
     height: "100%",
     borderRadius: radius.full,
-    backgroundColor: colors.brand.peach,
+    backgroundColor: colors.brand.honeyDeep,
   },
   fillExhausted: {
     backgroundColor: colors.brand.terracotta,
@@ -82,6 +85,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   upgrade: {
-    color: colors.brand.peach,
+    color: colors.brand.honeyDeep,
   },
 });

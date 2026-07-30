@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
 import { StyleSheet, View } from "react-native";
 
-import { colors, radius, spacing } from "@/design-system";
+import { borderWidth, colors, radius, shadows, spacing } from "@/design-system";
 
 type SoftPanelProps = {
   children: ReactNode;
@@ -19,11 +19,15 @@ export function SoftPanel({ children, style, tinted = false }: SoftPanelProps) {
 const styles = StyleSheet.create({
   panel: {
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: colors.surface.card,
+    borderWidth: borderWidth.hairline,
+    borderColor: colors.border.hairline,
     padding: spacing.lg,
     gap: spacing.sm,
+    ...shadows.soft,
   },
   tinted: {
-    backgroundColor: colors.brand.peach,
+    backgroundColor: colors.brand.honeySoft,
+    borderColor: colors.border.warm,
   },
 });

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import { AppText, colors, spacing } from "@/design-system";
+import { AppText, borderWidth, colors, radius, shadows, spacing } from "@/design-system";
 import { SoftScreen } from "@/features/shared/components/soft-screen";
 
 type SoftStackShellProps = {
@@ -47,7 +47,9 @@ export function SoftStackShell({
           >
             <Feather name={closeIcon} size={20} color={colors.brand.ink} />
           </Pressable>
-          <AppText weight="semibold">{title}</AppText>
+          <AppText variant="title" weight="semibold">
+            {title}
+          </AppText>
           {right ?? <View style={styles.iconBtn} />}
         </View>
 
@@ -94,10 +96,13 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    borderRadius: radius.full,
+    backgroundColor: colors.surface.card,
+    borderWidth: borderWidth.hairline,
+    borderColor: colors.border.hairline,
     alignItems: "center",
     justifyContent: "center",
+    ...shadows.soft,
   },
   scrollView: { flex: 1 },
   scrollContent: {

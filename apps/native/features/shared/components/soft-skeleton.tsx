@@ -25,17 +25,17 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.55)",
+    backgroundColor: colors.surface.mist,
   },
   hero: {
     height: 88,
     borderRadius: radius.lg,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.brand.honeySoft,
   },
   line: {
     height: 14,
     borderRadius: 7,
-    backgroundColor: "rgba(44,36,32,0.08)",
+    backgroundColor: colors.border.warm,
   },
   lineShort: { width: "62%" },
 });
