@@ -45,7 +45,7 @@ export const DEMO_HOUSEHOLDS: DemoHousehold[] = [
   {
     key: "rivera",
     familyName: "The Rivera household",
-    owner: { email: "demo1@bumpatlas.test", name: "Ana Rivera" },
+    owner: { email: "demo1@bumpatlas.example.com", name: "Ana Rivera" },
     coParent: { name: "Jordan Rivera" },
     children: [
       { displayName: "Mateo", ageInMonths: 26 },
@@ -56,7 +56,7 @@ export const DEMO_HOUSEHOLDS: DemoHousehold[] = [
   {
     key: "okafor",
     familyName: "The Okafor household",
-    owner: { email: "demo2@bumpatlas.test", name: "Chidi Okafor" },
+    owner: { email: "demo2@bumpatlas.example.com", name: "Chidi Okafor" },
     coParent: { name: "Ngozi Okafor" },
     children: [
       { displayName: "Zuri", ageInMonths: 26 },
@@ -67,7 +67,7 @@ export const DEMO_HOUSEHOLDS: DemoHousehold[] = [
   {
     key: "lindqvist",
     familyName: "The Lindqvist household",
-    owner: { email: "demo3@bumpatlas.test", name: "Sofia Lindqvist" },
+    owner: { email: "demo3@bumpatlas.example.com", name: "Sofia Lindqvist" },
     coParent: { name: "Erik Lindqvist" },
     children: [
       { displayName: "Elsa", ageInMonths: 26 },
@@ -78,7 +78,7 @@ export const DEMO_HOUSEHOLDS: DemoHousehold[] = [
   {
     key: "haruna",
     familyName: "The Haruna household",
-    owner: { email: "demo4@bumpatlas.test", name: "Amina Haruna" },
+    owner: { email: "demo4@bumpatlas.example.com", name: "Amina Haruna" },
     coParent: { name: "Yusuf Haruna" },
     children: [
       { displayName: "Layla", ageInMonths: 26 },

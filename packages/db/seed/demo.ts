@@ -1,14 +1,8 @@
 import { randomBytes } from "node:crypto";
 
 import prisma from "../src/index";
-import {
-  DEMO_COMMUNITY_POSTS,
-  DEMO_COMPLETIONS,
-  DEMO_HOUSEHOLDS,
-  DEMO_MEMORIES,
-  demoImageUrl,
-  type DemoHousehold,
-} from "./demo-data";
+import { attachDemoHousehold, daysAgo } from "../src/demo/attach-household";
+import { DEMO_HOUSEHOLDS, type DemoHousehold } from "../src/demo/data";
 
 /**
  * Demo data seed: four sign-in-able households with identical content.
@@ -36,20 +30,6 @@ function assertNotProduction(): void {
   if (/prod/i.test(url)) {
     throw new Error("Refusing to seed demo data: DATABASE_URL looks like production.");
   }
-}
-
-function daysAgo(days: number): Date {
-  const date = new Date();
-  date.setUTCHours(0, 0, 0, 0);
-  date.setUTCDate(date.getUTCDate() - days);
-  return date;
-}
-
-function monthsAgo(months: number): Date {
-  const date = new Date();
-  date.setUTCHours(0, 0, 0, 0);
-  date.setUTCMonth(date.getUTCMonth() - months);
-  return date;
 }
 
 /**
@@ -98,8 +78,28 @@ async function provisionClerkUser(input: {
   });
 
   if (!created.ok) {
-    // Surface the status, not the body: Clerk error payloads can echo the password.
-    console.warn(`  ! Clerk rejected ${input.email} (HTTP ${created.status})`);
+    // Clerk error payloads can echo submitted values (including the password), so surface
+    // only the error code, the offending param name, and Clerk's own static description —
+    // never `meta` or the raw body. A bare status code here cost a long debugging session
+    // when Clerk started rejecting the seed's `.test` email domain.
+    const reasons = await created
+      .json()
+      .then((body: unknown) => {
+        const errors = (body as { errors?: unknown }).errors;
+        if (!Array.isArray(errors)) return [];
+        return errors.map((error: Record<string, unknown>) => {
+          const param = (error.meta as { param_name?: string } | undefined)?.param_name;
+          return [error.code, param && `(${param})`, error.long_message]
+            .filter(Boolean)
+            .join(" ");
+        });
+      })
+      .catch(() => []);
+
+    console.warn(
+      `  ! Clerk rejected ${input.email} (HTTP ${created.status})` +
+        (reasons.length > 0 ? `\n      ${reasons.join("\n      ")}` : ""),
+    );
     return null;
   }
 
@@ -130,15 +130,22 @@ async function clearHousehold(household: DemoHousehold): Promise<void> {
 }
 
 const coParentEmail = (household: DemoHousehold) =>
-  `coparent-${household.key}@bumpatlas.test`;
+  `coparent-${household.key}@bumpatlas.example.com`;
 
-async function seedHousehold(household: DemoHousehold): Promise<void> {
+/** Resolves to true when the owner ended up with a real, sign-in-able Clerk account. */
+async function seedHousehold(household: DemoHousehold): Promise<boolean> {
   await clearHousehold(household);
 
-  const clerkId = WITH_CLERK
-    ? ((await provisionClerkUser(household.owner)) ??
-      `demo_${household.key}_${randomBytes(4).toString("hex")}`)
-    : `demo_${household.key}`;
+  const provisionedClerkId = WITH_CLERK ? await provisionClerkUser(household.owner) : null;
+
+  // The random suffix keeps the unique constraint satisfied when provisioning failed, so the
+  // rest of the seed still completes — but the caller has to know it produced a local-only
+  // account rather than printing sign-in instructions that cannot work.
+  const clerkId =
+    provisionedClerkId ??
+    (WITH_CLERK
+      ? `demo_${household.key}_${randomBytes(4).toString("hex")}`
+      : `demo_${household.key}`);
 
   const owner = await prisma.user.create({
     data: {
@@ -156,191 +163,17 @@ async function seedHousehold(household: DemoHousehold): Promise<void> {
     },
   });
 
-  // Local-only: exists so co-parent content and roles are visible. Not sign-in-able.
-  const coParent = await prisma.user.create({
-    data: {
+  await attachDemoHousehold({
+    ownerUserId: owner.id,
+    household,
+    // Stable identity so clearHousehold can find and delete it on the next run.
+    coParent: {
       clerkId: `demo_${household.key}_coparent`,
       email: coParentEmail(household),
-      name: household.coParent.name,
-      timeZone: "Europe/London",
-      isAdultAttested: true,
-      onboardingCompletedAt: new Date(),
-      createdAt: daysAgo(88),
     },
   });
 
-  const family = await prisma.family.create({
-    data: {
-      name: household.familyName,
-      ownerUserId: owner.id,
-      members: {
-        create: [
-          { userId: owner.id, role: "OWNER", status: "ACTIVE" },
-          { userId: coParent.id, role: "PARENT", status: "ACTIVE" },
-        ],
-      },
-    },
-  });
-
-  await prisma.user.updateMany({
-    where: { id: { in: [owner.id, coParent.id] } },
-    data: { defaultFamilyId: family.id },
-  });
-
-  for (const userId of [owner.id, coParent.id]) {
-    await prisma.notificationPreference.create({ data: { userId } });
-    for (const policyKey of ["TERMS", "PRIVACY", "COMMUNITY"] as const) {
-      await prisma.consentRecord.create({
-        data: { userId, policyKey, version: "2026-07-01" },
-      });
-    }
-  }
-
-  await prisma.entitlementCache.create({
-    data: {
-      familyId: family.id,
-      isPremium: household.isPremium,
-      maxMembers: household.isPremium ? 6 : 2,
-      maxChildren: household.isPremium ? null : 2,
-      mediaUploadsPerMonth: household.isPremium ? 1000 : 100,
-      aiDailyLimit: household.isPremium ? 30 : 5,
-      userGroupsCreatedLimit: household.isPremium ? 5 : 1,
-      source: household.isPremium ? "REVENUECAT" : "FREE",
-      ...(household.isPremium
-        ? { planId: "premium_monthly", renewsAt: daysAgo(-25) }
-        : {}),
-    },
-  });
-
-  const children = [];
-  for (const [index, child] of household.children.entries()) {
-    children.push(
-      await prisma.childProfile.create({
-        data: {
-          familyId: family.id,
-          displayName: child.displayName,
-          dateOfBirth: monthsAgo(child.ageInMonths),
-          birthOrder: index,
-        },
-      }),
-    );
-  }
-
-  // Youngest is the active child, matching what resolveActiveChild would pick anyway.
-  const youngest = children.at(-1)!;
-  await prisma.user.updateMany({
-    where: { id: { in: [owner.id, coParent.id] } },
-    data: { activeChildId: youngest.id },
-  });
-
-  let imageIndex = 0;
-  for (const [index, memory] of DEMO_MEMORIES.entries()) {
-    const child = children[memory.childIndex] ?? youngest;
-    // Alternate authorship so the household timeline shows both parents.
-    const authorId = index % 3 === 0 ? coParent.id : owner.id;
-    const eventDate = daysAgo(memory.daysAgo);
-
-    const created = await prisma.memoryEntry.create({
-      data: {
-        familyId: family.id,
-        authorUserId: authorId,
-        childId: child.id,
-        title: memory.body.split("\n")[0]!.slice(0, 120),
-        body: memory.body,
-        eventDate,
-        createdAt: eventDate,
-      },
-    });
-
-    if (memory.withImage) {
-      imageIndex += 1;
-      await prisma.mediaAsset.create({
-        data: {
-          familyId: family.id,
-          uploaderUserId: authorId,
-          memoryId: created.id,
-          // An absolute URL, which the media serializer passes through outside production.
-          storageKey: demoImageUrl(`${household.key}-${imageIndex}`),
-          contentType: "image/jpeg",
-          byteSize: 250_000,
-          width: 900,
-          height: 700,
-          status: "ATTACHED",
-          createdAt: eventDate,
-        },
-      });
-    }
-  }
-
-  for (const completion of DEMO_COMPLETIONS) {
-    for (const kind of completion.kinds) {
-      await prisma.challengeCompletion.create({
-        data: {
-          userId: owner.id,
-          familyId: family.id,
-          planDate: daysAgo(completion.daysAgo),
-          kind,
-        },
-      });
-    }
-  }
-
-  await prisma.badgeAward.createMany({
-    data: [
-      { userId: owner.id, badgeKey: "first_capture" },
-      { userId: owner.id, badgeKey: "care_pause" },
-      { userId: owner.id, badgeKey: "partner_joined" },
-    ],
-    skipDuplicates: true,
-  });
-
-  const definitions = await prisma.milestoneDefinition.findMany({ take: 3 });
-  for (const [index, definition] of definitions.entries()) {
-    await prisma.milestoneObservation.create({
-      data: {
-        familyId: family.id,
-        childId: youngest.id,
-        definitionId: definition.id,
-        status: index === 0 ? "OBSERVED" : index === 1 ? "EMERGING" : "NOT_OBSERVED",
-        observedAt: index === 0 ? daysAgo(4) : null,
-      },
-    });
-  }
-
-  await seedCommunityFor({ ownerId: owner.id, householdKey: household.key });
-}
-
-/** Joins a stage group and adds posts, so Connect is not an empty screen. */
-async function seedCommunityFor(input: {
-  ownerId: string;
-  householdKey: string;
-}): Promise<void> {
-  const group = await prisma.communityGroup.findFirst({
-    where: { kind: "STAGE", slug: "months-0-6" },
-  });
-
-  if (!group) return;
-
-  await prisma.communityGroupMember.upsert({
-    where: { groupId_userId: { groupId: group.id, userId: input.ownerId } },
-    create: { groupId: group.id, userId: input.ownerId, status: "ACTIVE" },
-    update: { status: "ACTIVE" },
-  });
-
-  // Only the first household authors posts; the rest read the same conversation, which is
-  // what a real cohort looks like and exercises the block/report flows against someone else.
-  if (input.householdKey !== DEMO_HOUSEHOLDS[0]!.key) return;
-
-  for (const [index, body] of DEMO_COMMUNITY_POSTS.entries()) {
-    await prisma.communityPost.create({
-      data: {
-        groupId: group.id,
-        authorUserId: input.ownerId,
-        body,
-        createdAt: daysAgo(index),
-      },
-    });
-  }
+  return provisionedClerkId !== null;
 }
 
 async function main() {
@@ -355,9 +188,13 @@ async function main() {
     );
   }
 
+  const signInReady = new Set<string>();
+
   for (const household of DEMO_HOUSEHOLDS) {
     console.log(`Seeding ${household.familyName}...`);
-    await seedHousehold(household);
+    if (await seedHousehold(household)) {
+      signInReady.add(household.key);
+    }
   }
 
   const [families, memories, media] = await Promise.all([
@@ -368,12 +205,26 @@ async function main() {
 
   console.log(`\nDone. ${families} households, ${memories} memories, ${media} images.\n`);
 
-  if (WITH_CLERK) {
+  if (WITH_CLERK && signInReady.size > 0) {
     console.log("Sign in with any of these (password below):");
     for (const household of DEMO_HOUSEHOLDS) {
+      if (!signInReady.has(household.key)) continue;
       console.log(`  ${household.owner.email}  ${household.isPremium ? "(premium)" : "(free)"}`);
     }
     console.log(`\n  password: ${DEMO_PASSWORD}\n`);
+
+    const failed = DEMO_HOUSEHOLDS.filter((h) => !signInReady.has(h.key));
+    if (failed.length > 0) {
+      console.warn(
+        `! ${failed.length} household(s) have local rows but no Clerk account and cannot be ` +
+          `signed into: ${failed.map((h) => h.owner.email).join(", ")}\n`,
+      );
+    }
+  } else if (WITH_CLERK) {
+    console.warn(
+      "! Clerk provisioning failed for every household — see the errors above.\n" +
+        "  The local rows exist, but none of these accounts can be signed into.\n",
+    );
   } else {
     console.log(
       "Local rows only — these accounts cannot be signed into.\n" +
