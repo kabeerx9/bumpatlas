@@ -1,0 +1,70 @@
+// Pregnancy and child profiles. Kept as two models rather than one generic JSON
+// profile: they have different lifecycles, and a pregnancy converts *into*
+// children rather than becoming one.
+
+enum PregnancyStatus {
+  ACTIVE
+  CONVERTED
+  ARCHIVED
+}
+
+model PregnancyProfile {
+  id       String @id @default(cuid())
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  /// Calendar date: time of day is meaningless and would drift across time zones.
+  dueDate DateTime @db.Date
+
+  status PregnancyStatus @default(ACTIVE)
+
+  /// First child produced by conversion. A convenience pointer only — a twin
+  /// conversion creates several children, so never treat this as the complete
+  /// set. Query ChildProfile by family instead.
+  primaryConvertedChildId String?
+
+  /// Enforces "at most one ACTIVE pregnancy per family" in Postgres rather than in
+  /// application code: set to familyId while ACTIVE and null once converted or
+  /// archived. Postgres treats NULLs as distinct in a unique index, so any number
+  /// of inactive pregnancies coexist while a second concurrent ACTIVE insert
+  /// fails on the constraint instead of racing through a read-then-write check.
+  activeFamilyKey String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([familyId, status])
+}
+
+model ChildProfile {
+  id       String @id @default(cuid())
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  /// trim().min(1).max(80) — matches createChildInputSchema in packages/contracts.
+  displayName String
+
+  /// Calendar date. Rejected server-side when in the future or before 1900.
+  dateOfBirth DateTime @db.Date
+
+  /// Stable sibling ordering, assigned from input order on twin conversion so
+  /// two children sharing a birth date always resolve deterministically.
+  birthOrder Int @default(0)
+
+  /// For premature births, the original due date, used for adjusted-age guidance.
+  adjustedDueDate DateTime? @db.Date
+
+  /// Hides the child from pickers and stage selection while keeping their
+  /// memories readable in the household timeline. There is no child delete in
+  /// MVP — deleting would orphan the meaning of attached memories.
+  archivedAt DateTime?
+
+  /// Back-relation for User.activeChildId.
+  activeForUsers User[] @relation("UserActiveChild")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Serves the hot path: youngest non-archived child in a family.
+  @@index([familyId, archivedAt, dateOfBirth])
+}

@@ -19,6 +19,12 @@ describe("todayResponseSchema", () => {
     const payload = {
       date: "2026-07-29",
       prompt: "What made today feel like yours?",
+      cards: {
+        capture: { promptId: "prompt_1", prompt: "What made today feel like yours?" },
+        care: null,
+        learn: null,
+        connect: null,
+      },
       loopCompletion: { capture: true, care: false, learn: false, connect: false },
       weekProgress: { storyDays: 3, wellnessDays: 2, activeDays: 3, goal: 4 },
       mediaUploadsUsed: 8,
@@ -94,6 +100,16 @@ describe("familySummarySchema", () => {
       name: "The Rivera household",
       stageMode: "postpartum" as const,
       childDisplayName: "Ava",
+      children: [
+        {
+          id: "child_1",
+          displayName: "Ava",
+          dateOfBirth: "2026-05-01",
+          birthOrder: 0,
+          isActive: true,
+          archivedAt: null,
+        },
+      ],
       dueDate: null,
       members: [
         { id: "m1", displayName: "You", role: "OWNER" as const, status: "active" as const },
@@ -166,6 +182,8 @@ describe("listModerationQueueResponseSchema", () => {
           reporter: "Anonymous",
           priority: "high" as const,
           status: "Open",
+          groupId: "grp_1",
+          groupKind: "stage" as const,
           createdAt: "2026-07-29T10:00:00.000Z",
         },
       ],

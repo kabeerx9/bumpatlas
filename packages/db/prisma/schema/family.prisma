@@ -1,0 +1,94 @@
+// Households. Every family-scoped query in the API must prove active membership
+// through FamilyMember inside the query itself (§6.3).
+
+enum FamilyMemberRole {
+  OWNER
+  PARENT
+  CONTRIBUTOR
+  VIEWER
+}
+
+enum FamilyMemberStatus {
+  ACTIVE
+  INVITED
+  REMOVED
+}
+
+model Family {
+  id   String @id @default(cuid())
+  name String
+
+  ownerUserId String
+  owner       User   @relation("FamilyOwner", fields: [ownerUserId], references: [id])
+
+  members  FamilyMember[]
+  invites  FamilyInvite[]
+  children ChildProfile[]
+
+  pregnancies PregnancyProfile[]
+  auditEvents AuditEvent[]
+
+  /// Users whose current household this is. Back-relation for User.defaultFamilyId.
+  defaultForUsers User[] @relation("UserDefaultFamily")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerUserId])
+}
+
+model FamilyMember {
+  id       String @id @default(cuid())
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role   FamilyMemberRole
+  status FamilyMemberStatus @default(ACTIVE)
+
+  joinedAt  DateTime  @default(now())
+  removedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Makes repeated invite acceptance idempotent at the database level rather
+  /// than relying on a read-then-write check (§5.10).
+  @@unique([familyId, userId])
+  @@index([userId, status])
+}
+
+/// Single-use household invite. The plaintext token is returned once at creation
+/// and never stored — only its SHA-256 hash — so a database or log leak cannot be
+/// replayed into household access.
+model FamilyInvite {
+  id       String @id @default(cuid())
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  /// SHA-256 of 32 random bytes. Unique so acceptance can lock exactly one row.
+  tokenHash String @unique
+
+  /// Never OWNER: a family has exactly one owner in MVP and ownership transfer is
+  /// post-MVP. Enforced in the invite service.
+  role FamilyMemberRole
+
+  /// Normalized lowercase. When set, acceptance requires a matching account email.
+  email String?
+
+  expiresAt DateTime
+
+  acceptedAt       DateTime?
+  acceptedByUserId String?
+  acceptedByUser   User?     @relation("InviteAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  createdByUserId String
+  createdByUser   User   @relation("InviteCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([familyId, acceptedAt])
+  @@index([expiresAt])
+}

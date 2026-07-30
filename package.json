@@ -11,6 +11,7 @@
     "build": "turbo build",
     "check-types": "turbo check-types",
     "test": "node --import tsx --test scripts/*.test.ts && turbo test",
+    "test:integration": "turbo test:integration",
     "init:project": "node --import tsx scripts/init-project.ts",
     "doctor": "node --import tsx scripts/doctor.ts",
     "dev:first-run": "sh scripts/dev-first-run.sh",

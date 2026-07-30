@@ -4,11 +4,26 @@ import { apiErrorResponseSchema } from "./me";
 
 export class ApiError extends Error {
   status: number;
+  /**
+   * Business code from a structured v1 error, e.g. `QUOTA_EXCEEDED` or
+   * `CHILD_LIMIT_REACHED`. Undefined for legacy string errors and transport
+   * failures. Clients branch on this rather than on message text.
+   */
+  code?: string;
+  details?: unknown;
+  requestId?: string;
 
-  constructor(status: number, message: string) {
+  constructor(
+    status: number,
+    message: string,
+    options?: { code?: string; details?: unknown; requestId?: string },
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = options?.code;
+    this.details = options?.details;
+    this.requestId = options?.requestId;
   }
 }
 
@@ -47,10 +62,13 @@ export function createApiClient(options: ApiClientOptions) {
     const payload = (await response.json().catch(() => null)) as unknown;
     const parsed = apiErrorResponseSchema.safeParse(payload);
 
+    if (parsed.success && typeof parsed.data.error !== "string") {
+      const { code, message, details, requestId } = parsed.data.error;
+      throw new ApiError(response.status, message, { code, details, requestId });
+    }
+
     const message = parsed.success
-      ? typeof parsed.data.error === "string"
-        ? parsed.data.error
-        : parsed.data.error.message
+      ? (parsed.data.error as string)
       : response.statusText;
 
     throw new ApiError(response.status, message);
