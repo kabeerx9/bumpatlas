@@ -1,0 +1,51 @@
+// Data export and deletion requests (GDPR-style subject requests).
+//
+// A database row, not a queue product: the volume is low, retries must be safe, and the
+// state has to be readable by the requester while it progresses.
+
+enum DataRequestType {
+  EXPORT
+  DELETE
+}
+
+enum DataRequestStatus {
+  /// Contract maps this to "queued".
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+model DataRequest {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Household at request time. A later change of household must not silently change
+  /// what an in-flight export covers.
+  familyId String?
+
+  type   DataRequestType
+  status DataRequestStatus @default(PENDING)
+
+  /// Set when a worker claims the row, so a crashed run can be detected and retried
+  /// rather than leaving the request stuck in PROCESSING forever.
+  claimedAt DateTime?
+  attempts  Int       @default(0)
+
+  /// Private object key. The download URL is signed per request and never stored.
+  exportStorageKey String?
+  readyAt          DateTime?
+  /// The export link expires; the row stays as the audit trail.
+  expiresAt        DateTime?
+
+  /// Error class only — never private content.
+  failureCode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Batch claiming reads (status, createdAt).
+  @@index([status, createdAt])
+  @@index([userId, type, status])
+}

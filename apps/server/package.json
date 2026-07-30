@@ -10,7 +10,8 @@
     "db:push:test": "node --import tsx scripts/push-test-schema.ts",
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/main.ts --outfile server",
     "dev": "tsx watch src/main.ts",
-    "start": "node dist/main.mjs"
+    "start": "node dist/main.mjs",
+    "ai:eval": "node --env-file=.env.example --import tsx src/services/ai/eval.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1098.0",

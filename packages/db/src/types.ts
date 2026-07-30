@@ -1,4 +1,6 @@
 export type {
+  AiConversation,
+  AiMessage,
   BadgeAward,
   ChallengeCompletion,
   ChildProfile,
@@ -6,6 +8,7 @@ export type {
   ContentBookmark,
   ContentItem,
   DailyPlan,
+  DataRequest,
   EntitlementCache,
   Family,
   FamilyInvite,
@@ -26,9 +29,13 @@ export type {
 } from "../prisma/generated/client";
 
 export {
+  AiMessageRole,
+  AiSafetyLabel,
   ChallengeKind,
   ConsentPolicyKey,
   ContentType,
+  DataRequestStatus,
+  DataRequestType as DataRequestTypeEnum,
   EntitlementSource,
   FamilyMemberRole,
   FamilyMemberStatus,

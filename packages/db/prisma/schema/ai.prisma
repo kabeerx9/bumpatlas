@@ -1,0 +1,96 @@
+// Bounded assistant. Off by default (AI_ENABLED=false) and unable to answer at all until
+// reviewed content exists to cite.
+
+enum AiMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+/// Safety classification attached to every stored answer, so a later audit can find what
+/// the assistant said about sensitive topics without reading every message.
+enum AiSafetyLabel {
+  NORMAL
+  /// Answered from reviewed sources.
+  SOURCED
+  /// Refused because no reliable source matched.
+  REFUSED_NO_SOURCE
+  /// Fixed escalation response for a critical category.
+  ESCALATED
+  /// Refused as out of scope (diagnosis, dosing).
+  REFUSED_OUT_OF_SCOPE
+}
+
+model AiConversation {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  familyId String?
+
+  title String?
+
+  messages AiMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, updatedAt])
+}
+
+model AiMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  role AiMessageRole
+  body String
+
+  /// Content slugs the answer was built from. An answer with no citations and a NORMAL
+  /// label should not exist.
+  citationSlugs String[]
+
+  safetyLabel AiSafetyLabel @default(NORMAL)
+
+  /// Set when the user reports the message. Kept as moderation evidence.
+  reportedAt   DateTime?
+  reportReason String?
+
+  createdAt DateTime @default(now())
+
+  /// Retention purge reads (createdAt).
+  @@index([conversationId, createdAt])
+  @@index([createdAt])
+}
+
+/**
+ * Per-family daily allowance.
+ *
+ * A row per (family, day) with a counter, incremented by a conditional UPDATE so the
+ * quota check and the increment are one atomic statement — a read-then-write would let
+ * two concurrent messages both pass the check.
+ */
+model AiUsageDaily {
+  id       String @id @default(cuid())
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  day   DateTime @db.Date
+  count Int      @default(0)
+
+  @@unique([familyId, day])
+}
+
+/// Per-user hourly cap, independent of the family allowance: it exists to stop one member
+/// burning the household's day in a minute.
+model AiUsageHourly {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Truncated to the hour.
+  hourStart DateTime
+  count     Int      @default(0)
+
+  @@unique([userId, hourStart])
+}
