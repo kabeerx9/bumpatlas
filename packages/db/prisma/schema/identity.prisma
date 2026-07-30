@@ -47,6 +47,8 @@ model User {
   consents       ConsentRecord[]
   auditEvents    AuditEvent[]
 
+  notificationPreference NotificationPreference?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

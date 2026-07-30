@@ -11,6 +11,9 @@ import { registerRequestContext } from "@/plugins/request-context";
 import { registerAccountRoutes } from "@/routes/account";
 import { registerHealthRoutes } from "@/routes/health";
 import { registerMeRoutes } from "@/routes/me";
+import { registerFamilyRoutes } from "@/routes/v1/families";
+import { registerPreferenceRoutes } from "@/routes/v1/preferences";
+import { registerProfileRoutes } from "@/routes/v1/profiles";
 import { registerClerkWebhookRoutes } from "@/routes/webhooks/clerk";
 
 const baseCorsConfig = {
@@ -104,6 +107,11 @@ export function buildApp() {
   fastify.register(registerMeRoutes);
   fastify.register(registerAccountRoutes);
   fastify.register(registerClerkWebhookRoutes);
+
+  // Phase 1
+  fastify.register(registerFamilyRoutes);
+  fastify.register(registerProfileRoutes);
+  fastify.register(registerPreferenceRoutes);
 
   return fastify;
 }

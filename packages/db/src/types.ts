@@ -1,9 +1,11 @@
 export type {
   ChildProfile,
   ConsentRecord,
+  EntitlementCache,
   Family,
   FamilyInvite,
   FamilyMember,
+  NotificationPreference,
   Prisma,
   PregnancyProfile,
   User,
@@ -11,6 +13,7 @@ export type {
 
 export {
   ConsentPolicyKey,
+  EntitlementSource,
   FamilyMemberRole,
   FamilyMemberStatus,
   PregnancyStatus,
