@@ -15,10 +15,12 @@ import { registerFamilyRoutes } from "@/routes/v1/families";
 import { registerCronRoutes } from "@/routes/cron/index";
 import { registerAiRoutes } from "@/routes/v1/ai";
 import { registerBillingRoutes } from "@/routes/v1/billing";
+import { registerCommunityRoutes } from "@/routes/v1/community";
 import { registerContentRoutes } from "@/routes/v1/content";
 import { registerDataRequestRoutes } from "@/routes/v1/data-requests";
 import { registerMemoryRoutes } from "@/routes/v1/memories";
 import { registerPreferenceRoutes } from "@/routes/v1/preferences";
+import { registerModerationRoutes } from "@/routes/v1/moderation";
 import { registerProfileRoutes } from "@/routes/v1/profiles";
 import { registerPublicRecapRoutes, registerRecapRoutes } from "@/routes/v1/recaps";
 import { registerTodayRoutes } from "@/routes/v1/today";
@@ -141,6 +143,10 @@ export function buildApp() {
 
   // Phase 7 — inert until FEATURE_AI and AI_ENABLED are both true and a provider is wired.
   fastify.register(registerAiRoutes);
+
+  // Phase 8 — community and founder moderation.
+  fastify.register(registerCommunityRoutes);
+  fastify.register(registerModerationRoutes);
 
   return fastify;
 }

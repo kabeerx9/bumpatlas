@@ -1,0 +1,294 @@
+// Community. The highest operational risk surface in the product.
+//
+// There is exactly ONE group model. Seeded stage cohorts and member-created groups differ
+// only by `kind`, so posts, comments, reactions, reports, blocks, moderation, and feed
+// filtering have a single code path. A parallel set of models for user groups would mean
+// every safety filter has to be remembered twice.
+
+enum CommunityGroupKind {
+  /// Seeded stage cohort. Discoverable by matching stage.
+  STAGE
+  /// Member-created. Always link-only.
+  USER
+}
+
+enum CommunityGroupVisibility {
+  STAGE_DISCOVERABLE
+  /// Never listed, never searchable, joinable only with an invite.
+  LINK_ONLY
+}
+
+enum CommunityGroupRole {
+  HOST
+  MEMBER
+}
+
+enum CommunityMemberStatus {
+  ACTIVE
+  LEFT
+  REMOVED
+  /// Loses read access immediately and cannot rejoin with any link.
+  BANNED
+}
+
+model CommunityGroup {
+  id   String @id @default(cuid())
+  /// Server-generated. For USER groups a random slug, never derived from the title, so a
+  /// group's URL cannot be guessed from its name.
+  slug String @unique
+
+  title       String
+  description String?
+
+  kind       CommunityGroupKind
+  visibility CommunityGroupVisibility
+
+  /// Only for STAGE groups.
+  stageKey String?
+
+  createdByUserId String?
+
+  postingEnabled Boolean @default(true)
+  /// Set when an admin disables posting. A host cannot re-enable what an admin disabled.
+  postingDisabledByAdmin Boolean @default(false)
+
+  memberLimit Int
+  isActive    Boolean   @default(true)
+  archivedAt  DateTime?
+
+  members  CommunityGroupMember[]
+  invites  CommunityGroupInvite[]
+  posts    CommunityPost[]
+  reports  ModerationReport[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kind, isActive, stageKey])
+  @@index([createdByUserId])
+}
+
+model CommunityGroupMember {
+  id      String         @id @default(cuid())
+  groupId String
+  group   CommunityGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role   CommunityGroupRole    @default(MEMBER)
+  status CommunityMemberStatus @default(ACTIVE)
+
+  joinedAt  DateTime  @default(now())
+  removedAt DateTime?
+
+  /// Makes a double-tapped join idempotent at the database level.
+  @@unique([groupId, userId])
+  @@index([userId, status])
+}
+
+/**
+ * Group invite. Mirrors the family invite design so there is one token pattern in the
+ * codebase, with one difference: reusable up to `maxUses`, so a host can drop one link into
+ * a group chat.
+ *
+ * Still hashed at rest, expiring, revocable, and use-capped.
+ */
+model CommunityGroupInvite {
+  id      String         @id @default(cuid())
+  groupId String
+  group   CommunityGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  createdByUserId String
+
+  /// SHA-256 of 32 random bytes. Plaintext is returned once and never stored or logged.
+  tokenHash String @unique
+
+  maxUses  Int @default(25)
+  useCount Int @default(0)
+
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([groupId, revokedAt])
+}
+
+model CommunityPost {
+  id      String         @id @default(cuid())
+  groupId String
+  group   CommunityGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  authorUserId String
+  author       User   @relation("PostAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  /// Text only. There are deliberately no media columns anywhere in this file: the product
+  /// bans child photos in community, and the safest way to enforce that is to have nowhere
+  /// to put one.
+  body String
+
+  hiddenAt DateTime?
+  /// True when an admin hid it. Hosts cannot reverse an admin hide.
+  hiddenByAdmin Boolean @default(false)
+
+  deletedAt DateTime?
+
+  comments  CommunityComment[]
+  reactions CommunityReaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// The feed read filters on all four in one query.
+  @@index([groupId, deletedAt, hiddenAt, createdAt])
+  @@index([authorUserId, createdAt])
+}
+
+model CommunityComment {
+  id     String        @id @default(cuid())
+  postId String
+  post   CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  authorUserId String
+  author       User   @relation("CommentAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  body String
+
+  hiddenAt      DateTime?
+  hiddenByAdmin Boolean   @default(false)
+  deletedAt     DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([postId, deletedAt, hiddenAt, createdAt])
+  @@index([authorUserId, createdAt])
+}
+
+model CommunityReaction {
+  id     String        @id @default(cuid())
+  postId String
+  post   CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId String
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// One emoji in MVP. Stored so more can be added without a migration.
+  emoji String @default("❤️")
+
+  createdAt DateTime @default(now())
+
+  /// Idempotent by constraint: tapping twice cannot double-count.
+  @@unique([postId, userId, emoji])
+}
+
+/**
+ * A one-directional block that filters in both directions.
+ *
+ * Asymmetric storage, symmetric effect: A blocking B means neither sees the other, because
+ * a block that only hid one side would let the blocked user keep replying.
+ */
+model UserBlock {
+  id            String @id @default(cuid())
+  blockerUserId String
+  blocker       User   @relation("Blocker", fields: [blockerUserId], references: [id], onDelete: Cascade)
+  blockedUserId String
+  blocked       User   @relation("Blocked", fields: [blockedUserId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([blockerUserId, blockedUserId])
+  @@index([blockedUserId])
+}
+
+enum ModerationTargetType {
+  POST
+  COMMENT
+  USER
+}
+
+enum ModerationPriority {
+  NORMAL
+  HIGH
+  /// Safety-of-life. Immediate acknowledgement and escalation log.
+  CRITICAL
+}
+
+enum ModerationStatus {
+  OPEN
+  REVIEWING
+  ESCALATED
+  RESOLVED
+  REJECTED
+}
+
+model ModerationReport {
+  id String @id @default(cuid())
+
+  reporterUserId String
+  reporter       User   @relation("Reporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+
+  targetType   ModerationTargetType
+  targetId     String
+  /// Denormalised so a queue item survives the target being hidden or archived.
+  targetAuthorUserId String?
+
+  /// Group context, so the founder can see whether a report came from a seeded cohort or a
+  /// member-created group — the remediation differs.
+  groupId String?
+  group   CommunityGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  reason  String
+  details String?
+
+  priority ModerationPriority @default(NORMAL)
+  status   ModerationStatus   @default(OPEN)
+
+  /// Queue-entry time, kept explicitly so SLA age is measurable rather than inferred.
+  queuedAt   DateTime  @default(now())
+  reviewedAt DateTime?
+
+  actions ModerationAction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Queue ordering.
+  @@index([status, priority, queuedAt])
+  @@index([targetType, targetId])
+  @@index([targetAuthorUserId, priority])
+}
+
+enum ModerationActorScope {
+  /// Founder acting through the admin queue.
+  ADMIN
+  /// Host acting inside their own group only.
+  HOST
+}
+
+/**
+ * Immutable record of a moderation decision.
+ *
+ * Append-only: evidence is never hard-deleted during moderation, and the scope marker is
+ * what lets the system tell an admin hide from a host hide — hosts may reverse only their
+ * own.
+ */
+model ModerationAction {
+  id       String            @id @default(cuid())
+  reportId String?
+  report   ModerationReport? @relation(fields: [reportId], references: [id], onDelete: SetNull)
+
+  actorUserId String
+  actorScope  ModerationActorScope
+
+  /// e.g. "hide_post", "ban_member", "escalate".
+  action String
+  note   String?
+
+  targetType ModerationTargetType?
+  targetId   String?
+  groupId    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([reportId, createdAt])
+  @@index([groupId, createdAt])
+}
