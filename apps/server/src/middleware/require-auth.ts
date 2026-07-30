@@ -3,6 +3,7 @@ import { env } from "@bumpatlas/env/server";
 import { getAuth } from "@clerk/fastify";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
+import { isDemoSeedingEnabled, seedNewUserIfEnabled } from "@/services/demo/seed-new-user";
 import { unauthenticated } from "@/services/errors";
 
 /**
@@ -26,18 +27,42 @@ export type AuthContext = {
  * front of every authenticated request. The row starts with only the Clerk ID;
  * `/api/me` and the Clerk webhook fill in email, name, and avatar.
  */
-async function loadOrCreateUser(clerkUserId: string) {
-  const existing = await prisma.user.findUnique({
-    where: { clerkId: clerkUserId },
-    select: { id: true, defaultFamilyId: true, timeZone: true },
-  });
+const USER_FIELDS = { id: true, defaultFamilyId: true, timeZone: true } as const;
 
-  if (existing) return existing;
+async function loadOrCreateUser(clerkUserId: string): Promise<{
+  id: string;
+  defaultFamilyId: string | null;
+  timeZone: string | null;
+}> {
+  // Upsert rather than find-then-create. A cold app start fans out ~10 authenticated
+  // requests concurrently, so for a Clerk user with no local row yet every one of them
+  // misses the read and then races the insert: one wins and the rest fail P2002. Prisma
+  // compiles a unique-field upsert with no nested writes into a single
+  // INSERT ... ON CONFLICT DO UPDATE, which the database resolves atomically.
+  //
+  // `update: {}` is deliberate — this row is only ever *created* here. Email, name, and
+  // avatar are owned by /api/me and the Clerk webhook, and must not be clobbered.
+  try {
+    return await prisma.user.upsert({
+      where: { clerkId: clerkUserId },
+      create: { clerkId: clerkUserId },
+      update: {},
+      select: USER_FIELDS,
+    });
+  } catch (error) {
+    // Belt and braces: ON CONFLICT covers the common race, but a concurrent insert landing
+    // between the conflict check and the update can still surface P2002. The row provably
+    // exists by then, so re-reading is the correct recovery.
+    if ((error as { code?: string }).code !== "P2002") throw error;
 
-  return prisma.user.create({
-    data: { clerkId: clerkUserId },
-    select: { id: true, defaultFamilyId: true, timeZone: true },
-  });
+    const existing = await prisma.user.findUnique({
+      where: { clerkId: clerkUserId },
+      select: USER_FIELDS,
+    });
+
+    if (!existing) throw error;
+    return existing;
+  }
 }
 
 /**
@@ -84,7 +109,19 @@ export function createRequireAuth(getAuthFn: GetAuth = getAuth) {
       return null;
     }
 
-    const user = await loadOrCreateUser(clerkUserId);
+    let user = await loadOrCreateUser(clerkUserId);
+
+    // Development affordance, off by default: give a brand-new account a populated household
+    // so a first sign-in does not land on empty-state screens. Awaited rather than fired off,
+    // because the request that triggers it is usually the very first /api/v1/today — letting
+    // it race would return an empty payload and cache it client-side.
+    if (!user.defaultFamilyId && isDemoSeedingEnabled()) {
+      await seedNewUserIfEnabled(user.id, request.log);
+      user = (await prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
+        select: USER_FIELDS,
+      })) as typeof user;
+    }
 
     persistTimeZone(request, user.id, user.timeZone);
 
