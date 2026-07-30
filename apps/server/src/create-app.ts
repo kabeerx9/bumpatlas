@@ -16,6 +16,7 @@ import { registerContentRoutes } from "@/routes/v1/content";
 import { registerMemoryRoutes } from "@/routes/v1/memories";
 import { registerPreferenceRoutes } from "@/routes/v1/preferences";
 import { registerProfileRoutes } from "@/routes/v1/profiles";
+import { registerPublicRecapRoutes, registerRecapRoutes } from "@/routes/v1/recaps";
 import { registerTodayRoutes } from "@/routes/v1/today";
 import { registerClerkWebhookRoutes } from "@/routes/webhooks/clerk";
 
@@ -122,6 +123,10 @@ export function buildApp() {
   // Phase 3
   fastify.register(registerTodayRoutes);
   fastify.register(registerContentRoutes);
+
+  // Phase 4
+  fastify.register(registerRecapRoutes);
+  fastify.register(registerPublicRecapRoutes);
 
   return fastify;
 }

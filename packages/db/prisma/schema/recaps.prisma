@@ -1,0 +1,66 @@
+// Weekly recaps and their share links.
+
+/**
+ * One recap per family per week — household-scoped, not per child.
+ *
+ * A parent of two wants one weekly moment, not two competing ones, and per-child recap
+ * tracks are explicitly deferred. Highlights therefore draw from every child's memories
+ * and never rank or compare siblings.
+ */
+model WeeklyRecap {
+  id       String @id @default(cuid())
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  /// Monday of the recap week, in the family's own time zone.
+  weekStart DateTime @db.Date
+
+  weekLabel String
+  title     String
+
+  /// Ordered short strings derived from the week's memories. No memory bodies verbatim.
+  highlights String[]
+
+  memoryCount   Int @default(0)
+  storyDays     Int @default(0)
+  wellnessDays  Int @default(0)
+
+  /// Which child was active when generated, for the private response only. Never in the
+  /// public payload.
+  childId String?
+
+  shareTokens RecapShareToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Makes generation idempotent: cron and on-demand both target the same row.
+  @@unique([familyId, weekStart])
+}
+
+/**
+ * A share link. Only the hash is stored, exactly like a family invite, so there is one
+ * token pattern in the codebase.
+ *
+ * A recap link is readable by anyone who receives it, which is why the public payload is
+ * an allowlist rather than a filtered version of the private one.
+ */
+model RecapShareToken {
+  id      String      @id @default(cuid())
+  recapId String
+  recap   WeeklyRecap @relation(fields: [recapId], references: [id], onDelete: Cascade)
+
+  tokenHash String @unique
+
+  createdByUserId String
+
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  /// Count only — never who viewed, which would turn a shared link into a tracker.
+  viewCount Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([recapId, revokedAt])
+}
