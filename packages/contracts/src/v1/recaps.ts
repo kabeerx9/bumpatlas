@@ -32,13 +32,20 @@ export type ShareLinkResponse = z.infer<typeof shareLinkResponseSchema>;
  * link can read it, so it is built field by field from a serializer that starts
  * empty: no IDs, no member list, no memory bodies, no media keys, no dates of
  * birth. Adding a field here is a privacy decision.
+ *
+ * The household name is deliberately absent: households are routinely named after the
+ * child ("Ava's household"), so including it would leak the child's name through the
+ * back door that the `childDisplayName` rule exists to close.
  */
 export const publicRecapSchema = z.object({
   weekLabel: z.string(),
   title: z.string(),
   highlights: z.array(z.string()),
-  childDisplayName: z.string().nullable(),
-  familyName: z.string(),
+  /**
+   * Always null in the public payload. Kept in the shape so a client can render one
+   * component for both the private and shared views without branching.
+   */
+  childDisplayName: z.null(),
   expiresAt: z.string(),
 });
 export type PublicRecap = z.infer<typeof publicRecapSchema>;

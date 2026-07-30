@@ -1,0 +1,164 @@
+// Reviewed product content: what Today shows and what the Guide lists.
+//
+// Publication is gated on reviewer provenance for anything health-adjacent. That
+// gate is enforced in the seed script and in the query layer, not just by policy.
+
+enum ContentType {
+  /// Journaling prompt. No health claim, so no reviewer required.
+  MEMORY_PROMPT
+  PARENTING_TIP
+  PREGNANCY_WEEK_CARD
+  PARENT_WELLNESS_CARD
+  /// Safe pre-written answer snippets retrievable by the AI phase.
+  AI_SNIPPET
+}
+
+model ContentItem {
+  id   String      @id @default(cuid())
+  slug String      @unique
+  type ContentType
+
+  title          String
+  summary        String
+  bodyMarkdown   String
+  readingMinutes Int    @default(2)
+
+  /// Stage keys from computeStage(), e.g. ["P_T2"] or ["NB_0_3M","I_3_6M"].
+  stageTags String[]
+
+  sourceName String?
+
+  /// Required before `isPublished` for every type except MEMORY_PROMPT. A card that
+  /// makes a claim about pregnancy or a parent's body without a named reviewer and a
+  /// review date is exactly what the safety rule exists to keep out of the app.
+  reviewerName String?
+  reviewedOn   DateTime? @db.Date
+
+  isPublished Boolean   @default(false)
+  withdrawnAt DateTime?
+
+  bookmarks ContentBookmark[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Serves stage-filtered published reads.
+  @@index([type, isPublished, withdrawnAt])
+}
+
+model ContentBookmark {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  contentItemId String
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  /// Makes the toggle safe: a double tap cannot create two rows.
+  @@unique([userId, contentItemId])
+}
+
+/**
+ * A guided "Care" action. Separate from ContentItem because it has real structure —
+ * ordered steps and mandatory safety copy — that would otherwise be untyped JSON on a
+ * generic content row.
+ */
+model WellnessAction {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  title  String
+  detail String
+
+  /// Display label such as "2 min"; `durationSeconds` drives the on-screen timer.
+  duration        String
+  durationSeconds Int
+
+  stageNote String
+  stageTags String[]
+
+  /// Mandatory on every published action: what to check before starting, and when to
+  /// stop and seek care. The Care screen renders both, so neither may be null once
+  /// published.
+  clearanceCopy String
+  stopCopy      String
+
+  /// Ordered [{ id, title, body }]. Small, always read whole, never queried into.
+  steps Json
+
+  badgeKey String?
+
+  sourceName   String?
+  reviewerName String?
+  reviewedOn   DateTime? @db.Date
+
+  isPublished Boolean   @default(false)
+  withdrawnAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished, withdrawnAt])
+}
+
+enum MilestoneStatus {
+  NOT_OBSERVED
+  EMERGING
+  OBSERVED
+  SKIPPED
+}
+
+/**
+ * Non-diagnostic developmental milestone. The product never computes delay and never
+ * compares siblings, so there is deliberately no "expected by" column — only stage
+ * tags for which definitions to show.
+ */
+model MilestoneDefinition {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  title String
+  /// Observational, never phrased as a pass/fail expectation.
+  guidance String
+  domain   String
+
+  stageTags String[]
+
+  reviewerName String?
+  reviewedOn   DateTime? @db.Date
+
+  isPublished Boolean @default(false)
+
+  observations MilestoneObservation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished])
+}
+
+model MilestoneObservation {
+  id       String @id @default(cuid())
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  childId String
+  child   ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  definitionId String
+  definition   MilestoneDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+
+  status     MilestoneStatus @default(NOT_OBSERVED)
+  observedAt DateTime?
+
+  memoryId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Per child, so siblings track independently and nothing is ever compared.
+  @@unique([childId, definitionId])
+  @@index([familyId, childId])
+}

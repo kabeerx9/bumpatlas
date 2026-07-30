@@ -1,0 +1,71 @@
+// Entitlements and notification preferences.
+//
+// EntitlementCache is seeded at family creation (Phase 1) and only ever updated by
+// the RevenueCat webhook or an explicit admin action (Phase 5). Routes read limits
+// from here and never from a client-supplied value.
+
+enum EntitlementSource {
+  FREE
+  REVENUECAT
+  MANUAL
+}
+
+/// The single place the API reads limits from.
+///
+/// Denormalised on purpose: quota checks run on the hot path (every memory, every
+/// AI message), and recomputing them from subscription state per request would put
+/// a provider's data model in the middle of a write path.
+model EntitlementCache {
+  id       String @id @default(cuid())
+  familyId String @unique
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  isPremium Boolean @default(false)
+
+  planId   String?
+  renewsAt DateTime?
+
+  maxMembers Int @default(2)
+
+  /// Null means unlimited (Premium). Enforced on child *creation* only — never on
+  /// reads, and never during pregnancy conversion, so a family delivering twins is
+  /// not blocked from recording the birth.
+  maxChildren Int? @default(2)
+
+  /// Counts, not bytes: `mediaUploadsUsed`/`mediaUploadsLimit` are what the shipped
+  /// UI displays. `MediaAsset.byteSize` is still stored so a byte quota can be added
+  /// later without a data migration.
+  mediaUploadsPerMonth Int @default(100)
+
+  aiDailyLimit           Int @default(5)
+  userGroupsCreatedLimit Int @default(1)
+
+  source EntitlementSource @default(FREE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model NotificationPreference {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  dailyPrompt      Boolean @default(true)
+  wellnessReminder Boolean @default(true)
+  partnerActivity  Boolean @default(true)
+  weeklyRecap      Boolean @default(true)
+  communityReply   Boolean @default(false)
+  subscription     Boolean @default(true)
+
+  quietHoursEnabled Boolean @default(true)
+  /// `HH:MM` in the user's own time zone, not UTC: quiet hours mean nothing if they
+  /// drift with the server's location.
+  quietStart String @default("21:00")
+  quietEnd   String @default("08:00")
+
+  groupRelatedAlerts Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

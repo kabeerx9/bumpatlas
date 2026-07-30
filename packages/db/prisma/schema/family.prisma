@@ -27,6 +27,14 @@ model Family {
 
   pregnancies PregnancyProfile[]
   auditEvents AuditEvent[]
+  entitlement EntitlementCache?
+  memories    MemoryEntry[]
+  mediaAssets MediaAsset[]
+  completions ChallengeCompletion[]
+
+  milestoneObservations MilestoneObservation[]
+  recaps                WeeklyRecap[]
+  subscription          Subscription?
 
   /// Users whose current household this is. Back-relation for User.defaultFamilyId.
   defaultForUsers User[] @relation("UserDefaultFamily")

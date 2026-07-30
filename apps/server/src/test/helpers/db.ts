@@ -57,6 +57,11 @@ async function listTables(schema: string): Promise<string[]> {
  * default, and with one shared schema that means one file truncating another
  * file's fixtures mid-test. If you see integration tests that pass alone and fail
  * together, this is why.
+ *
+ * The same hazard applies across *processes*: two `pnpm test:integration` runs at
+ * once (a local run plus CI against the same schema, or two terminals) will truncate
+ * each other's fixtures and produce failures that look like isolation bugs. One run
+ * at a time per schema; give CI its own.
  */
 export async function resetDatabase(): Promise<void> {
   const schema = assertTestSchema();

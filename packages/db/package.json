@@ -17,7 +17,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "postinstall": "prisma generate",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "seed:content": "node --env-file=../../apps/server/.env --import tsx seed/seed.ts",
+    "seed:validate": "node --env-file=../../apps/server/.env --import tsx seed/validate.ts"
   },
   "dependencies": {
     "@bumpatlas/env": "workspace:*",
@@ -31,6 +33,7 @@
     "@bumpatlas/config": "workspace:*",
     "@types/pg": "^8.16.0",
     "prisma": "^7.8.0",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "tsx": "^4.20.5"
   }
 }

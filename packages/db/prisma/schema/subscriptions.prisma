@@ -1,0 +1,59 @@
+// Subscription state as reported by RevenueCat.
+//
+// This is a mirror of the provider's truth, kept separately from EntitlementCache: the
+// cache is what routes read on the hot path, this is the audit trail of why it says what
+// it says.
+
+enum SubscriptionStatus {
+  ACTIVE
+  IN_GRACE_PERIOD
+  CANCELLED
+  EXPIRED
+}
+
+model Subscription {
+  id       String @id @default(cuid())
+  familyId String @unique
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  /// RevenueCat App User ID. Set to the Clerk user ID by the client at purchase time.
+  providerUserId String?
+
+  productId String?
+  status    SubscriptionStatus @default(EXPIRED)
+
+  /// Known expiry. Entitlements survive a delayed webhook until this passes, then fail
+  /// safely to free limits — without deleting anything.
+  expiresAt DateTime?
+
+  /// Timestamp of the provider event that last changed this row. Used to ignore events
+  /// that arrive out of order, which RevenueCat does not guarantee.
+  lastEventAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+model PushDevice {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Unique across users: a device that signs into a second account must move, not be
+  /// registered twice, or the previous user keeps receiving that device's notifications.
+  token    String         @unique
+  platform DevicePlatform
+
+  disabledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, disabledAt])
+}

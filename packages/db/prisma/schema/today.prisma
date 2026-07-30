@@ -1,0 +1,80 @@
+// The Today loop: one frozen plan per user per day, completions, and badges.
+
+/**
+ * The day's four cards, chosen once and then fixed.
+ *
+ * Keyed by `(userId, planDate)` only — deliberately *not* by child. Switching the
+ * active child mid-day must not regenerate the plan: regenerating would erase the
+ * day's completions and let someone farm weekly progress by toggling between
+ * siblings. The switch takes effect tomorrow.
+ */
+model DailyPlan {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Calendar date in the user's own time zone, not UTC.
+  planDate DateTime @db.Date
+
+  /// Stage key used at generation time, kept so the plan can be explained later even
+  /// after the child's stage has moved on.
+  stageKey String
+
+  memoryPromptId    String?
+  wellnessActionId  String?
+  learnContentId    String?
+  communityPromptId String?
+  communityGroupId  String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, planDate])
+}
+
+enum ChallengeKind {
+  STORY
+  WELLNESS
+  LEARN
+  CONNECT
+}
+
+/**
+ * One completion per user, per day, per kind.
+ *
+ * Household-wide rather than per child: a parent who completes a wellness action has
+ * completed it once, however many children they have. Per-child tracks are deferred.
+ */
+model ChallengeCompletion {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  planDate DateTime      @db.Date
+  kind     ChallengeKind
+
+  /// The content or action completed, for auditing what the plan offered.
+  targetId String?
+
+  createdAt DateTime @default(now())
+
+  /// The unique constraint is what makes repeat completion harmless — no read-then-write.
+  @@unique([userId, planDate, kind])
+  @@index([userId, planDate])
+  @@index([familyId, createdAt])
+}
+
+/// Cosmetic and idempotent. Uniqueness is the final protection behind the award rules.
+model BadgeAward {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  badgeKey String
+
+  awardedAt DateTime @default(now())
+
+  @@unique([userId, badgeKey])
+}

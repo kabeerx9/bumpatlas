@@ -1,0 +1,91 @@
+// Memories and their media.
+//
+// This is the data users would be most upset to lose the meaning of, which is why
+// child/pregnancy attribution is a column rather than something inferred later.
+
+enum MemoryVisibility {
+  HOUSEHOLD
+  PRIVATE
+}
+
+model MemoryEntry {
+  id       String @id @default(cuid())
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  /// Exactly one of these, or neither for a household-level memory. Enforced in the
+  /// service and in the contract, not by the database, because Postgres cannot
+  /// express "at most one of two nullable FKs" without a check constraint that
+  /// `db:push` would not carry.
+  childId String?
+  child    ChildProfile? @relation(fields: [childId], references: [id], onDelete: SetNull)
+
+  pregnancyId String?
+  pregnancy   PregnancyProfile? @relation(fields: [pregnancyId], references: [id], onDelete: SetNull)
+
+  authorUserId String
+  author       User   @relation("MemoryAuthor", fields: [authorUserId], references: [id])
+
+  /// Stored explicitly rather than derived on read: the API returns a title that the
+  /// create input does not accept, and the user can edit it afterwards.
+  title String
+  body  String
+
+  /// Calendar date — "when it happened", which is not when it was typed.
+  eventDate DateTime @db.Date
+
+  visibility MemoryVisibility @default(HOUSEHOLD)
+
+  media MediaAsset[]
+
+  /// Soft delete: revoking access is immediate, and the row is what lets a
+  /// mis-tapped delete be recovered during the retention window.
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Serves the household timeline read: (eventDate DESC, id DESC) cursor order.
+  @@index([familyId, deletedAt, eventDate, id])
+  @@index([familyId, childId, eventDate])
+}
+
+enum MediaAssetStatus {
+  /// Upload URL issued, bytes not yet confirmed or attached.
+  PENDING
+  ATTACHED
+  DELETED
+}
+
+model MediaAsset {
+  id       String @id @default(cuid())
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  uploaderUserId String
+  uploader       User   @relation("MediaUploader", fields: [uploaderUserId], references: [id])
+
+  memoryId String?
+  memory   MemoryEntry? @relation(fields: [memoryId], references: [id], onDelete: SetNull)
+
+  /// Unique so a client cannot claim an object key that already belongs to someone.
+  storageKey  String @unique
+  contentType String
+
+  /// Retained even though the enforced quota is upload *counts*, so a byte-based
+  /// quota can be added later without a data migration.
+  byteSize Int
+
+  width  Int?
+  height Int?
+
+  status MediaAssetStatus @default(PENDING)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  /// Monthly quota counting and orphan cleanup both read (family, status, createdAt).
+  @@index([familyId, status, createdAt])
+  @@index([memoryId])
+}
