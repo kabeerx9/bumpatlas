@@ -21,6 +21,13 @@ export const moderationItemSchema = z.object({
    */
   groupId: z.string().nullable(),
   groupKind: groupKindSchema.nullable(),
+  /**
+   * How many critical reports this author has accumulated overall.
+   *
+   * Surfaced so the founder can act on the person or the group rather than playing
+   * whack-a-mole with individual posts.
+   */
+  repeatCriticalReports: z.number().int().nonnegative().optional(),
   createdAt: z.string(),
 });
 export type ModerationItem = z.infer<typeof moderationItemSchema>;
