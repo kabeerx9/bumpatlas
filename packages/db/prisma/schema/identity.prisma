@@ -54,6 +54,7 @@ model User {
   dailyPlans             DailyPlan[]
   completions            ChallengeCompletion[]
   badges                 BadgeAward[]
+  pushDevices            PushDevice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

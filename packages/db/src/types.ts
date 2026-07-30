@@ -17,7 +17,9 @@ export type {
   NotificationPreference,
   PregnancyProfile,
   Prisma,
+  PushDevice,
   RecapShareToken,
+  Subscription,
   User,
   WeeklyRecap,
   WellnessAction,
@@ -35,6 +37,8 @@ export {
   MilestoneStatus,
   PregnancyStatus,
   PrimaryGoal,
+  DevicePlatform,
   ProductEventName,
+  SubscriptionStatus,
   WebhookProvider,
 } from "../prisma/generated/enums";
