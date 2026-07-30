@@ -55,6 +55,9 @@ model User {
   completions            ChallengeCompletion[]
   badges                 BadgeAward[]
   pushDevices            PushDevice[]
+  dataRequests           DataRequest[]
+  aiConversations        AiConversation[]
+  aiHourlyUsage          AiUsageHourly[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

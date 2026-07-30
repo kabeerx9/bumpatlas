@@ -12,8 +12,10 @@ import { registerAccountRoutes } from "@/routes/account";
 import { registerHealthRoutes } from "@/routes/health";
 import { registerMeRoutes } from "@/routes/me";
 import { registerFamilyRoutes } from "@/routes/v1/families";
+import { registerCronRoutes } from "@/routes/cron/index";
 import { registerBillingRoutes } from "@/routes/v1/billing";
 import { registerContentRoutes } from "@/routes/v1/content";
+import { registerDataRequestRoutes } from "@/routes/v1/data-requests";
 import { registerMemoryRoutes } from "@/routes/v1/memories";
 import { registerPreferenceRoutes } from "@/routes/v1/preferences";
 import { registerProfileRoutes } from "@/routes/v1/profiles";
@@ -131,6 +133,10 @@ export function buildApp() {
 
   // Phase 5
   fastify.register(registerBillingRoutes);
+
+  // Phase 6
+  fastify.register(registerDataRequestRoutes);
+  fastify.register(registerCronRoutes);
 
   return fastify;
 }
