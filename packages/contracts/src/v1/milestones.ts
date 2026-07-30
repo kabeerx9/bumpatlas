@@ -21,8 +21,9 @@ export const milestoneDefinitionSchema = z.object({
   guidance: z.string(),
   domain: z.string(),
   stageTags: z.array(z.string()),
-  reviewer: z.string().nullable(),
-  reviewedAt: z.string().nullable(),
+  /** Same field names as `contentDetailSchema` and `wellnessActionSchema`. */
+  reviewerName: z.string().nullable(),
+  reviewedOn: z.string().nullable(),
 });
 export type MilestoneDefinition = z.infer<typeof milestoneDefinitionSchema>;
 

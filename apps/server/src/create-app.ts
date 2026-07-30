@@ -12,9 +12,11 @@ import { registerAccountRoutes } from "@/routes/account";
 import { registerHealthRoutes } from "@/routes/health";
 import { registerMeRoutes } from "@/routes/me";
 import { registerFamilyRoutes } from "@/routes/v1/families";
+import { registerContentRoutes } from "@/routes/v1/content";
 import { registerMemoryRoutes } from "@/routes/v1/memories";
 import { registerPreferenceRoutes } from "@/routes/v1/preferences";
 import { registerProfileRoutes } from "@/routes/v1/profiles";
+import { registerTodayRoutes } from "@/routes/v1/today";
 import { registerClerkWebhookRoutes } from "@/routes/webhooks/clerk";
 
 const baseCorsConfig = {
@@ -116,6 +118,10 @@ export function buildApp() {
 
   // Phase 2
   fastify.register(registerMemoryRoutes);
+
+  // Phase 3
+  fastify.register(registerTodayRoutes);
+  fastify.register(registerContentRoutes);
 
   return fastify;
 }

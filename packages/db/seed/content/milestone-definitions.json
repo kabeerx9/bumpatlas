@@ -1,0 +1,52 @@
+[
+  {
+    "slug": "social-smile",
+    "title": "Social smile",
+    "guidance": "A smile that answers your face or voice, rather than one that comes and goes on its own. Babies find this at their own pace.",
+    "domain": "social",
+    "stageTags": ["NB_0_3M", "I_3_6M"],
+    "reviewerName": null,
+    "reviewedOn": null,
+    "isPublished": false
+  },
+  {
+    "slug": "tracks-faces",
+    "title": "Follows a face with their eyes",
+    "guidance": "Their gaze stays with you as you move slowly across their view. Some days it holds, some days it does not.",
+    "domain": "vision",
+    "stageTags": ["NB_0_3M"],
+    "reviewerName": null,
+    "reviewedOn": null,
+    "isPublished": false
+  },
+  {
+    "slug": "lifts-head-briefly",
+    "title": "Lifts their head briefly",
+    "guidance": "During tummy time, their head comes up for a moment before resting again.",
+    "domain": "motor",
+    "stageTags": ["NB_0_3M", "I_3_6M"],
+    "reviewerName": null,
+    "reviewedOn": null,
+    "isPublished": false
+  },
+  {
+    "slug": "cooing-sounds",
+    "title": "Cooing sounds",
+    "guidance": "Soft vowel sounds that are not crying — often aimed at you, sometimes at the ceiling.",
+    "domain": "communication",
+    "stageTags": ["NB_0_3M", "I_3_6M"],
+    "reviewerName": null,
+    "reviewedOn": null,
+    "isPublished": false
+  },
+  {
+    "slug": "hands-to-mouth",
+    "title": "Brings hands to mouth",
+    "guidance": "Hands find their mouth on purpose. This is exploring, not necessarily hunger.",
+    "domain": "motor",
+    "stageTags": ["NB_0_3M", "I_3_6M"],
+    "reviewerName": null,
+    "reviewedOn": null,
+    "isPublished": false
+  }
+]

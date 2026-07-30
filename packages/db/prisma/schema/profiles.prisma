@@ -67,6 +67,8 @@ model ChildProfile {
   activeForUsers User[]        @relation("UserActiveChild")
   memories       MemoryEntry[]
 
+  milestoneObservations MilestoneObservation[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

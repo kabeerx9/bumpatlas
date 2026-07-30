@@ -1,0 +1,73 @@
+[
+  {
+    "slug": "two-minute-breathing-reset",
+    "title": "Two-minute breathing reset",
+    "detail": "A quiet pause for you — not a workout.",
+    "duration": "2 min",
+    "durationSeconds": 120,
+    "stageNote": "Gentle for most parents. Stop anytime you feel unwell.",
+    "stageTags": ["NB_0_3M", "I_3_6M", "I_6_12M", "T_12_24M", "K_2_6Y"],
+    "clearanceCopy": "If you have had recent surgery, chest pain, dizziness, or your clinician advised rest — pause and check with them before starting.",
+    "stopCopy": "If you feel dizzy, short of breath, chest pain, or anything that worries you — stop and rest. Seek care if it continues.",
+    "badgeKey": "care_pause",
+    "steps": [
+      {
+        "id": "s1",
+        "title": "Find a soft spot",
+        "body": "Sit or stand somewhere steady. Unclench your jaw and drop your shoulders."
+      },
+      {
+        "id": "s2",
+        "title": "Breathe in for 4",
+        "body": "Inhale gently through your nose. Count slowly: 1 · 2 · 3 · 4."
+      },
+      {
+        "id": "s3",
+        "title": "Breathe out for 6",
+        "body": "Exhale through your mouth, longer than the inhale. Count: 1 · 2 · 3 · 4 · 5 · 6."
+      },
+      {
+        "id": "s4",
+        "title": "Repeat a few times",
+        "body": "Do this about six rounds — or fewer if that is all you have. Stopping early is fine."
+      }
+    ],
+    "sourceName": null,
+    "reviewerName": null,
+    "reviewedOn": null,
+    "isPublished": false
+  },
+  {
+    "slug": "side-lying-rest-cue",
+    "title": "Side-lying rest cue",
+    "detail": "A soft reset for third-trimester hips and breath — not a workout.",
+    "duration": "3 min",
+    "durationSeconds": 180,
+    "stageNote": "Pregnancy-safe rest cue. Stop anytime you feel unwell.",
+    "stageTags": ["P_T2", "P_T3"],
+    "clearanceCopy": "If you have pregnancy complications, bleeding, reduced fetal movement, chest pain, dizziness, or your clinician advised rest — pause and check with them before starting.",
+    "stopCopy": "If you feel dizzy, short of breath, chest pain, contractions that worry you, or anything that feels wrong — stop and rest. Seek care if it continues.",
+    "badgeKey": "care_pause",
+    "steps": [
+      {
+        "id": "p1",
+        "title": "Lie on your side",
+        "body": "Prefer the left side if comfortable. Place a pillow between your knees."
+      },
+      {
+        "id": "p2",
+        "title": "Soften your jaw",
+        "body": "Unclench, drop your shoulders, and let your belly feel supported."
+      },
+      {
+        "id": "p3",
+        "title": "Breathe gently",
+        "body": "Inhale for 4, exhale for 6. Do about six rounds — fewer is fine."
+      }
+    ],
+    "sourceName": null,
+    "reviewerName": null,
+    "reviewedOn": null,
+    "isPublished": false
+  }
+]
