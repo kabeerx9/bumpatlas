@@ -18,7 +18,7 @@ export function OfflineBanner({
 }: OfflineBannerProps) {
   return (
     <View style={styles.banner}>
-      <Feather name="wifi-off" size={16} color={colors.brand.peach} />
+      <Feather name="wifi-off" size={16} color={colors.brand.honeyDeep} />
       <AppText variant="bodySmall" style={styles.copy}>
         {message}
       </AppText>
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     borderRadius: radius.lg,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.brand.honeySoft,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
@@ -53,6 +53,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   action: {
-    color: colors.brand.peach,
+    color: colors.brand.honeyDeep,
   },
 });

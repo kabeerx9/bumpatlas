@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import { AppText, Button, Pill, Surface, colors, radius, spacing, useAppTheme } from "@/design-system";
 import { mockToday } from "@/features/mock/demo-data";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useRespectReduceMotion } from "@/features/shared/hooks/use-respect-reduce-motion";
@@ -24,6 +24,7 @@ function formatSeconds(total: number) {
 
 export function CareScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const stageQuery = useStageQuery();
   const stageMode = stageQuery.data?.stageMode ?? "postpartum";
   const completeChallenge = useCompleteChallengeMutation();
@@ -113,11 +114,11 @@ export function CareScreen() {
     const skipped = phase === "skipped";
     return (
       <SoftStackShell title="Care" closeIcon="x" onBack={goHome} centered>
-        <View style={styles.finishMark}>
+        <View style={[styles.finishMark, { backgroundColor: colors.brand.honeySoft }]}>
             <Feather
               name={skipped ? "heart" : badgeAwarded ? "award" : "check"}
               size={28}
-              color={colors.brand.peach}
+              color={colors.brand.honeyDeep}
             />
           </View>
           <AppText variant="heading" align="center">
@@ -131,15 +132,15 @@ export function CareScreen() {
                 : "Two minutes for you counts. Your week of calm days still welcomes this — no streak to protect."}
           </AppText>
           {!skipped && badgeAwarded && action.badgeOnComplete ? (
-            <View style={styles.badgeCard}>
-              <Feather name="award" size={20} color={colors.brand.peach} />
+            <Surface elevated radiusSize="xl" style={styles.badgeCard}>
+              <Feather name="award" size={20} color={colors.brand.honeyDeep} />
               <View style={styles.badgeCopy}>
                 <AppText weight="semibold">{action.badgeOnComplete.title}</AppText>
                 <AppText variant="caption" tone="secondary">
                   Added to your badges
                 </AppText>
               </View>
-            </View>
+            </Surface>
           ) : null}
           <Button size="lg" onPress={goHome} style={styles.finishCta}>
             Back to Today
@@ -150,7 +151,7 @@ export function CareScreen() {
               style={styles.badgesLink}
               accessibilityLabel="View badges"
             >
-              <AppText variant="caption" weight="semibold" style={styles.packsText}>
+              <AppText variant="caption" weight="semibold" tone="brand">
                 View badges
               </AppText>
             </Pressable>
@@ -181,8 +182,8 @@ export function CareScreen() {
           Medical clearance reminder
         </AppText>
 
-        <View style={styles.clearanceCard}>
-          <Feather name="alert-circle" size={22} color={colors.brand.peach} />
+        <Surface elevated radiusSize="xl" padding="xl" style={styles.clearanceCard}>
+          <Feather name="alert-circle" size={22} color={colors.brand.honeyDeep} />
           <AppText variant="title">{action.title}</AppText>
           <AppText variant="body" tone="secondary" style={styles.clearanceBody}>
             {action.clearanceCopy}
@@ -190,7 +191,7 @@ export function CareScreen() {
           <AppText variant="bodySmall" tone="secondary">
             {action.stopCopy}
           </AppText>
-        </View>
+        </Surface>
 
         <Pressable
           onPress={() => setClearanceAcknowledged(!clearanceAcknowledged)}
@@ -199,9 +200,15 @@ export function CareScreen() {
           accessibilityState={{ checked: clearanceAcknowledged }}
           accessibilityLabel="I understand and feel cleared to try this gently"
         >
-          <View style={[styles.checkbox, clearanceAcknowledged && styles.checkboxOn]}>
+          <View
+            style={[
+              styles.checkbox,
+              { borderColor: colors.brand.honeyDeep },
+              clearanceAcknowledged && { backgroundColor: colors.brand.honey, borderColor: colors.brand.honey },
+            ]}
+          >
             {clearanceAcknowledged ? (
-              <Feather name="check" size={14} color={colors.text.inverse} />
+              <Feather name="check" size={14} color={colors.brand.ink} />
             ) : null}
           </View>
           <AppText variant="bodySmall" style={styles.acceptCopy}>
@@ -248,34 +255,31 @@ export function CareScreen() {
         For you · {action.duration}
       </AppText>
 
-      <View style={styles.hero}>
-        <View style={styles.heroIcon}>
-          <Feather name="wind" size={22} color={colors.text.inverse} />
+      <Surface elevated radiusSize="xl" padding="xl" style={styles.hero}>
+        <View style={[styles.heroIcon, { backgroundColor: theme.colors.background }]}>
+          <Feather name="wind" size={22} color={colors.brand.honeyDeep} />
         </View>
-        <AppText variant="heading" style={styles.heroTitle}>
-          {action.title}
-        </AppText>
-        <AppText variant="body" style={styles.heroDetail}>
+        <AppText variant="heading">{action.title}</AppText>
+        <AppText variant="body" tone="secondary">
           {action.detail}
         </AppText>
-        <AppText variant="caption" style={styles.heroMeta}>
+        <AppText variant="caption" tone="tertiary">
           {action.stageNote}
         </AppText>
-        <AppText variant="caption" style={styles.heroMeta}>
+        <AppText variant="caption" tone="tertiary">
           Reviewed by {action.reviewerName} · {action.reviewedOn}
         </AppText>
-        <AppText variant="caption" style={styles.heroMeta}>
+        <AppText variant="caption" tone="tertiary">
           Source: {action.sourceName}
         </AppText>
-      </View>
+      </Surface>
 
       {phase === "in_progress" ? (
-        <View style={styles.timerCard}>
-          <AppText variant="caption" style={styles.peachLabel}>
-            Soft timer · optional
-            {reduceMotion.current ? " · reduce motion on" : ""}
-          </AppText>
-          <AppText variant="hero" style={styles.timerValue}>
+        <Surface elevated radiusSize="xl" padding="xl" style={styles.timerCard}>
+          <Pill tone="selected">
+            Soft timer · optional{reduceMotion.current ? " · reduce motion on" : ""}
+          </Pill>
+          <AppText variant="hero" weight="semibold">
             {formatSeconds(secondsLeft)}
           </AppText>
           <Pressable
@@ -283,11 +287,11 @@ export function CareScreen() {
             accessibilityLabel={timerRunning ? "Pause timer" : "Resume timer"}
             style={styles.timerToggleHit}
           >
-            <AppText weight="semibold" style={styles.timerToggle}>
+            <AppText weight="semibold" tone="brand">
               {timerRunning ? "Pause timer" : "Resume timer"}
             </AppText>
           </Pressable>
-        </View>
+        </Surface>
       ) : null}
 
       <AppText weight="semibold">How to do it</AppText>
@@ -301,32 +305,39 @@ export function CareScreen() {
             onPress={() => {
               if (phase === "in_progress") setActiveStep(index);
             }}
-            style={[
-              styles.stepCard,
-              isActive && styles.stepActive,
-              isPast && styles.stepPast,
-            ]}
             accessibilityLabel={`Step ${index + 1}: ${step.title}`}
           >
-            <View style={[styles.stepIndex, isActive && styles.stepIndexActive]}>
-              {isPast ? (
-                <Feather name="check" size={14} color={colors.text.inverse} />
-              ) : (
-                <AppText
-                  variant="caption"
-                  weight="semibold"
-                  style={isActive ? styles.stepIndexTextActive : undefined}
-                >
-                  {index + 1}
+            <Surface
+              elevated={isActive}
+              radiusSize="xl"
+              style={[
+                styles.stepCard,
+                isActive && { borderWidth: 1.5, borderColor: colors.brand.honey },
+                isPast && styles.stepPast,
+              ]}
+            >
+              <View
+                style={[
+                  styles.stepIndex,
+                  { backgroundColor: colors.brand.honeySoft },
+                  isActive && { backgroundColor: colors.brand.honey },
+                ]}
+              >
+                {isPast ? (
+                  <Feather name="check" size={14} color={colors.brand.ink} />
+                ) : (
+                  <AppText variant="caption" weight="semibold">
+                    {index + 1}
+                  </AppText>
+                )}
+              </View>
+              <View style={styles.stepCopy}>
+                <AppText weight="semibold">{step.title}</AppText>
+                <AppText variant="bodySmall" tone="secondary">
+                  {step.body}
                 </AppText>
-              )}
-            </View>
-            <View style={styles.stepCopy}>
-              <AppText weight="semibold">{step.title}</AppText>
-              <AppText variant="bodySmall" tone="secondary">
-                {step.body}
-              </AppText>
-            </View>
+              </View>
+            </Surface>
           </Pressable>
         );
       })}
@@ -341,8 +352,8 @@ export function CareScreen() {
         </Button>
       ) : null}
 
-      <View style={styles.stopBox}>
-        <Feather name="alert-circle" size={16} color={colors.brand.peach} />
+      <View style={[styles.stopBox, { backgroundColor: colors.brand.honeySoft }]}>
+        <Feather name="alert-circle" size={16} color={colors.brand.honeyDeep} />
         <AppText variant="bodySmall" tone="secondary" style={styles.stopCopy}>
           {action.stopCopy}
         </AppText>
@@ -353,10 +364,10 @@ export function CareScreen() {
         style={styles.packsLink}
         accessibilityLabel="Browse wellness packs"
       >
-        <AppText variant="caption" weight="semibold" style={styles.packsText}>
+        <AppText variant="caption" weight="semibold" tone="brand">
           Browse more Care packs
         </AppText>
-        <Feather name="arrow-up-right" size={14} color={colors.brand.peach} />
+        <Feather name="arrow-up-right" size={14} color={colors.brand.honeyDeep} />
       </Pressable>
     </SoftStackShell>
   );
@@ -364,9 +375,6 @@ export function CareScreen() {
 
 const styles = StyleSheet.create({
   hero: {
-    borderRadius: 28,
-    backgroundColor: colors.brand.peach,
-    padding: spacing.xl,
     gap: spacing.sm,
     marginBottom: spacing.xs,
   },
@@ -374,38 +382,13 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.22)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.xs,
   },
-  heroTitle: {
-    color: colors.text.inverse,
-  },
-  heroDetail: {
-    color: "rgba(255,255,255,0.9)",
-  },
-  heroMeta: {
-    color: "rgba(255,255,255,0.75)",
-    marginTop: 2,
-  },
   timerCard: {
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.xl,
     alignItems: "center",
     gap: spacing.sm,
-  },
-  peachLabel: {
-    color: colors.brand.peach,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-  },
-  timerValue: {
-    color: colors.brand.ink,
-  },
-  timerToggle: {
-    color: colors.brand.peach,
   },
   timerToggleHit: {
     minHeight: 44,
@@ -414,14 +397,6 @@ const styles = StyleSheet.create({
   stepCard: {
     flexDirection: "row",
     gap: spacing.md,
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.72)",
-    padding: spacing.lg,
-  },
-  stepActive: {
-    backgroundColor: colors.surface.card,
-    borderWidth: 1.5,
-    borderColor: colors.brand.peach,
   },
   stepPast: {
     opacity: 0.72,
@@ -430,16 +405,9 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.brand.peachSoft,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 2,
-  },
-  stepIndexActive: {
-    backgroundColor: colors.brand.peach,
-  },
-  stepIndexTextActive: {
-    color: colors.text.inverse,
   },
   stepCopy: {
     flex: 1,
@@ -453,7 +421,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: spacing.sm,
     borderRadius: radius.lg,
-    backgroundColor: colors.brand.peachSoft,
     padding: spacing.lg,
     marginTop: spacing.sm,
   },
@@ -467,9 +434,6 @@ const styles = StyleSheet.create({
     gap: 4,
     minHeight: 44,
   },
-  packsText: {
-    color: colors.brand.peach,
-  },
   skipBtn: {
     paddingVertical: spacing.sm,
     minHeight: 44,
@@ -479,7 +443,6 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: colors.brand.peachSoft,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.sm,
@@ -497,16 +460,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
     alignSelf: "stretch",
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    padding: spacing.lg,
   },
   badgeCopy: { flex: 1, gap: 2 },
   badgesLink: { minHeight: 44, justifyContent: "center" },
   clearanceCard: {
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    padding: spacing.xl,
     gap: spacing.md,
   },
   clearanceBody: { lineHeight: 22 },
@@ -521,11 +478,9 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: colors.brand.peach,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 1,
   },
-  checkboxOn: { backgroundColor: colors.brand.peach },
   acceptCopy: { flex: 1, lineHeight: 20 },
 });

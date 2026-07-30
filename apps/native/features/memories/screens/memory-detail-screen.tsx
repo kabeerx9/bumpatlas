@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import { AppText, Button, Pill, Surface, colors, radius, spacing, useAppTheme } from "@/design-system";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import {
   useDeleteMemoryMutation,
@@ -24,6 +24,7 @@ type Mode = "view" | "edit";
 
 export function MemoryDetailScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const familyQuery = useFamilyQuery();
   const childDisplayName = familyQuery.data?.childDisplayName ?? "your child";
@@ -128,7 +129,7 @@ export function MemoryDetailScreen() {
   if (memoryQuery.isLoading) {
     return (
       <SoftStackShell title="Memory" onBack={() => router.back()} centered>
-        <ActivityIndicator color={colors.brand.peach} />
+        <ActivityIndicator color={theme.colors.secondary} />
       </SoftStackShell>
     );
   }
@@ -150,7 +151,7 @@ export function MemoryDetailScreen() {
     return (
       <SoftStackShell title="Memory" onBack={() => router.back()} centered>
         <View style={styles.deletedMark}>
-          <Feather name="heart" size={26} color={colors.brand.peach} />
+          <Feather name="heart" size={26} color={theme.colors.accentText} />
         </View>
         <AppText variant="heading" align="center">
           Moment removed
@@ -177,7 +178,7 @@ export function MemoryDetailScreen() {
             style={styles.iconBtn}
             accessibilityLabel="Edit memory"
           >
-            <Feather name="edit-2" size={18} color={colors.brand.ink} />
+            <Feather name="edit-2" size={18} color={theme.colors.text} />
           </Pressable>
         ) : (
           <Pressable onPress={cancelEdit} hitSlop={12} style={styles.headerTextBtn}>
@@ -213,54 +214,47 @@ export function MemoryDetailScreen() {
         )
       }
     >
-      <View style={styles.photo}>
-        <Feather name="image" size={28} color={colors.brand.peach} />
+      <Surface style={styles.photo} radiusSize="xl" bordered={false}>
+        <Feather name="image" size={28} color={theme.colors.textMuted} />
         <AppText variant="caption" tone="secondary">
           Photo stays private to household
         </AppText>
+      </Surface>
+
+      <View style={[styles.privacyChip, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+        <Feather
+          name={visibility === "private" ? "lock" : "home"}
+          size={14}
+          color={theme.colors.textSecondary}
+        />
+        <AppText variant="caption" weight="semibold" tone="secondary">
+          {visibility === "private"
+            ? "Only you · not shared with household"
+            : "Household only · not on Connect"}
+        </AppText>
       </View>
 
-      <View style={styles.privacyChip}>
-            <Feather
-              name={visibility === "private" ? "lock" : "home"}
-              size={14}
-              color={colors.brand.peach}
-            />
-            <AppText variant="caption" weight="semibold" style={styles.privacyText}>
-              {visibility === "private"
-                ? "Only you · not shared with household"
-                : "Household only · not on Connect"}
-            </AppText>
-          </View>
-
-          <View style={styles.visibilityRow}>
-            {(
-              [
-                { id: "household" as const, label: "Household" },
-                { id: "private" as const, label: "Only me" },
-              ] as const
-            ).map((option) => {
-              const active = visibility === option.id;
-              return (
-                <Pressable
-                  key={option.id}
-                  onPress={() => setVisibility(option.id)}
-                  style={[styles.visChip, active && styles.visChipActive]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={`Visibility ${option.label}`}
-                >
-                  <AppText
-                    variant="caption"
-                    weight="semibold"
-                    style={active ? styles.visTextActive : undefined}
-                  >
-                    {option.label}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
+      <View style={styles.visibilityRow}>
+        {(
+          [
+            { id: "household" as const, label: "Household" },
+            { id: "private" as const, label: "Only me" },
+          ] as const
+        ).map((option) => {
+          const active = visibility === option.id;
+          return (
+            <Pressable
+              key={option.id}
+              onPress={() => setVisibility(option.id)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`Visibility ${option.label}`}
+            >
+              <Pill tone={active ? "selected" : "neutral"}>{option.label}</Pill>
+            </Pressable>
+          );
+        })}
+      </View>
 
           <AppText variant="caption" tone="secondary">
             {memory.eventDate} · {memory.authorName} · for {childDisplayName}
@@ -305,12 +299,12 @@ export function MemoryDetailScreen() {
           )}
 
           {mode === "view" ? (
-            <View style={styles.helpBox}>
-              <Feather name="shield" size={16} color={colors.brand.peach} />
+            <Surface style={styles.helpBox} radiusSize="lg">
+              <Feather name="shield" size={16} color={theme.colors.accentText} />
               <AppText variant="bodySmall" tone="secondary" style={styles.helpCopy}>
                 Shared with adults in your household. Never posted to community groups.
               </AppText>
-            </View>
+            </Surface>
           ) : null}
     </SoftStackShell>
   );
@@ -321,7 +315,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: colors.surface.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -334,8 +328,7 @@ const styles = StyleSheet.create({
   },
   photo: {
     height: 220,
-    borderRadius: 28,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.pastel.lemon,
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.sm,
@@ -346,31 +339,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderRadius: radius.full,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    borderWidth: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-  },
-  privacyText: {
-    color: colors.brand.peach,
   },
   visibilityRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
-  },
-  visChip: {
-    borderRadius: radius.full,
-    backgroundColor: "rgba(255,255,255,0.72)",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    minHeight: 44,
-    justifyContent: "center",
-  },
-  visChipActive: {
-    backgroundColor: colors.brand.peach,
-  },
-  visTextActive: {
-    color: colors.text.inverse,
   },
   bodyText: {
     lineHeight: 24,
@@ -381,7 +357,7 @@ const styles = StyleSheet.create({
   titleInput: {
     minHeight: 52,
     borderRadius: radius.lg,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: colors.surface.card,
     paddingHorizontal: spacing.lg,
     fontSize: 18,
     color: colors.text.primary,
@@ -390,7 +366,7 @@ const styles = StyleSheet.create({
   bodyInput: {
     minHeight: 140,
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: colors.surface.card,
     padding: spacing.lg,
     fontSize: 16,
     color: colors.text.primary,
@@ -400,9 +376,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: spacing.sm,
-    borderRadius: radius.lg,
-    backgroundColor: "rgba(255,255,255,0.72)",
-    padding: spacing.lg,
     marginTop: spacing.sm,
   },
   helpCopy: {
@@ -423,7 +396,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.pastel.lemon,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.sm,

@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { StyleSheet, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import { AppText, Button, colors, radius, shadows, spacing } from "@/design-system";
 
 type HighRiskEscalateProps = {
   onAcknowledge: () => void;
@@ -38,15 +38,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1.5,
     borderColor: colors.brand.terracotta,
-    backgroundColor: "rgba(255,255,255,0.95)",
+    backgroundColor: colors.surface.card,
     padding: spacing.lg,
     gap: spacing.sm,
+    ...shadows.soft,
   },
   icon: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.brand.peachSoft,
+    borderRadius: radius.full,
+    backgroundColor: colors.brand.honeySoft,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -6,14 +6,23 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import {
+  AppText,
+  Button,
+  IconButton,
+  Pill,
+  Screen,
+  Surface,
+  spacing,
+  useAppTheme,
+} from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
-import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import {
   useCreateCommentMutation,
   useCreateGroupPostMutation,
@@ -32,6 +41,7 @@ const communityRules = [
 
 export function ConnectComposeScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const { mode, postId } = useLocalSearchParams<{
     mode?: "prompt" | "reply";
     postId?: string;
@@ -58,6 +68,7 @@ export function ConnectComposeScreen() {
   const [body, setBody] = useState("");
   const [rulesAccepted, setRulesAccepted] = useState(communityRulesAccepted);
 
+  const groups = groupsQuery.data?.items ?? [];
   const posts = groupPostsQuery.data?.items ?? [];
   const parentPost = useMemo(
     () => posts.find((post) => post.id === postId),
@@ -65,8 +76,7 @@ export function ConnectComposeScreen() {
   );
 
   const activeGroupName =
-    groupsQuery.data?.items.find((group) => group.id === activeGroupId)?.name ??
-    "Your stage group";
+    groups.find((group) => group.id === activeGroupId)?.name ?? "Your stage group";
 
   const trimmed = body.trim();
   const effectiveRules = rulesAccepted || communityRulesAccepted;
@@ -104,83 +114,97 @@ export function ConnectComposeScreen() {
   }
 
   return (
-    <SoftStackShell
-      title={isReply ? "Reply" : "Share a reply"}
-      closeIcon="x"
-      onBack={() => router.back()}
-      scroll={false}
-      footer={
-        <Button size="lg" disabled={!canPost} onPress={() => void handlePost()}>
-          {isSubmitting ? "Posting…" : isReply ? "Post reply" : "Post to group"}
-        </Button>
-      }
-    >
+    <Screen padded={false}>
+      <View style={styles.header}>
+        <IconButton accessibilityLabel="Close" onPress={() => router.back()}>
+          <Feather name="x" size={20} color={theme.colors.text} />
+        </IconButton>
+        <AppText variant="title">{isReply ? "Reply" : "Share a reply"}</AppText>
+        <View style={styles.headerSpacer} />
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.flex}
       >
-        <View style={styles.body}>
-          <View style={styles.contextPanel}>
-            <AppText variant="caption" style={styles.peachLabel}>
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Surface tone="dark" bordered={false} radiusSize="xl" style={styles.contextPanel}>
+            <AppText variant="caption" tone="inverse" style={styles.contextEyebrow}>
               {isReply ? "Replying in" : "Today’s prompt"} · {activeGroupName}
             </AppText>
-            <AppText variant="title" tone="inverse" style={styles.contextTitle}>
+            <AppText variant="title" tone="inverse">
               {isReply && parentPost ? parentPost.body : CONNECT_PROMPT}
             </AppText>
             {isReply && parentPost ? (
-              <AppText variant="caption" style={styles.contextMeta}>
+              <AppText variant="caption" tone="inverse" style={styles.contextMeta}>
                 {parentPost.authorName} · comments {commentsUsedToday}/{commentsDailyLimit} today
               </AppText>
             ) : (
-              <AppText variant="caption" style={styles.contextMeta}>
+              <AppText variant="caption" tone="inverse" style={styles.contextMeta}>
                 {posts.length} notes in group · posts {postsUsedToday}/10 today · comments{" "}
                 {commentsUsedToday}/{commentsDailyLimit}
               </AppText>
             )}
-          </View>
+          </Surface>
+
+          {!isReply && groups.length > 0 ? (
+            <View style={styles.groupPickerRow}>
+              {groups.map((group) => (
+                <Pill key={group.id} tone={group.id === activeGroupId ? "selected" : "neutral"}>
+                  {group.name}
+                </Pill>
+              ))}
+            </View>
+          ) : null}
 
           {atPostLimit ? (
-            <AppText variant="bodySmall" style={styles.limitWarn}>
+            <AppText variant="bodySmall" tone="brand" style={styles.limitWarn}>
               Daily post limit reached (10). Replies still count toward your comment limit.
             </AppText>
           ) : null}
 
           {atCommentLimit ? (
-            <AppText variant="bodySmall" style={styles.limitWarn}>
+            <AppText variant="bodySmall" tone="brand" style={styles.limitWarn}>
               Daily comment limit reached ({commentsDailyLimit}). Limits reset tomorrow.
             </AppText>
           ) : null}
 
           {linkBlocked ? (
-            <AppText variant="bodySmall" style={styles.limitWarn}>
+            <AppText variant="bodySmall" tone="brand" style={styles.limitWarn}>
               Links are paused for the first 14 days (day {accountAgeDays} of your account). Text
               only for now.
             </AppText>
           ) : null}
 
-          <TextInput
-            value={body}
-            onChangeText={setBody}
-            placeholder={
-              isReply
-                ? "Write a supportive reply..."
-                : "What made today a little easier?"
-            }
-            placeholderTextColor={colors.text.muted}
-            multiline
-            maxLength={MAX_CHARS}
-            style={styles.input}
-            textAlignVertical="top"
-            accessibilityLabel="Post text"
-          />
+          <Surface radiusSize="xl" style={styles.inputCard}>
+            <TextInput
+              value={body}
+              onChangeText={setBody}
+              placeholder={
+                isReply
+                  ? "Write a supportive reply..."
+                  : "What made today a little easier?"
+              }
+              placeholderTextColor={theme.colors.textMuted}
+              multiline
+              maxLength={MAX_CHARS}
+              style={[styles.input, { color: theme.colors.text }]}
+              textAlignVertical="top"
+              accessibilityLabel="Post text"
+            />
+            <AppText variant="caption" tone="secondary" style={styles.counter}>
+              {body.length}/{MAX_CHARS}
+            </AppText>
+          </Surface>
 
-          <AppText variant="caption" tone="secondary" style={styles.counter}>
-            {body.length}/{MAX_CHARS}
-          </AppText>
-
-          <View style={styles.rulesCard}>
+          <Surface radiusSize="xl" style={styles.rulesCard}>
             <View style={styles.rulesHeader}>
-              <Feather name="shield" size={16} color={colors.brand.peach} />
+              <Feather name="shield" size={16} color={theme.colors.brandText} />
               <AppText weight="semibold">Community rules</AppText>
             </View>
             {communityRules.map((rule) => (
@@ -194,69 +218,63 @@ export function ConnectComposeScreen() {
               accessibilityRole="checkbox"
               accessibilityState={{ checked: effectiveRules }}
             >
-              <View style={[styles.checkbox, effectiveRules && styles.checkboxChecked]}>
+              <View
+                style={[
+                  styles.checkbox,
+                  { borderColor: theme.colors.secondary },
+                  effectiveRules && { backgroundColor: theme.colors.secondary },
+                ]}
+              >
                 {effectiveRules ? (
-                  <Feather name="check" size={14} color={colors.text.inverse} />
+                  <Feather name="check" size={14} color={theme.colors.secondaryText} />
                 ) : null}
               </View>
               <AppText variant="bodySmall" style={styles.acceptCopy}>
                 I agree to keep Connect kind and text-only
               </AppText>
             </Pressable>
-          </View>
-        </View>
+          </Surface>
+        </ScrollView>
       </KeyboardAvoidingView>
-    </SoftStackShell>
+
+      <View style={styles.footer}>
+        <Button size="lg" disabled={!canPost} onPress={() => void handlePost()}>
+          {isSubmitting ? "Posting…" : isReply ? "Post reply" : "Post to group"}
+        </Button>
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.page,
+    paddingVertical: spacing.md,
+  },
+  headerSpacer: { width: 44 },
   flex: { flex: 1 },
-  body: {
-    flex: 1,
+  scroll: {
+    paddingHorizontal: spacing.page,
+    paddingBottom: spacing.xl,
     gap: spacing.md,
   },
-  contextPanel: {
-    borderRadius: radius.xl,
-    backgroundColor: colors.brand.peach,
-    padding: spacing.xl,
-    gap: spacing.sm,
-  },
-  peachLabel: {
-    color: "rgba(255,255,255,0.78)",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
-  contextTitle: {
-    lineHeight: 28,
-  },
-  contextMeta: {
-    color: "rgba(255,255,255,0.82)",
-  },
-  limitWarn: {
-    color: colors.brand.terracotta,
-    lineHeight: 20,
-  },
+  contextPanel: { gap: spacing.sm, padding: spacing.xl },
+  contextEyebrow: { opacity: 0.78, letterSpacing: 0.8, textTransform: "uppercase" },
+  contextMeta: { opacity: 0.82 },
+  groupPickerRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  limitWarn: { lineHeight: 20 },
+  inputCard: { gap: spacing.xs },
   input: {
     minHeight: 140,
     maxHeight: 220,
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.lg,
     fontSize: 17,
-    color: colors.text.primary,
     fontFamily: "Poppins_400Regular",
   },
-  counter: {
-    textAlign: "right",
-    marginTop: -spacing.sm,
-  },
-  rulesCard: {
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.lg,
-    gap: spacing.xs,
-  },
+  counter: { textAlign: "right" },
+  rulesCard: { gap: spacing.xs },
   rulesHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -270,22 +288,20 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: "rgba(44,36,32,0.06)",
+    borderTopColor: "transparent",
   },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: colors.brand.peach,
     alignItems: "center",
     justifyContent: "center",
   },
-  checkboxChecked: {
-    backgroundColor: colors.brand.peach,
-    borderColor: colors.brand.peach,
-  },
-  acceptCopy: {
-    flex: 1,
+  acceptCopy: { flex: 1 },
+  footer: {
+    paddingHorizontal: spacing.page,
+    paddingBottom: spacing.xl,
+    paddingTop: spacing.md,
   },
 });

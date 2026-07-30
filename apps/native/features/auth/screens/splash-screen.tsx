@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
-import { Animated, StyleSheet, View } from "react-native";
+import { Animated, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AppText, BrandWordmark, colors, spacing } from "@/design-system";
-import { SoftScreen } from "@/features/shared/components/soft-screen";
+import { Atmosphere, AppText, BrandWordmark, colors, spacing } from "@/design-system";
 import { useRespectReduceMotion } from "@/features/shared/hooks/use-respect-reduce-motion";
 
 export function SplashScreen() {
@@ -22,24 +22,24 @@ export function SplashScreen() {
   }, [fade, reduceMotion]);
 
   return (
-    <SoftScreen scroll={false} edges={["top", "bottom"]}>
-      <View style={styles.body}>
+    <Atmosphere variant="cream">
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <Animated.View style={[styles.center, { opacity: fade }]}>
           <BrandWordmark size="xl" markOnly style={styles.mark} />
-          <AppText variant="heading" align="center" style={styles.title}>
+          <AppText variant="heading" weight="semibold" align="center" style={styles.title}>
             BumpAtlas
           </AppText>
           <AppText variant="label" tone="secondary" align="center">
             The early days, cherished
           </AppText>
         </Animated.View>
-      </View>
-    </SoftScreen>
+      </SafeAreaView>
+    </Atmosphere>
   );
 }
 
 const styles = StyleSheet.create({
-  body: {
+  safe: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",

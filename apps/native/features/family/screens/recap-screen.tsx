@@ -3,7 +3,15 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useRef, useState } from "react";
 import { Alert, Pressable, Share, StyleSheet, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import {
+  AppText,
+  Button,
+  Surface,
+  colors,
+  radius,
+  spacing,
+  useAppTheme,
+} from "@/design-system";
 import { mockRecaps } from "@/features/mock/demo-data";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useMockData } from "@/lib/api/client";
@@ -14,6 +22,7 @@ import { appRoutes } from "@/navigation/routes";
 
 export function RecapScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const recapQuery = useCurrentRecapQuery();
   const entitlementsQuery = useEntitlementsQuery();
@@ -42,8 +51,8 @@ export function RecapScreen() {
   if (!eligible) {
     return (
       <SoftStackShell title="Weekly recap" closeIcon="x" onBack={() => router.back()} centered>
-        <Feather name="heart" size={28} color={colors.brand.peach} />
-        <AppText variant="heading" align="center">
+        <Feather name="heart" size={28} color={colors.brand.honeyDeep} />
+        <AppText variant="heading" weight="semibold" align="center">
           Keep going gently
         </AppText>
         <AppText variant="body" tone="secondary" align="center">
@@ -115,61 +124,59 @@ export function RecapScreen() {
         </Button>
       }
     >
-      <View
-        ref={cardRef}
-        collapsable={false}
-        style={[styles.shareCard, isPremium && styles.shareCardPremium]}
-      >
-        <AppText variant="caption" style={styles.eyebrow}>
-          {recap.weekLabel}
-          {isPremium ? " · Premium theme" : ""}
-        </AppText>
-        <AppText variant="heading" tone="inverse">
-          {recap.title}
-        </AppText>
-        <AppText variant="bodySmall" style={styles.childName}>
-          {displayName}&apos;s week
-        </AppText>
-        <View style={styles.cardArt}>
-          <View style={styles.cardArtOrb} />
-          <View style={[styles.cardArtOrb, styles.cardArtOrbTwo]} />
-        </View>
-        <View style={styles.highlights}>
-          {recap.highlights.map((highlight) => (
-            <View key={highlight} style={styles.bulletRow}>
-              <View style={styles.bullet} />
-              <AppText variant="bodySmall" style={styles.bulletText}>
-                {highlight}
+      <View ref={cardRef} collapsable={false} style={styles.shareCardWrap}>
+        <Surface tone="card" elevated radiusSize="xl" style={styles.shareCard}>
+          <View style={styles.mediaArt}>
+            <View style={styles.mediaArtOrb} />
+            <View style={[styles.mediaArtOrb, styles.mediaArtOrbTwo]} />
+            <View style={styles.floatingPill}>
+              <AppText variant="caption" weight="semibold" tone="brand">
+                {recap.weekLabel}
+                {isPremium ? " · Premium theme" : ""}
               </AppText>
             </View>
-          ))}
-        </View>
-        <AppText variant="caption" style={styles.footer}>
-          BumpAtlas · household only · no birth date / location
-        </AppText>
+          </View>
+          <AppText variant="heading" weight="semibold">
+            {recap.title}
+          </AppText>
+          <AppText variant="bodySmall" tone="secondary">
+            {displayName}&apos;s week
+          </AppText>
+          <View style={styles.highlights}>
+            {recap.highlights.map((highlight) => (
+              <View key={highlight} style={styles.bulletRow}>
+                <View style={styles.bullet} />
+                <AppText variant="bodySmall" tone="secondary" style={styles.bulletText}>
+                  {highlight}
+                </AppText>
+              </View>
+            ))}
+          </View>
+          <AppText variant="caption" tone="muted" style={styles.footer}>
+            BumpAtlas · household only · no birth date / location
+          </AppText>
+        </Surface>
       </View>
 
       {!isPremium ? (
-        <View style={styles.themeCard}>
+        <Surface tone="card" elevated radiusSize="xl" style={styles.themeCard}>
           <AppText weight="semibold">Premium theme</AppText>
           <AppText variant="bodySmall" tone="secondary">
             Soft parchment layout with a calmer type rhythm — free keeps the standard card.
           </AppText>
-          <Pressable
-            onPress={() => router.push(appRoutes.paywall("recap"))}
+          <Button
+            size="sm"
             style={styles.copyBtn}
-            accessibilityLabel="Unlock premium recap theme"
+            onPress={() => router.push(appRoutes.paywall("recap"))}
+            leftAccessory={<Feather name="star" size={14} color={theme.colors.primaryText} />}
           >
-            <Feather name="star" size={14} color={colors.text.inverse} />
-            <AppText variant="caption" weight="semibold" tone="inverse">
-              Unlock with Premium
-            </AppText>
-          </Pressable>
-        </View>
+            Unlock with Premium
+          </Button>
+        </Surface>
       ) : null}
 
       <View style={styles.privacy}>
-        <Feather name="lock" size={16} color={colors.brand.peach} />
+        <Feather name="lock" size={16} color={colors.brand.honeyDeep} />
         <AppText variant="bodySmall" tone="secondary" style={styles.privacyCopy}>
           Share cards omit exact birth date, location, and health details by default. Household-only
           — never auto-posts to Connect.
@@ -181,7 +188,7 @@ export function RecapScreen() {
         onPress={() => void copyPrivateLink()}
         accessibilityLabel="Copy private web link"
       >
-        <Feather name="link" size={14} color={colors.brand.peach} />
+        <Feather name="link" size={14} color={colors.brand.honeyDeep} />
         <AppText variant="caption" weight="semibold" style={styles.linkText}>
           {linkCopied ? "Private link ready" : "Copy private web link"}
         </AppText>
@@ -191,38 +198,42 @@ export function RecapScreen() {
 }
 
 const styles = StyleSheet.create({
+  shareCardWrap: { borderRadius: radius.xl, overflow: "hidden" },
   shareCard: {
-    borderRadius: radius.xl,
-    backgroundColor: colors.brand.ink,
-    padding: spacing.xl,
     gap: spacing.md,
+  },
+  mediaArt: {
+    height: 96,
+    borderRadius: radius.lg,
+    backgroundColor: colors.pastel.lemon,
     overflow: "hidden",
+    justifyContent: "flex-end",
+    padding: spacing.sm,
   },
-  shareCardPremium: {
-    backgroundColor: "#3d342c",
-  },
-  eyebrow: { color: "rgba(255,248,240,0.7)" },
-  childName: { color: "rgba(255,248,240,0.85)" },
-  cardArt: {
-    height: 72,
-    marginVertical: spacing.sm,
-  },
-  cardArtOrb: {
+  mediaArtOrb: {
     position: "absolute",
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "rgba(232,165,152,0.25)",
-    right: -20,
+    backgroundColor: colors.pastel.petal,
+    right: -30,
     top: -30,
   },
-  cardArtOrbTwo: {
+  mediaArtOrbTwo: {
     width: 80,
     height: 80,
-    left: 20,
-    top: 10,
+    left: 10,
+    bottom: -30,
     right: undefined,
-    backgroundColor: "rgba(255,248,240,0.08)",
+    top: undefined,
+    backgroundColor: colors.pastel.mint,
+  },
+  floatingPill: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.surface.card,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
   highlights: { gap: spacing.sm },
   bulletRow: { flexDirection: "row", gap: spacing.sm, alignItems: "flex-start" },
@@ -231,27 +242,16 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     marginTop: 7,
-    backgroundColor: colors.brand.peach,
+    backgroundColor: colors.brand.honey,
   },
-  bulletText: { flex: 1, color: "rgba(255,248,240,0.9)" },
-  footer: { color: "rgba(255,248,240,0.55)", marginTop: spacing.sm },
+  bulletText: { flex: 1 },
+  footer: { marginTop: spacing.sm },
   themeCard: {
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    padding: spacing.lg,
     gap: spacing.sm,
   },
   copyBtn: {
-    marginTop: spacing.xs,
     alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    backgroundColor: colors.brand.ink,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    minHeight: 44,
+    marginTop: spacing.xs,
   },
   privacy: {
     flexDirection: "row",
@@ -265,5 +265,5 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     minHeight: 44,
   },
-  linkText: { color: colors.brand.peach },
+  linkText: { color: colors.brand.honeyDeep },
 });

@@ -8,7 +8,7 @@ type ProgressRingProps = {
   size?: number;
 };
 
-/** Soft progress ring for weekly calm days (4-of-7 style goal). */
+/** Honey progress ring on a butter track for weekly calm days (4-of-7 style goal). */
 export function ProgressRing({ activeDays, goal, size = 56 }: ProgressRingProps) {
   const ratio = Math.min(1, goal > 0 ? activeDays / goal : 0);
   const stroke = 5;
@@ -38,8 +38,8 @@ export function ProgressRing({ activeDays, goal, size = 56 }: ProgressRingProps)
                   borderWidth: stroke,
                   borderColor: "transparent",
                   transform: [{ rotate: `${start - 90}deg` }],
-                  borderTopColor: isFilled ? colors.brand.peach : "rgba(255,255,255,0.35)",
-                  borderRightColor: isFilled ? colors.brand.peach : "rgba(255,255,255,0.35)",
+                  borderTopColor: isFilled ? colors.brand.honey : colors.surface.app,
+                  borderRightColor: isFilled ? colors.brand.honey : colors.surface.app,
                 },
               ]}
             />
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   count: {
-    color: colors.text.inverse,
+    color: colors.brand.ink,
     fontSize: 12,
   },
 });

@@ -1,6 +1,6 @@
 import { StyleSheet, TextInput, View } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, borderWidth, radius, spacing, useAppTheme } from "@/design-system";
 
 type NameStepProps = {
   name: string;
@@ -8,6 +8,8 @@ type NameStepProps = {
 };
 
 export function NameStep({ name, onChangeName }: NameStepProps) {
+  const theme = useAppTheme();
+
   return (
     <View style={styles.block}>
       <AppText variant="heading">Tell us about your little one</AppText>
@@ -23,8 +25,11 @@ export function NameStep({ name, onChangeName }: NameStepProps) {
           value={name}
           onChangeText={onChangeName}
           placeholder="What should we call them?"
-          placeholderTextColor={colors.text.muted}
-          style={styles.input}
+          placeholderTextColor={theme.colors.textMuted}
+          style={[
+            styles.input,
+            { borderColor: theme.colors.border, backgroundColor: theme.colors.surface, color: theme.colors.text },
+          ]}
           autoCapitalize="words"
           autoCorrect={false}
           returnKeyType="done"
@@ -41,11 +46,8 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 56,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border.strong,
-    backgroundColor: colors.surface.card,
+    borderWidth: borderWidth.thin,
     paddingHorizontal: spacing.lg,
-    color: colors.text.primary,
     fontSize: 16,
     fontFamily: "Poppins_400Regular",
   },

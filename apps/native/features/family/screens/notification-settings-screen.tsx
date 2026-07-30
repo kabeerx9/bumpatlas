@@ -2,7 +2,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import { AppText, Button, Surface, colors, radius, spacing } from "@/design-system";
 import { mockNotificationCategories } from "@/features/mock/mock-content";
 import type { NotificationPrefKey } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
@@ -112,7 +112,7 @@ export function NotificationSettingsScreen() {
       </AppText>
 
       {permission !== "granted" ? (
-        <View style={styles.permissionCard}>
+        <Surface tone="card" elevated radiusSize="xl" style={styles.permissionCard}>
           <AppText weight="semibold">Device permission</AppText>
           <AppText variant="bodySmall" tone="secondary">
             BumpAtlas needs system permission to deliver quiet-hours-aware prompts.
@@ -120,7 +120,7 @@ export function NotificationSettingsScreen() {
           <Button size="sm" disabled={registering} onPress={() => void enableSystemNotifications()}>
             {registering ? "Requesting…" : "Allow notifications"}
           </Button>
-        </View>
+        </Surface>
       ) : null}
 
       <View style={styles.sectionHead}>
@@ -136,26 +136,32 @@ export function NotificationSettingsScreen() {
           setQuietHoursEnabled(next);
           void persistPrefsPatch({ quietHoursEnabled: next });
         }}
-        style={[styles.row, quietHoursEnabled && styles.rowOn]}
       >
-        <View style={styles.copy}>
-          <AppText weight="semibold">Enable quiet hours</AppText>
-          <View style={styles.timeChips}>
-            <Pressable onPress={cycleQuietHours} hitSlop={8} style={styles.timeChip}>
-              <AppText variant="caption" weight="semibold" style={styles.chipText}>
-                {quietLabel}
-              </AppText>
-            </Pressable>
-            <Pressable onPress={cycleQuietHours} hitSlop={8}>
-              <AppText variant="caption" tone="secondary">
-                Tap to change
-              </AppText>
-            </Pressable>
+        <Surface
+          tone="card"
+          elevated
+          radiusSize="xl"
+          style={[styles.row, quietHoursEnabled && styles.rowOn]}
+        >
+          <View style={styles.copy}>
+            <AppText weight="semibold">Enable quiet hours</AppText>
+            <View style={styles.timeChips}>
+              <Pressable onPress={cycleQuietHours} hitSlop={8} style={styles.timeChip}>
+                <AppText variant="caption" weight="semibold" style={styles.chipText}>
+                  {quietLabel}
+                </AppText>
+              </Pressable>
+              <Pressable onPress={cycleQuietHours} hitSlop={8}>
+                <AppText variant="caption" tone="secondary">
+                  Tap to change
+                </AppText>
+              </Pressable>
+            </View>
           </View>
-        </View>
-        <View style={[styles.toggle, quietHoursEnabled && styles.toggleOn]}>
-          <View style={[styles.knob, quietHoursEnabled && styles.knobOn]} />
-        </View>
+          <View style={[styles.toggle, quietHoursEnabled && styles.toggleOn]}>
+            <View style={[styles.knob, quietHoursEnabled && styles.knobOn]} />
+          </View>
+        </Surface>
       </Pressable>
 
       <Pressable
@@ -164,19 +170,25 @@ export function NotificationSettingsScreen() {
           setGroupRelatedAlerts(next);
           void persistPrefsPatch({ groupRelatedAlerts: next });
         }}
-        style={[styles.row, groupRelatedAlerts && styles.rowOn]}
         accessibilityRole="switch"
         accessibilityState={{ checked: groupRelatedAlerts }}
       >
-        <View style={styles.copy}>
-          <AppText weight="semibold">Group related alerts</AppText>
-          <AppText variant="bodySmall" tone="secondary">
-            Bundle partner + recap nudges instead of scattering separate pings.
-          </AppText>
-        </View>
-        <View style={[styles.toggle, groupRelatedAlerts && styles.toggleOn]}>
-          <View style={[styles.knob, groupRelatedAlerts && styles.knobOn]} />
-        </View>
+        <Surface
+          tone="card"
+          elevated
+          radiusSize="xl"
+          style={[styles.row, groupRelatedAlerts && styles.rowOn]}
+        >
+          <View style={styles.copy}>
+            <AppText weight="semibold">Group related alerts</AppText>
+            <AppText variant="bodySmall" tone="secondary">
+              Bundle partner + recap nudges instead of scattering separate pings.
+            </AppText>
+          </View>
+          <View style={[styles.toggle, groupRelatedAlerts && styles.toggleOn]}>
+            <View style={[styles.knob, groupRelatedAlerts && styles.knobOn]} />
+          </View>
+        </Surface>
       </Pressable>
 
       <View style={styles.sectionHead}>
@@ -196,19 +208,20 @@ export function NotificationSettingsScreen() {
                 prefs: { ...notificationPrefs, [key]: next },
               });
             }}
-            style={[styles.row, enabled && styles.rowOn]}
             accessibilityRole="switch"
             accessibilityState={{ checked: enabled }}
           >
-            <View style={styles.copy}>
-              <AppText weight="semibold">{category.label}</AppText>
-              <AppText variant="bodySmall" tone="secondary">
-                {category.description}
-              </AppText>
-            </View>
-            <View style={[styles.toggle, enabled && styles.toggleOn]}>
-              <View style={[styles.knob, enabled && styles.knobOn]} />
-            </View>
+            <Surface tone="card" elevated radiusSize="xl" style={[styles.row, enabled && styles.rowOn]}>
+              <View style={styles.copy}>
+                <AppText weight="semibold">{category.label}</AppText>
+                <AppText variant="bodySmall" tone="secondary">
+                  {category.description}
+                </AppText>
+              </View>
+              <View style={[styles.toggle, enabled && styles.toggleOn]}>
+                <View style={[styles.knob, enabled && styles.knobOn]} />
+              </View>
+            </Surface>
           </Pressable>
         );
       })}
@@ -218,9 +231,6 @@ export function NotificationSettingsScreen() {
 
 const styles = StyleSheet.create({
   permissionCard: {
-    borderRadius: radius.xl,
-    backgroundColor: colors.brand.peachSoft,
-    padding: spacing.lg,
     gap: spacing.sm,
   },
   sectionHead: { gap: 2, marginTop: spacing.md },
@@ -228,22 +238,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
   },
-  rowOn: { borderColor: colors.brand.peachSoft, backgroundColor: colors.surface.warm },
+  rowOn: { borderColor: colors.brand.honey, backgroundColor: colors.surface.warm },
   copy: { flex: 1, gap: 2 },
   timeChips: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: 4 },
   timeChip: {
     borderRadius: radius.full,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.brand.honeySoft,
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
   },
-  chipText: { color: colors.brand.peach },
+  chipText: { color: colors.brand.honeyDeep },
   toggle: {
     width: 48,
     height: 28,
@@ -252,7 +257,7 @@ const styles = StyleSheet.create({
     padding: 3,
     justifyContent: "center",
   },
-  toggleOn: { backgroundColor: colors.brand.peach },
+  toggleOn: { backgroundColor: colors.brand.honey },
   knob: {
     width: 22,
     height: 22,

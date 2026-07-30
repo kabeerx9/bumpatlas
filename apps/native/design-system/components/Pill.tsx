@@ -44,7 +44,7 @@ const toneStyle = (theme: AppTheme): Record<PillTone, ViewStyle> => ({
 });
 
 const textTone: Record<PillTone, "primary" | "secondary" | "inverse" | "brand"> = {
-  selected: "inverse",
+  selected: "primary",
   neutral: "secondary",
   mint: "primary",
   lavender: "brand",

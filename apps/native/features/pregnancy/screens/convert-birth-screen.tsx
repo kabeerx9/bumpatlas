@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, StyleSheet, TextInput, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import { AppText, Button, Surface, colors, radius, spacing, useAppTheme } from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useConvertPregnancyMutation } from "@/lib/api/hooks";
@@ -11,6 +11,7 @@ import { appRoutes } from "@/navigation/routes";
 
 export function ConvertBirthScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const { convertPregnancy } = useMockUi();
   const convertPregnancyMutation = useConvertPregnancyMutation();
   const [childName, setChildName] = useState("");
@@ -45,7 +46,7 @@ export function ConvertBirthScreen() {
         centered
         onBack={() => router.replace(appRoutes.home)}
       >
-        <Feather name="check-circle" size={32} color={colors.brand.peach} />
+        <Feather name="check-circle" size={32} color={colors.brand.honeyDeep} />
         <AppText variant="heading" align="center">
           Welcome, {childName.trim()}
         </AppText>
@@ -71,15 +72,15 @@ export function ConvertBirthScreen() {
         </Button>
       }
     >
-      <View style={styles.hero}>
-        <AppText variant="heading" tone="inverse">
+      <Surface elevated radiusSize="xl" padding="xl" style={styles.hero}>
+        <AppText variant="heading" weight="semibold">
           Convert pregnancy journal
         </AppText>
-        <AppText variant="bodySmall" style={styles.heroCopy}>
+        <AppText variant="bodySmall" tone="secondary">
           Enter birth details once. Your bump journal and memories stay private to the
           household.
         </AppText>
-      </View>
+      </Surface>
 
       <View style={styles.field}>
         <AppText variant="label" tone="secondary">
@@ -89,8 +90,8 @@ export function ConvertBirthScreen() {
           value={childName}
           onChangeText={setChildName}
           placeholder="What should we call them?"
-          placeholderTextColor={colors.text.muted}
-          style={styles.input}
+          placeholderTextColor={theme.colors.textMuted}
+          style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, color: theme.colors.text }]}
           autoCapitalize="words"
         />
       </View>
@@ -103,8 +104,8 @@ export function ConvertBirthScreen() {
           value={birthDate}
           onChangeText={setBirthDate}
           placeholder="Jul 29, 2026"
-          placeholderTextColor={colors.text.muted}
-          style={styles.input}
+          placeholderTextColor={theme.colors.textMuted}
+          style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, color: theme.colors.text }]}
         />
       </View>
 
@@ -118,20 +119,15 @@ export function ConvertBirthScreen() {
 
 const styles = StyleSheet.create({
   hero: {
-    borderRadius: 28,
-    backgroundColor: colors.brand.peach,
-    padding: spacing.xl,
     gap: spacing.sm,
   },
-  heroCopy: { color: "rgba(255,255,255,0.88)", lineHeight: 20 },
   field: { gap: spacing.sm },
   input: {
     minHeight: 56,
     borderRadius: radius.lg,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    borderWidth: 1,
     paddingHorizontal: spacing.lg,
     fontSize: 16,
-    color: colors.text.primary,
     fontFamily: "Poppins_400Regular",
   },
 });

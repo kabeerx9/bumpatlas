@@ -1,9 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
-import { SoftScreen } from "@/features/shared/components/soft-screen";
+import { AppText, Button, Pill, colors, radius, spacing, useAppTheme } from "@/design-system";
 
 type OnboardingShellProps = {
   children: ReactNode;
@@ -30,18 +30,18 @@ export function OnboardingShell({
   secondaryLabel,
   onSecondary,
 }: OnboardingShellProps) {
-  const progress = Math.min(100, Math.max(8, (stepIndex / totalSteps) * 100));
+  const theme = useAppTheme();
 
   return (
-    <SoftScreen scroll={false} edges={["top", "bottom"]}>
-      <View style={styles.column}>
+    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={styles.column} edges={["top", "bottom"]}>
         <View style={styles.topBar}>
           {onBack ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Go back"
               onPress={onBack}
-              style={styles.backBtn}
+              style={[styles.backBtn, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
               hitSlop={12}
             >
               <Feather name="arrow-left" size={20} color={colors.brand.ink} />
@@ -50,8 +50,15 @@ export function OnboardingShell({
             <View style={styles.backPlaceholder} />
           )}
 
+          <Pill tone="selected">
+            Step {stepIndex} of {totalSteps}
+          </Pill>
+
           {showManageProfile ? (
-            <Pressable style={styles.manageChip} accessibilityLabel="Manage profile">
+            <Pressable
+              style={[styles.manageChip, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+              accessibilityLabel="Manage profile"
+            >
               <Feather name="user" size={14} color={colors.brand.ink} />
               <AppText variant="caption" weight="semibold">
                 Manage Profile
@@ -62,13 +69,14 @@ export function OnboardingShell({
           )}
         </View>
 
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progress}%` }]} />
-        </View>
-
         <View style={styles.body}>{children}</View>
 
-        <View style={styles.footer}>
+        <View
+          style={[
+            styles.footer,
+            { borderTopColor: theme.colors.border, backgroundColor: theme.colors.background },
+          ]}
+        >
           {secondaryLabel && onSecondary ? (
             <Pressable onPress={onSecondary} hitSlop={12} style={styles.secondaryBtn}>
               <AppText tone="secondary" align="center">
@@ -80,12 +88,13 @@ export function OnboardingShell({
             {continueLabel}
           </Button>
         </View>
-      </View>
-    </SoftScreen>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   column: { flex: 1 },
   topBar: {
     paddingHorizontal: spacing.page,
@@ -117,19 +126,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     minHeight: 44,
   },
-  progressTrack: {
-    marginTop: spacing.md,
-    marginHorizontal: spacing.page,
-    height: 4,
-    borderRadius: radius.full,
-    backgroundColor: "rgba(44,36,32,0.12)",
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: radius.full,
-    backgroundColor: colors.brand.peach,
-  },
   body: {
     flex: 1,
     paddingHorizontal: spacing.page,
@@ -140,8 +136,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border.hairline,
-    backgroundColor: "rgba(243,245,247,0.94)",
     gap: spacing.sm,
   },
   secondaryBtn: {

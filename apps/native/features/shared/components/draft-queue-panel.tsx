@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, borderWidth, colors, radius, shadows, spacing } from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 
 type DraftQueuePanelProps = {
@@ -17,7 +17,7 @@ export function DraftQueuePanel({ onOpenDraft }: DraftQueuePanelProps) {
   return (
     <View style={styles.wrap}>
       <View style={styles.head}>
-        <Feather name="cloud-off" size={16} color={colors.brand.peach} />
+        <Feather name="cloud-off" size={16} color={colors.brand.honeyDeep} />
         <AppText weight="semibold" style={styles.title}>
           Upload queue · {drafts.length}
         </AppText>
@@ -74,9 +74,12 @@ export function DraftQueuePanel({ onOpenDraft }: DraftQueuePanelProps) {
 const styles = StyleSheet.create({
   wrap: {
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.85)",
+    backgroundColor: colors.surface.card,
+    borderWidth: borderWidth.hairline,
+    borderColor: colors.border.hairline,
     padding: spacing.lg,
     gap: spacing.sm,
+    ...shadows.soft,
   },
   head: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   title: { color: colors.brand.ink },
@@ -84,8 +87,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(44,36,32,0.06)",
+    borderTopWidth: borderWidth.hairline,
+    borderTopColor: colors.border.hairline,
     paddingTop: spacing.sm,
     minHeight: 44,
   },
@@ -96,5 +99,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  clear: { color: colors.brand.peach },
+  clear: { color: colors.brand.honeyDeep },
 });

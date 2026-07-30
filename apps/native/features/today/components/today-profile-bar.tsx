@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, IconButton, colors, spacing, useAppTheme } from "@/design-system";
 
 type TodayProfileBarProps = {
   displayName: string;
@@ -9,36 +9,44 @@ type TodayProfileBarProps = {
   onSettingsPress: () => void;
 };
 
+function greetingForNow() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 export function TodayProfileBar({
   displayName,
   stageLabel,
   onSettingsPress,
 }: TodayProfileBarProps) {
+  const theme = useAppTheme();
+
   return (
     <View style={styles.bar}>
-      <View style={styles.profile}>
-        <View style={styles.avatarRing}>
-          <View style={styles.avatar}>
-            <AppText weight="semibold" tone="inverse" style={styles.initial}>
-              {displayName.slice(0, 1)}
-            </AppText>
-          </View>
-        </View>
-        <View style={styles.copy}>
-          <AppText variant="title">{displayName}</AppText>
-          <AppText variant="bodySmall" tone="secondary">
-            {stageLabel} · growing gently
-          </AppText>
-        </View>
+      <View style={styles.copy}>
+        <AppText variant="hero" weight="medium">
+          {greetingForNow()}, {displayName}
+        </AppText>
+        <AppText variant="bodySmall" tone="secondary">
+          {stageLabel} · growing gently
+        </AppText>
       </View>
 
       <View style={styles.actions}>
-        <Pressable style={styles.iconBtn} hitSlop={8}>
-          <Feather name="bell" size={18} color={colors.brand.ink} />
-        </Pressable>
-        <Pressable style={styles.iconBtn} onPress={onSettingsPress} hitSlop={8}>
-          <Feather name="settings" size={18} color={colors.brand.ink} />
-        </Pressable>
+        <IconButton accessibilityLabel="Notifications" tone="card">
+          <Feather name="bell" size={18} color={theme.colors.text} />
+        </IconButton>
+        <IconButton
+          accessibilityLabel="Open profile settings"
+          tone="card"
+          onPress={onSettingsPress}
+        >
+          <AppText weight="semibold" style={{ color: colors.brand.ink }}>
+            {displayName.slice(0, 1).toUpperCase()}
+          </AppText>
+        </IconButton>
       </View>
     </View>
   );
@@ -47,46 +55,16 @@ export function TodayProfileBar({
 const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-  },
-  profile: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: spacing.md,
-    flex: 1,
-  },
-  avatarRing: {
-    padding: 3,
-    borderRadius: radius.full,
-    borderWidth: 2,
-    borderColor: colors.brand.peach,
-  },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.brand.peach,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  initial: {
-    fontSize: 20,
   },
   copy: {
-    gap: 2,
+    gap: 4,
     flex: 1,
   },
   actions: {
     flexDirection: "row",
     gap: spacing.sm,
-  },
-  iconBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(255,255,255,0.72)",
-    alignItems: "center",
-    justifyContent: "center",
   },
 });

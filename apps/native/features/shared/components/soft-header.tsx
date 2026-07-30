@@ -17,7 +17,9 @@ export function SoftHeader({ eyebrow, title, subtitle, right }: SoftHeaderProps)
         <AppText variant="caption" style={styles.eyebrow}>
           {eyebrow}
         </AppText>
-        <AppText variant="heading">{title}</AppText>
+        <AppText variant="heading" weight="semibold">
+          {title}
+        </AppText>
         {subtitle ? (
           <AppText variant="body" tone="secondary" style={styles.subtitle}>
             {subtitle}
@@ -41,7 +43,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   eyebrow: {
-    color: colors.brand.peach,
+    color: colors.brand.honeyDeep,
     letterSpacing: 1,
     textTransform: "uppercase",
   },

@@ -1,6 +1,6 @@
 import { StyleSheet, TextInput, View } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, borderWidth, radius, spacing, useAppTheme } from "@/design-system";
 
 type HouseholdStepProps = {
   householdName: string;
@@ -8,6 +8,8 @@ type HouseholdStepProps = {
 };
 
 export function HouseholdStep({ householdName, onChangeHouseholdName }: HouseholdStepProps) {
+  const theme = useAppTheme();
+
   return (
     <View style={styles.block}>
       <AppText variant="heading">Name your household</AppText>
@@ -24,8 +26,11 @@ export function HouseholdStep({ householdName, onChangeHouseholdName }: Househol
           value={householdName}
           onChangeText={onChangeHouseholdName}
           placeholder="The Rivera household"
-          placeholderTextColor={colors.text.muted}
-          style={styles.input}
+          placeholderTextColor={theme.colors.textMuted}
+          style={[
+            styles.input,
+            { borderColor: theme.colors.border, backgroundColor: theme.colors.surface, color: theme.colors.text },
+          ]}
           autoCapitalize="words"
           autoCorrect={false}
         />
@@ -41,11 +46,8 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 56,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border.strong,
-    backgroundColor: colors.surface.card,
+    borderWidth: borderWidth.thin,
     paddingHorizontal: spacing.lg,
-    color: colors.text.primary,
     fontSize: 16,
     fontFamily: "Poppins_400Regular",
   },

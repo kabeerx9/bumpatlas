@@ -1,8 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
-import { Animated, StyleSheet, View } from "react-native";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, Button, colors, shadows, spacing } from "@/design-system";
+import { AppText, CardStack, Surface, colors, radius, shadows, spacing, useAppTheme } from "@/design-system";
 import { useRespectReduceMotion } from "@/features/shared/hooks/use-respect-reduce-motion";
 import { ProgressRing } from "@/features/today/components/progress-ring";
 import { TodayHeroIllustration } from "@/features/today/components/today-hero-illustration";
@@ -26,6 +26,7 @@ export function CaptureHeroCard({
 }: CaptureHeroCardProps) {
   const appear = useRef(new Animated.Value(0)).current;
   const { reduceMotion } = useRespectReduceMotion();
+  const theme = useAppTheme();
 
   useEffect(() => {
     if (reduceMotion.current) {
@@ -42,128 +43,130 @@ export function CaptureHeroCard({
 
   return (
     <Animated.View
-      style={[
-        styles.shell,
-        emphasized && styles.emphasized,
-        {
-          opacity: appear,
-          transform: [
-            {
-              translateY: appear.interpolate({
-                inputRange: [0, 1],
-                outputRange: [18, 0],
-              }),
-            },
-          ],
-        },
-      ]}
+      style={{
+        opacity: appear,
+        transform: [
+          {
+            translateY: appear.interpolate({
+              inputRange: [0, 1],
+              outputRange: [18, 0],
+            }),
+          },
+        ],
+      }}
     >
-      <View style={styles.blobTop} />
-      <View style={styles.blobBottom} />
+      <CardStack radiusSize="xl">
+        <Surface
+          tone="card"
+          radiusSize="xl"
+          padding="xl"
+          elevated
+          bordered={!emphasized}
+          style={[styles.shell, emphasized && styles.emphasized]}
+        >
+          <View style={styles.badge}>
+            <AppText variant="label" style={styles.badgeText}>
+              {activeDays}/{goal} calm days
+            </AppText>
+          </View>
 
-      <View style={styles.topRow}>
-        <View style={styles.topCopy}>
-          <AppText variant="caption" style={styles.eyebrow}>
-            {emphasized ? "Your focus · Capture" : `Today with ${babyName}`}
+          <View style={styles.topRow}>
+            <View style={styles.topCopy}>
+              <AppText variant="caption" tone="brand" weight="semibold" style={styles.eyebrow}>
+                {emphasized ? "Your focus · Capture" : `Today with ${babyName}`}
+              </AppText>
+              <AppText variant="caption" weight="semibold" tone="secondary">
+                Calm days this week
+              </AppText>
+            </View>
+            <ProgressRing activeDays={activeDays} goal={goal} />
+          </View>
+
+          <AppText variant="heading" weight="medium" style={styles.prompt}>
+            {prompt}
           </AppText>
-          <AppText variant="caption" weight="semibold" style={styles.week}>
-            Calm days this week
+          <AppText variant="bodySmall" tone="secondary" style={styles.support}>
+            One photo or a short note. That’s enough.
           </AppText>
-        </View>
-        <ProgressRing activeDays={activeDays} goal={goal} />
-      </View>
 
-      <AppText variant="heading" style={styles.prompt}>
-        {prompt}
-      </AppText>
-      <AppText variant="bodySmall" style={styles.support}>
-        One photo or a short note. That’s enough.
-      </AppText>
-
-      <View style={styles.illustrationRow}>
-        <TodayHeroIllustration />
-      </View>
-
-      <Button
-        size="lg"
-        variant="ghost"
-        onPress={onCapture}
-        style={styles.cta}
-        rightAccessory={<Feather name="arrow-right" size={16} color={colors.brand.peach} />}
-      >
-        Capture moment
-      </Button>
+          <View style={styles.illustrationRow}>
+            <TodayHeroIllustration />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Capture moment"
+              onPress={onCapture}
+              style={({ pressed }) => [
+                styles.captureBtn,
+                { backgroundColor: theme.colors.primary },
+                pressed && styles.captureBtnPressed,
+              ]}
+            >
+              <Feather name="camera" size={20} color={theme.colors.primaryText} />
+            </Pressable>
+          </View>
+        </Surface>
+      </CardStack>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   shell: {
-    borderRadius: 32,
-    backgroundColor: colors.brand.peach,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xl,
     gap: spacing.sm,
-    overflow: "hidden",
     minHeight: 280,
-    ...shadows.purple,
   },
   emphasized: {
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.55)",
+    borderWidth: 1.5,
+    borderColor: colors.brand.honey,
   },
-  blobTop: {
+  badge: {
     position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "rgba(255,255,255,0.16)",
-    top: -70,
-    right: -50,
+    top: -14,
+    right: spacing.lg,
+    backgroundColor: colors.surface.card,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    ...shadows.soft,
   },
-  blobBottom: {
-    position: "absolute",
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    bottom: -40,
-    left: -30,
+  badgeText: {
+    color: colors.brand.honeyDeep,
   },
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: spacing.sm,
+    marginTop: spacing.sm,
   },
-  topCopy: { flex: 1, paddingRight: spacing.md },
+  topCopy: { flex: 1, paddingRight: spacing.md, gap: 4 },
   eyebrow: {
-    color: "rgba(255,255,255,0.78)",
     letterSpacing: 0.8,
     textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  week: {
-    color: colors.text.inverse,
   },
   prompt: {
-    color: colors.text.inverse,
+    color: colors.brand.ink,
     lineHeight: 36,
     maxWidth: "92%",
   },
   support: {
-    color: "rgba(255,255,255,0.82)",
     marginBottom: spacing.sm,
   },
   illustrationRow: {
+    flexDirection: "row",
     alignItems: "flex-end",
-    marginTop: -spacing.md,
+    justifyContent: "space-between",
   },
-  cta: {
-    marginTop: spacing.sm,
-    alignSelf: "stretch",
-    backgroundColor: colors.surface.card,
-    borderColor: colors.surface.card,
+  captureBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadows.card,
+  },
+  captureBtnPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.96 }],
   },
 });

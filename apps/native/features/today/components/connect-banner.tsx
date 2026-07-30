@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, colors, radius, spacing, useAppTheme } from "@/design-system";
 
 type ConnectBannerProps = {
   prompt: string;
@@ -18,6 +18,8 @@ export function ConnectBanner({
   emphasized,
   onPress,
 }: ConnectBannerProps) {
+  const theme = useAppTheme();
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -30,20 +32,22 @@ export function ConnectBanner({
       ]}
     >
       <View style={styles.iconWrap}>
-        <Feather name="users" size={18} color={colors.text.inverse} />
+        <Feather name="users" size={18} color={colors.brand.ink} />
       </View>
       <View style={styles.copy}>
-        <AppText variant="caption" style={styles.eyebrow}>
+        <AppText variant="caption" weight="semibold" style={styles.eyebrow}>
           {emphasized ? "Your focus · " : ""}Connect · {groupName}
         </AppText>
         <AppText weight="semibold" numberOfLines={2} style={styles.title}>
           {prompt}
         </AppText>
-        <AppText variant="caption" style={styles.meta}>
+        <AppText variant="caption" tone="secondary">
           {replyCount} parents replied today
         </AppText>
       </View>
-      <Feather name="chevron-right" size={20} color={colors.brand.peach} />
+      <View style={[styles.cta, { backgroundColor: theme.colors.primary }]}>
+        <Feather name="chevron-right" size={16} color={theme.colors.primaryText} />
+      </View>
     </Pressable>
   );
 }
@@ -55,12 +59,12 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: colors.pastel.sky,
     minHeight: 72,
   },
   emphasized: {
     borderWidth: 1.5,
-    borderColor: colors.brand.peach,
+    borderColor: colors.brand.honey,
   },
   pressed: {
     opacity: 0.92,
@@ -69,7 +73,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: colors.brand.peach,
+    backgroundColor: colors.brand.honeySoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -78,13 +82,18 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   eyebrow: {
-    color: colors.brand.peach,
+    color: colors.brand.honeyDeep,
     letterSpacing: 0.4,
+    textTransform: "uppercase",
   },
   title: {
     color: colors.brand.ink,
   },
-  meta: {
-    color: colors.text.secondary,
+  cta: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

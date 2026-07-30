@@ -1,6 +1,7 @@
 export * from "./components/Atmosphere";
 export * from "./components/BrandWordmark";
 export * from "./components/Button";
+export * from "./components/CardStack";
 export * from "./components/IconButton";
 export * from "./components/Pill";
 export * from "./components/Screen";

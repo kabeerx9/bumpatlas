@@ -1,11 +1,12 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, IconButton, Screen, colors, radius, spacing, useAppTheme } from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
-import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useBadgesQuery } from "@/lib/api/hooks";
+
+const TILE_PASTELS = [colors.pastel.petal, colors.pastel.mint, colors.pastel.lemon, colors.pastel.sky];
 
 function formatEarnedDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -13,40 +14,74 @@ function formatEarnedDate(iso: string) {
 
 export function BadgesScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const { newlyEarnedBadgeId } = useMockUi();
   const badgesQuery = useBadgesQuery();
   const badges = badgesQuery.data?.items ?? [];
 
   return (
-    <SoftStackShell title="Badges" onBack={() => router.back()}>
-      <AppText variant="bodySmall" tone="secondary">
-        Cosmetic only — never a streak to protect. Missing a day never takes these away.
-      </AppText>
+    <Screen padded={false} contentStyle={styles.screenFlex}>
+      <View style={styles.header}>
+        <IconButton accessibilityLabel="Go back" onPress={() => router.back()}>
+          <Feather name="arrow-left" size={20} color={theme.colors.text} />
+        </IconButton>
+        <AppText variant="title" weight="semibold">
+          Badges
+        </AppText>
+        <View style={styles.headerSpacer} />
+      </View>
 
-      {badgesQuery.isLoading ? (
-        <ActivityIndicator color={colors.brand.peach} />
-      ) : (
-        badges.map((badge) => {
-          const earned = Boolean(badge.earnedAt);
-          const justEarned = newlyEarnedBadgeId === badge.id;
-          return (
-            <View
-              key={badge.id}
-              style={[styles.card, !earned && styles.cardLocked, justEarned && styles.cardFresh]}
-            >
-              <View style={[styles.icon, earned && styles.iconEarned]}>
-                <Feather
-                  name={earned ? "award" : "lock"}
-                  size={18}
-                  color={earned ? colors.text.inverse : colors.text.muted}
-                />
-              </View>
-              <View style={styles.copy}>
-                <AppText weight="semibold">{badge.title}</AppText>
-                <AppText variant="bodySmall" tone="secondary">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <AppText variant="bodySmall" tone="secondary">
+          Cosmetic only — never a streak to protect. Missing a day never takes these away.
+        </AppText>
+
+        {badgesQuery.isLoading ? (
+          <ActivityIndicator color={theme.colors.secondary} style={styles.loading} />
+        ) : (
+          <View style={styles.grid}>
+            {badges.map((badge, index) => {
+            const earned = Boolean(badge.earnedAt);
+            const justEarned = newlyEarnedBadgeId === badge.id;
+            const pastel = TILE_PASTELS[index % TILE_PASTELS.length];
+
+            return (
+              <View key={badge.id} style={styles.tileWrap}>
+                <View
+                  style={[
+                    styles.tile,
+                    { backgroundColor: earned ? theme.colors.secondary : theme.colors.surfaceMuted },
+                    justEarned && { borderWidth: 2, borderColor: theme.colors.secondary },
+                    !earned && { borderWidth: 1, borderColor: theme.colors.border },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.tileGlow,
+                      { backgroundColor: earned ? "transparent" : pastel, opacity: earned ? 0 : 0.5 },
+                    ]}
+                  />
+                  <Feather
+                    name={earned ? "award" : "lock"}
+                    size={22}
+                    color={earned ? theme.colors.text : theme.colors.textMuted}
+                  />
+                </View>
+                <AppText variant="bodySmall" weight="semibold" align="center" numberOfLines={2}>
+                  {badge.title}
+                </AppText>
+                <AppText variant="caption" tone="secondary" align="center" numberOfLines={2}>
                   {badge.description}
                 </AppText>
-                <AppText variant="caption" style={earned ? styles.earned : undefined}>
+                <AppText
+                  variant="caption"
+                  weight="semibold"
+                  tone={earned ? "brand" : "muted"}
+                  align="center"
+                >
                   {earned
                     ? justEarned
                       ? "Just earned"
@@ -54,36 +89,47 @@ export function BadgesScreen() {
                     : "Not yet earned"}
                 </AppText>
               </View>
-            </View>
-          );
-        })
-      )}
-    </SoftStackShell>
+            );
+          })}
+          </View>
+        )}
+      </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  screenFlex: { flex: 1 },
+  scrollContent: { paddingHorizontal: spacing.page, paddingTop: spacing.md, paddingBottom: 132, gap: spacing.lg },
+  loading: { marginTop: spacing.lg },
+  header: {
+    paddingHorizontal: spacing.page,
+    paddingTop: spacing.lg,
     flexDirection: "row",
-    gap: spacing.md,
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.lg,
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  cardLocked: { opacity: 0.72 },
-  cardFresh: {
-    borderWidth: 1,
-    borderColor: "rgba(106,143,168,0.45)",
+  headerSpacer: { width: 44, height: 44 },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.lg,
   },
-  icon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.brand.peachSoft,
+  tileWrap: {
+    width: "30%",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  tile: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.full,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
-  iconEarned: { backgroundColor: colors.brand.peach },
-  copy: { flex: 1, gap: 4 },
-  earned: { color: colors.brand.peach },
+  tileGlow: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: radius.full,
+  },
 });

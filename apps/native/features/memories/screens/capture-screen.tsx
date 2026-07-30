@@ -15,7 +15,7 @@ import {
   View,
 } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import { AppText, Button, IconButton, Pill, Surface, colors, radius, spacing, useAppTheme } from "@/design-system";
 import { mockMemoryPrompts } from "@/features/mock/demo-data";
 import { mockPregnancy } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
@@ -34,6 +34,7 @@ const BACKDATE_OPTIONS = ["Today", "Yesterday", "2 days ago", "Pick a date…"];
 
 export function CaptureScreen() {
   const router = useRouter();
+  const theme = useAppTheme();
   const queryClient = useQueryClient();
   const { isOffline, saveDraft, completeCapture, stageMode } = useMockUi();
   const todayQuery = useTodayQuery();
@@ -198,22 +199,22 @@ export function CaptureScreen() {
         </View>
 
         {savedLocally ? (
-          <View style={styles.savedBanner}>
-            <Feather name="check-circle" size={16} color={colors.brand.peach} />
+          <Surface tone="lavender" style={styles.savedBanner} padding="md" bordered={false}>
+            <Feather name="check-circle" size={16} color={theme.colors.accentText} />
             <AppText variant="bodySmall">Saved locally · will sync when online</AppText>
-          </View>
+          </Surface>
         ) : null}
 
         {awardedBadge ? (
-          <View style={styles.savedBanner}>
-            <Feather name="award" size={16} color={colors.brand.peach} />
+          <Surface tone="lavender" style={styles.savedBanner} padding="md" bordered={false}>
+            <Feather name="award" size={16} color={theme.colors.accentText} />
             <AppText variant="bodySmall">First Capture badge earned — no streak to protect</AppText>
             <Pressable onPress={() => router.back()} hitSlop={8}>
-              <AppText variant="caption" weight="semibold" style={styles.removePhoto}>
+              <AppText variant="caption" weight="semibold" tone="brand">
                 Back to Today
               </AppText>
             </Pressable>
-          </View>
+          </Surface>
         ) : null}
 
         <ScrollView
@@ -223,10 +224,10 @@ export function CaptureScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.promptPanel}>
-            <AppText variant="caption" style={styles.peachLabel}>
+            <AppText variant="caption" weight="semibold" style={styles.promptLabel}>
               Today’s prompt
             </AppText>
-            <AppText variant="heading" style={styles.prompt}>
+            <AppText variant="heading" tone="inverse">
               {prompt}
             </AppText>
             {stageMode !== "pregnancy" ? (
@@ -235,7 +236,7 @@ export function CaptureScreen() {
                 hitSlop={8}
                 accessibilityLabel="Try another prompt"
               >
-                <AppText variant="caption" weight="semibold" style={styles.removePhoto}>
+                <AppText variant="caption" weight="semibold" style={styles.promptLink}>
                   Try another prompt
                 </AppText>
               </Pressable>
@@ -250,17 +251,10 @@ export function CaptureScreen() {
                 <Pressable
                   key={option}
                   onPress={() => setEventDate(option)}
-                  style={[styles.dateChip, active && styles.dateChipActive]}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
                 >
-                  <AppText
-                    variant="caption"
-                    weight="semibold"
-                    style={active ? styles.dateTextActive : undefined}
-                  >
-                    {option}
-                  </AppText>
+                  <Pill tone={active ? "selected" : "neutral"}>{option}</Pill>
                 </Pressable>
               );
             })}
@@ -294,7 +288,7 @@ export function CaptureScreen() {
                   }}
                   accessibilityLabel="Remove photo"
                 >
-                  <AppText variant="caption" weight="semibold" style={styles.removePhoto}>
+                  <AppText variant="caption" weight="semibold" tone="brand" style={styles.removePhotoSpacing}>
                     Remove photo
                   </AppText>
                 </Pressable>
@@ -324,8 +318,8 @@ export function CaptureScreen() {
               accessibilityLabel="Add a photo"
               disabled={mediaExhausted || picking}
             >
-              <View style={styles.cameraCircle}>
-                <Feather name="camera" size={22} color={colors.brand.peach} />
+              <View style={[styles.cameraCircle, { backgroundColor: theme.colors.primary }]}>
+                <Feather name="camera" size={22} color={theme.colors.primaryText} />
               </View>
               <AppText weight="semibold">
                 {mediaExhausted
@@ -347,7 +341,7 @@ export function CaptureScreen() {
                   hitSlop={8}
                   accessibilityLabel="View premium media quota"
                 >
-                  <AppText variant="caption" weight="semibold" style={styles.removePhoto}>
+                  <AppText variant="caption" weight="semibold" tone="brand" style={styles.removePhotoSpacing}>
                     View premium media options
                   </AppText>
                 </Pressable>
@@ -368,17 +362,10 @@ export function CaptureScreen() {
                 <Pressable
                   key={option.id}
                   onPress={() => setVisibility(option.id)}
-                  style={[styles.dateChip, active && styles.dateChipActive]}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
                 >
-                  <AppText
-                    variant="caption"
-                    weight="semibold"
-                    style={active ? styles.dateTextActive : undefined}
-                  >
-                    {option.label}
-                  </AppText>
+                  <Pill tone={active ? "selected" : "neutral"}>{option.label}</Pill>
                 </Pressable>
               );
             })}
@@ -412,7 +399,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: colors.surface.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -422,43 +409,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     marginBottom: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.brand.peachSoft,
   },
   body: { gap: spacing.md, paddingBottom: spacing.lg },
   promptPanel: {
     borderRadius: radius.xl,
-    backgroundColor: colors.brand.peach,
+    backgroundColor: colors.brand.ink,
     padding: spacing.xl,
     gap: spacing.sm,
   },
-  peachLabel: {
-    color: "rgba(255,255,255,0.78)",
+  promptLabel: {
+    color: "rgba(255,255,255,0.7)",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
-  prompt: { color: colors.text.inverse, lineHeight: 34 },
+  promptLink: { color: colors.brand.honey },
   dateRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  dateChip: {
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
-  },
-  dateChipActive: {
-    backgroundColor: colors.brand.peachSoft,
-    borderColor: colors.brand.peach,
-  },
-  dateTextActive: { color: colors.brand.peach },
   dateInput: {
     minHeight: 48,
     borderRadius: radius.lg,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: colors.surface.card,
     paddingHorizontal: spacing.lg,
     color: colors.text.primary,
     fontFamily: "Poppins_400Regular",
@@ -466,7 +435,7 @@ const styles = StyleSheet.create({
   photoBox: {
     minHeight: 160,
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: colors.surface.card,
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.xs,
@@ -475,7 +444,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.md,
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: colors.surface.card,
     padding: spacing.md,
     alignItems: "center",
   },
@@ -483,13 +452,13 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: radius.lg,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.pastel.lemon,
   },
   photoMeta: { flex: 1, gap: 4 },
-  removePhoto: { color: colors.brand.peach, marginTop: spacing.xs },
+  removePhotoSpacing: { marginTop: spacing.xs },
   failBox: {
     borderRadius: radius.xl,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.surface.mist,
     padding: spacing.lg,
     gap: spacing.sm,
   },
@@ -498,7 +467,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.brand.peachSoft,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.xs,
@@ -507,7 +475,7 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 120,
     borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: colors.surface.card,
     padding: spacing.lg,
     fontSize: 17,
     color: colors.text.primary,

@@ -13,15 +13,15 @@ export type CityWalkActivityProps = {
 
 const cityWalkActivityLayout = String.raw`
 function CityWalkActivity(props, environment) {
-  const brand = environment.isLuminanceReduced ? "#FFFFFF" : "#8EE3C1";
-  const text = environment.colorScheme === "dark" ? "#FFFFFF" : "#1C1C1E";
-  const secondary = environment.colorScheme === "dark" ? "#D1D5DB" : "#6B7280";
+  const brand = environment.isLuminanceReduced ? "#FFFFFF" : "#F2C878";
+  const text = environment.colorScheme === "dark" ? "#FFFFFF" : "#221E16";
+  const secondary = environment.colorScheme === "dark" ? "#E8DFC9" : "#9A9078";
   const progressText = String(Math.round(props.progress)) + "%";
 
   const banner = jsxs(VStack, {
     alignment: "leading",
     spacing: 8,
-    modifiers: [padding({ all: 14 }), activityBackgroundTint("#26215C")],
+    modifiers: [padding({ all: 14 }), activityBackgroundTint("#211D15")],
     children: [
       jsxs(HStack, {
         alignment: "center",
@@ -37,7 +37,7 @@ function CityWalkActivity(props, environment) {
                 children: props.title
               }),
               jsx(Text, {
-                modifiers: [font({ size: 12 }), foregroundStyle("#D1D5DB")],
+                modifiers: [font({ size: 12 }), foregroundStyle("#E8DFC9")],
                 children: props.status
               })
             ]
@@ -54,7 +54,7 @@ function CityWalkActivity(props, environment) {
         children: "Now: " + props.currentStop
       }),
       jsx(Text, {
-        modifiers: [font({ size: 12 }), foregroundStyle("#D1D5DB")],
+        modifiers: [font({ size: 12 }), foregroundStyle("#E8DFC9")],
         children:
           "Next: " +
           props.nextStop +

@@ -28,15 +28,15 @@ export function InviteStep({ householdName, childName }: InviteStepProps) {
 
       <View style={styles.perks}>
         <View style={styles.perkRow}>
-          <Feather name="check" size={16} color={colors.brand.peach} />
+          <Feather name="check" size={16} color={colors.brand.honeyDeep} />
           <AppText variant="bodySmall">Shared journal — private to your household</AppText>
         </View>
         <View style={styles.perkRow}>
-          <Feather name="check" size={16} color={colors.brand.peach} />
+          <Feather name="check" size={16} color={colors.brand.honeyDeep} />
           <AppText variant="bodySmall">Less mental load — both of you can contribute</AppText>
         </View>
         <View style={styles.perkRow}>
-          <Feather name="check" size={16} color={colors.brand.peach} />
+          <Feather name="check" size={16} color={colors.brand.honeyDeep} />
           <AppText variant="bodySmall">Skip anytime — you can invite from Family later</AppText>
         </View>
       </View>
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   block: { gap: spacing.lg },
   hero: {
     borderRadius: radius.xl,
-    backgroundColor: colors.brand.peach,
+    backgroundColor: colors.brand.ink,
     padding: spacing.xl,
     gap: spacing.sm,
     alignItems: "center",
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(255,255,255,0.16)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.xs,

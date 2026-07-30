@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
-import { AppText, Button, colors, radius, spacing } from "@/design-system";
+import { AppText, Button, Surface, colors, radius, spacing } from "@/design-system";
 import { mockInvitePreview } from "@/features/mock/demo-data";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
@@ -74,15 +74,15 @@ export function InviteAcceptScreen() {
       <>
         <View style={styles.hero}>
           <View style={styles.avatar}>
-            <Feather name="users" size={28} color={colors.text.inverse} />
+            <Feather name="users" size={28} color={colors.brand.honeyDeep} />
           </View>
-          <AppText variant="caption" style={styles.heroEyebrow}>
+          <AppText variant="caption" tone="brand" style={styles.heroEyebrow}>
             You&apos;re invited
           </AppText>
-          <AppText variant="heading" style={styles.heroTitle}>
+          <AppText variant="heading" weight="semibold" align="center">
             {accepted && acceptedFamily ? `Welcome to ${acceptedFamily.name}` : "Join a household"}
           </AppText>
-          <AppText variant="bodySmall" style={styles.heroCopy}>
+          <AppText variant="bodySmall" tone="secondary" align="center">
             {accepted && acceptedFamily
               ? `You can now help capture ${
                   acceptedFamily.childDisplayName ?? "their"
@@ -91,12 +91,16 @@ export function InviteAcceptScreen() {
           </AppText>
         </View>
 
-        <View style={styles.detailCard}>
+        <Surface tone="card" elevated radiusSize="xl" style={styles.detailCard}>
           <View style={styles.detailRow}>
             <AppText variant="caption" tone="secondary">
               Invite code
             </AppText>
-            <AppText weight="semibold">{token ?? "Missing invite code"}</AppText>
+            <View style={styles.codePill}>
+              <AppText weight="semibold" style={styles.codeText}>
+                {token ?? "Missing invite code"}
+              </AppText>
+            </View>
           </View>
           <View style={styles.detailRow}>
             <AppText variant="caption" tone="secondary">
@@ -114,10 +118,10 @@ export function InviteAcceptScreen() {
               </AppText>
             </View>
           ) : null}
-        </View>
+        </Surface>
 
         <View style={styles.note}>
-          <Feather name="lock" size={16} color={colors.brand.peach} />
+          <Feather name="lock" size={16} color={colors.brand.honeyDeep} />
           <AppText variant="bodySmall" tone="secondary" style={styles.noteCopy}>
             Household memories are private. Connect posts stay separate — text only, no child
             photos.
@@ -126,7 +130,7 @@ export function InviteAcceptScreen() {
 
         {accepted ? (
           <View style={styles.success}>
-            <Feather name="check-circle" size={20} color={colors.brand.peach} />
+            <Feather name="check-circle" size={20} color={colors.brand.honeyDeep} />
             <AppText weight="semibold">Welcome to the household</AppText>
             <AppText variant="bodySmall" tone="secondary">
               Opening Family...
@@ -140,40 +144,24 @@ export function InviteAcceptScreen() {
 
 const styles = StyleSheet.create({
   hero: {
-    borderRadius: 28,
-    backgroundColor: colors.brand.peach,
-    padding: spacing.xl,
     gap: spacing.sm,
     alignItems: "center",
+    paddingVertical: spacing.md,
   },
   avatar: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "rgba(255,255,255,0.22)",
+    backgroundColor: colors.brand.honeySoft,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.xs,
   },
   heroEyebrow: {
-    color: "rgba(255,255,255,0.78)",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
-  heroTitle: {
-    color: colors.text.inverse,
-    lineHeight: 34,
-    textAlign: "center",
-  },
-  heroCopy: {
-    color: "rgba(255,255,255,0.88)",
-    lineHeight: 20,
-    textAlign: "center",
-  },
   detailCard: {
-    borderRadius: radius.xl,
-    backgroundColor: "rgba(255,255,255,0.78)",
-    padding: spacing.lg,
     gap: spacing.md,
   },
   detailRow: {
@@ -181,6 +169,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     gap: spacing.md,
+  },
+  codePill: {
+    borderRadius: radius.full,
+    backgroundColor: colors.brand.honeySoft,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+  },
+  codeText: {
+    letterSpacing: 2,
+    color: colors.brand.honeyDeep,
   },
   note: {
     flexDirection: "row",
@@ -196,6 +194,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     padding: spacing.lg,
     borderRadius: radius.xl,
-    backgroundColor: colors.brand.peachSoft,
+    backgroundColor: colors.brand.honeySoft,
   },
 });

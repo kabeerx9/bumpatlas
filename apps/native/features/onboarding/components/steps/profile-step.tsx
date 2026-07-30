@@ -1,6 +1,6 @@
 import { StyleSheet, TextInput, View } from "react-native";
 
-import { AppText, colors, radius, spacing } from "@/design-system";
+import { AppText, borderWidth, radius, spacing, useAppTheme } from "@/design-system";
 import type { OnboardingRole } from "@/features/onboarding/components/steps/role-step";
 
 type ProfileStepProps = {
@@ -22,8 +22,13 @@ export function ProfileStep({
   onChangeChildDob,
   onChangeDueDate,
 }: ProfileStepProps) {
+  const theme = useAppTheme();
   const expecting = role === "expecting";
   const partner = role === "partner";
+  const inputStyle = [
+    styles.input,
+    { borderColor: theme.colors.border, backgroundColor: theme.colors.surface, color: theme.colors.text },
+  ];
 
   if (partner) {
     return (
@@ -57,8 +62,8 @@ export function ProfileStep({
             value={dueDate}
             onChangeText={onChangeDueDate}
             placeholder="Aug 15, 2026"
-            placeholderTextColor={colors.text.muted}
-            style={styles.input}
+            placeholderTextColor={theme.colors.textMuted}
+            style={inputStyle}
           />
         </View>
       ) : (
@@ -71,8 +76,8 @@ export function ProfileStep({
               value={childName}
               onChangeText={onChangeChildName}
               placeholder="What should we call them?"
-              placeholderTextColor={colors.text.muted}
-              style={styles.input}
+              placeholderTextColor={theme.colors.textMuted}
+              style={inputStyle}
               autoCapitalize="words"
               autoCorrect={false}
             />
@@ -85,8 +90,8 @@ export function ProfileStep({
               value={childDob}
               onChangeText={onChangeChildDob}
               placeholder="Apr 28, 2026"
-              placeholderTextColor={colors.text.muted}
-              style={styles.input}
+              placeholderTextColor={theme.colors.textMuted}
+              style={inputStyle}
             />
           </View>
         </>
@@ -102,11 +107,8 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 56,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border.strong,
-    backgroundColor: colors.surface.card,
+    borderWidth: borderWidth.thin,
     paddingHorizontal: spacing.lg,
-    color: colors.text.primary,
     fontSize: 16,
     fontFamily: "Poppins_400Regular",
   },
