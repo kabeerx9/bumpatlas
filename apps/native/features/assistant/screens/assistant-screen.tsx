@@ -12,7 +12,16 @@ import {
   View,
 } from "react-native";
 
-import { AppText, IconButton, borderWidth, radius, spacing, useAppTheme } from "@/design-system";
+import {
+  AppText,
+  ChatBubble,
+  IconButton,
+  borderWidth,
+  radius,
+  shadows,
+  spacing,
+  useAppTheme,
+} from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { CitationCard, type Citation } from "@/features/shared/components/citation-card";
 import { EscalateCard } from "@/features/shared/components/escalate-card";
@@ -198,39 +207,30 @@ export function AssistantScreen() {
           showsVerticalScrollIndicator={false}
         >
           {thread.map((item, index) => (
-            <View key={item.role === "assistant" ? item.id : `user-${index}`}>
-              <View
-                style={[
-                  styles.bubble,
-                  item.role === "user" ? dynamicStyles.userBubble : dynamicStyles.aiBubble,
-                ]}
-              >
-                <AppText
-                  variant="bodySmall"
-                  tone={item.role === "user" ? "inverse" : "primary"}
-                >
-                  {item.text}
-                </AppText>
-                {item.role === "assistant" && item.citation ? (
-                  <CitationCard
-                    citation={item.citation}
-                    onOpen={() =>
-                      item.citation?.guideId &&
-                      router.push(appRoutes.guideArticle(item.citation.guideId))
-                    }
-                  />
-                ) : null}
-                {item.role === "assistant" && item.escalate ? (
-                  <EscalateCard
-                    onEmergency={() =>
-                      Alert.alert(
-                        "Emergency",
-                        "If you or your baby are in immediate danger, call your local emergency number.",
-                      )
-                    }
-                  />
-                ) : null}
-              </View>
+            <View
+              key={item.role === "assistant" ? item.id : `user-${index}`}
+              style={item.role === "user" ? styles.rowMine : styles.rowTheirs}
+            >
+              <ChatBubble from={item.role === "user" ? "you" : "them"}>{item.text}</ChatBubble>
+              {item.role === "assistant" && item.citation ? (
+                <CitationCard
+                  citation={item.citation}
+                  onOpen={() =>
+                    item.citation?.guideId &&
+                    router.push(appRoutes.guideArticle(item.citation.guideId))
+                  }
+                />
+              ) : null}
+              {item.role === "assistant" && item.escalate ? (
+                <EscalateCard
+                  onEmergency={() =>
+                    Alert.alert(
+                      "Emergency",
+                      "If you or your baby are in immediate danger, call your local emergency number.",
+                    )
+                  }
+                />
+              ) : null}
               {item.role === "assistant" && item.id !== "intro" ? (
                 <Pressable
                   onPress={() => reportAnswer(item.id)}
@@ -279,7 +279,11 @@ export function AssistantScreen() {
             </SoftPanel>
           ) : null}
 
-          <View style={styles.suggestions}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.suggestions}
+          >
             {SUGGESTIONS.map((suggestion) => (
               <Pressable
                 key={suggestion}
@@ -301,7 +305,7 @@ export function AssistantScreen() {
                 )}
               </Pressable>
             ))}
-          </View>
+          </ScrollView>
         </ScrollView>
 
         <View style={dynamicStyles.composer}>
@@ -341,11 +345,17 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     gap: spacing.sm,
   },
-  bubble: {
+  rowMine: {
+    alignSelf: "flex-end",
+    alignItems: "flex-end",
     maxWidth: "92%",
-    borderRadius: radius.xl,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    gap: spacing.xs,
+  },
+  rowTheirs: {
+    alignSelf: "flex-start",
+    alignItems: "flex-start",
+    maxWidth: "92%",
+    gap: spacing.xs,
   },
   reportRow: {
     flexDirection: "row",
@@ -360,23 +370,13 @@ const styles = StyleSheet.create({
   consentRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
   consentCopy: { flex: 1, lineHeight: 20 },
   consentBtnDisabled: { opacity: 0.4 },
-  suggestions: { gap: spacing.sm, marginTop: spacing.md },
+  suggestions: { gap: spacing.sm, marginTop: spacing.md, paddingRight: spacing.page },
   sendDisabled: { opacity: 0.4 },
 });
 
 /** Theme-dependent styles: bubbles, chips, and the composer need light/dark aware tokens. */
 function themedStyles(theme: ReturnType<typeof useAppTheme>) {
   return StyleSheet.create({
-    userBubble: {
-      alignSelf: "flex-end",
-      backgroundColor: theme.colors.primary,
-    },
-    aiBubble: {
-      alignSelf: "flex-start",
-      backgroundColor: theme.colors.surface,
-      borderWidth: borderWidth.hairline,
-      borderColor: theme.colors.border,
-    },
     checkbox: {
       width: 22,
       height: 22,
@@ -396,12 +396,11 @@ function themedStyles(theme: ReturnType<typeof useAppTheme>) {
       paddingVertical: spacing.sm,
     },
     suggestion: {
+      ...shadows.soft,
       borderRadius: radius.full,
       backgroundColor: theme.colors.surface,
-      borderWidth: borderWidth.hairline,
-      borderColor: theme.colors.border,
       paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.sm,
+      paddingVertical: spacing.sm + 1,
       alignSelf: "flex-start",
     },
     suggestionPressed: {
@@ -416,20 +415,20 @@ function themedStyles(theme: ReturnType<typeof useAppTheme>) {
       alignItems: "center",
     },
     input: {
+      ...shadows.soft,
       flex: 1,
       minHeight: 48,
       borderRadius: radius.full,
       backgroundColor: theme.colors.surface,
-      borderWidth: borderWidth.hairline,
-      borderColor: theme.colors.border,
       paddingHorizontal: spacing.lg,
       color: theme.colors.text,
-      fontFamily: "Poppins_400Regular",
+      fontFamily: "Inter_400Regular",
+      fontSize: 14,
     },
     sendBtn: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: 46,
+      height: 46,
+      borderRadius: radius.full,
       backgroundColor: theme.colors.primary,
       alignItems: "center",
       justifyContent: "center",

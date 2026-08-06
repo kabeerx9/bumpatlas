@@ -6,17 +6,22 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import {
   AppText,
   Button,
-  CardStack,
+  ChipRow,
   IconButton,
-  Pill,
+  PostCard,
   Screen,
+  ScreenHeader,
+  SectionHeader,
   Surface,
   colors,
+  layout,
   radius,
+  shadows,
   spacing,
   useAppTheme,
 } from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
+import { formatRelativeTime } from "@/features/shared/lib/format-date";
 import {
   useBlockUserMutation,
   useGroupPostsQuery,
@@ -26,24 +31,6 @@ import {
 import { appRoutes } from "@/navigation/routes";
 
 const CONNECT_PROMPT = "What made today feel a little easier?";
-
-const AVATAR_TONES = [colors.pastel.petal, colors.pastel.mint, colors.pastel.lemon, colors.pastel.sky];
-
-function avatarTone(name: string) {
-  const sum = [...name].reduce((total, char) => total + char.charCodeAt(0), 0);
-  return AVATAR_TONES[sum % AVATAR_TONES.length];
-}
-
-function timeAgo(iso: string) {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return iso;
-  const diffMinutes = Math.max(0, Math.round((Date.now() - then) / 60000));
-  if (diffMinutes < 1) return "just now";
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  const diffHours = Math.round(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${Math.round(diffHours / 24)}d ago`;
-}
 
 export function ConnectScreen() {
   const router = useRouter();
@@ -66,7 +53,7 @@ export function ConnectScreen() {
   const groupPostsQuery = useGroupPostsQuery(activeGroupId);
   const reactMutation = useReactToPostMutation(activeGroupId);
   const blockMutation = useBlockUserMutation();
-  const [showBlockMenu, setShowBlockMenu] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [rulesOpen, setRulesOpen] = useState(!connectRulesSeen && !communityRulesAccepted);
 
   const groups = groupsQuery.data?.items ?? [];
@@ -85,6 +72,11 @@ export function ConnectScreen() {
     [posts, blockedAuthorIds],
   );
 
+  const groupChips = useMemo(
+    () => groups.map((group) => ({ value: group.id, label: `${group.name} · ${group.memberCount}` })),
+    [groups],
+  );
+
   const isWarming = !groupPostsQuery.isLoading && visiblePosts.length === 0;
 
   function confirmBlock(authorId: string, authorName: string) {
@@ -99,7 +91,7 @@ export function ConnectScreen() {
           onPress: () => {
             blockAuthor(authorId);
             blockMutation.mutate({ userId: authorId });
-            setShowBlockMenu(null);
+            setOpenMenuId(null);
           },
         },
       ],
@@ -108,230 +100,193 @@ export function ConnectScreen() {
 
   return (
     <Screen padded={false}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
-        <View style={styles.headerRow}>
-          <View style={styles.headerCopy}>
-            <AppText variant="caption" tone="brand" style={styles.eyebrow}>
-              Connect
-            </AppText>
-            <AppText variant="heading">{activeGroup.name}</AppText>
-            <AppText variant="bodySmall" tone="secondary">
-              Invite-only stage group. Text first. No child photos in community.
-            </AppText>
-          </View>
-          <View style={styles.headerActions}>
-            <IconButton
-              accessibilityLabel="Change stage group"
-              onPress={() => router.push(appRoutes.connectGroups)}
-            >
-              <Feather name="users" size={18} color={theme.colors.text} />
-            </IconButton>
-            <IconButton
-              accessibilityLabel="Blocked members"
-              onPress={() => router.push(appRoutes.connectBlocked)}
-            >
-              <Feather name="slash" size={18} color={theme.colors.text} />
-            </IconButton>
-          </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <View style={styles.gutter}>
+          <ScreenHeader
+            title="Community"
+            subtitle="Tips and stories from other parents."
+            action={
+              <View style={styles.headerActions}>
+                <IconButton
+                  accessibilityLabel="Change stage group"
+                  size={40}
+                  onPress={() => router.push(appRoutes.connectGroups)}
+                >
+                  <Feather name="users" size={16} color={theme.colors.text} />
+                </IconButton>
+                <IconButton
+                  accessibilityLabel="Blocked members"
+                  size={40}
+                  onPress={() => router.push(appRoutes.connectBlocked)}
+                >
+                  <Feather name="slash" size={16} color={theme.colors.text} />
+                </IconButton>
+              </View>
+            }
+          />
         </View>
 
-        {groups.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipRow}
-          >
-            {groups.map((group) => (
-              <Pressable
-                key={group.id}
-                onPress={() => router.push(appRoutes.connectGroups)}
-                accessibilityRole="button"
-                accessibilityLabel={`${group.name}, ${group.memberCount} members`}
-              >
-                <Pill tone={group.id === activeGroupId ? "selected" : "neutral"}>
-                  {group.name} · {group.memberCount}
-                </Pill>
-              </Pressable>
-            ))}
-          </ScrollView>
+        {groupChips.length > 0 ? (
+          <ChipRow
+            chips={groupChips}
+            value={activeGroupId}
+            onChange={() => router.push(appRoutes.connectGroups)}
+          />
         ) : null}
 
         {rulesOpen ? (
-          <Surface tone="mint" style={styles.rulesGate}>
-            <AppText weight="semibold">Community rules</AppText>
-            <AppText variant="bodySmall" tone="secondary">
-              Text only — no child photos. Be kind. No medical dosing for others. Report anything
-              unsafe.
-            </AppText>
-            <Button
-              size="lg"
-              onPress={() => {
-                acceptCommunityRules();
-                markConnectRulesSeen();
-                setRulesOpen(false);
-              }}
-            >
-              I agree · continue
-            </Button>
-          </Surface>
+          <View style={styles.gutter}>
+            <Surface tone="mint" radiusSize="lg" bordered={false} style={styles.gapSm}>
+              <AppText weight="semibold">Community rules</AppText>
+              <AppText variant="bodySmall" tone="secondary">
+                Text only — no child photos. Be kind. No medical dosing for others. Report anything
+                unsafe.
+              </AppText>
+              <Button
+                size="lg"
+                onPress={() => {
+                  acceptCommunityRules();
+                  markConnectRulesSeen();
+                  setRulesOpen(false);
+                }}
+              >
+                I agree · continue
+              </Button>
+            </Surface>
+          </View>
         ) : null}
 
-        <AppText variant="caption" tone="secondary">
-          {postsUsedToday} of 10 posts today · comments {commentsUsedToday}/{commentsDailyLimit} ·{" "}
-          {activeGroup.memberCount} members
-          {!linksAllowed ? ` · links paused (day ${accountAgeDays}/14)` : ""}
-        </AppText>
-
         {isWarming ? (
-          <Surface tone="lavender" style={styles.warming}>
-            <Feather name="sun" size={24} color={theme.colors.brandText} />
-            <AppText weight="semibold">Your group is warming up</AppText>
-            <AppText variant="bodySmall" tone="secondary">
-              Founding hosts post the daily prompt until more families join. Be an early voice — text
-              only, always kind.
-            </AppText>
-            <Button
-              size="lg"
-              onPress={() => router.push(appRoutes.connectCompose({ mode: "prompt" }))}
-            >
-              Share today&apos;s prompt
-            </Button>
-          </Surface>
+          <View style={styles.gutter}>
+            <Surface tone="lavender" radiusSize="lg" bordered={false} style={styles.warming}>
+              <Feather name="sun" size={24} color={theme.colors.brandText} />
+              <AppText weight="semibold">Your group is warming up</AppText>
+              <AppText variant="bodySmall" tone="secondary">
+                Founding hosts post the daily prompt until more families join. Be an early voice —
+                text only, always kind.
+              </AppText>
+              <Button
+                size="lg"
+                onPress={() => router.push(appRoutes.connectCompose({ mode: "prompt" }))}
+              >
+                Share today&apos;s prompt
+              </Button>
+            </Surface>
+          </View>
         ) : (
           <>
-            <CardStack style={styles.promptStack}>
-              <Surface tone="dark" bordered={false} radiusSize="xl" style={styles.promptCard}>
-                <AppText variant="caption" tone="inverse" style={styles.promptEyebrow}>
-                  Today's prompt
+            <View style={styles.gutter}>
+              <View style={[styles.promptCard, shadows.card, { backgroundColor: theme.colors.accent }]}>
+                <AppText variant="label" style={styles.honeyLabel}>
+                  Today&apos;s prompt
                 </AppText>
-                <AppText variant="title" tone="inverse">
-                  {CONNECT_PROMPT}
-                </AppText>
-                <AppText variant="bodySmall" tone="inverse" style={styles.promptMeta}>
+                <AppText variant="title">{CONNECT_PROMPT}</AppText>
+                <AppText variant="bodySmall" tone="secondary">
                   {visiblePosts.length} recent notes · keep it kind
                 </AppText>
                 <Button
-                  variant="secondary"
                   size="lg"
                   onPress={() => router.push(appRoutes.connectCompose({ mode: "prompt" }))}
                   style={styles.promptCta}
                 >
                   Share a reply
                 </Button>
-              </Surface>
-            </CardStack>
+              </View>
+            </View>
 
-            <AppText weight="semibold">From your circle</AppText>
-
-            {visiblePosts.map((post) => {
-              const liked = post.reactedByMe ?? false;
-              return (
-                <Surface key={post.id} radiusSize="lg" style={styles.postCard}>
-                  <Pressable onPress={() => router.push(appRoutes.connectPost(post.id))}>
-                    <View style={styles.authorRow}>
-                      <View style={[styles.avatar, { backgroundColor: avatarTone(post.authorName) }]}>
-                        <AppText weight="semibold">{post.authorName.slice(0, 1)}</AppText>
-                      </View>
-                      <View style={styles.authorCopy}>
-                        <AppText variant="bodySmall" weight="semibold">
-                          {post.authorName}
-                        </AppText>
-                        <AppText variant="caption" tone="muted">
-                          {timeAgo(post.createdAt)}
-                        </AppText>
-                      </View>
-                    </View>
-                    <AppText style={styles.postBody}>{post.body}</AppText>
-                    <AppText variant="caption" tone="secondary" style={styles.commentCount}>
-                      {post.commentCount} replies
-                    </AppText>
-                  </Pressable>
-                  <View style={styles.postActions}>
-                    <View style={styles.action}>
-                      <IconButton
-                        accessibilityLabel={liked ? "Unlike post" : "Like post"}
-                        onPress={() => reactMutation.mutate(post.id)}
-                        disabled={reactMutation.isPending}
-                        size={36}
-                        tone={liked ? "purple" : "card"}
-                      >
-                        <Feather
-                          name="heart"
-                          size={14}
-                          color={liked ? theme.colors.secondaryText : theme.colors.textMuted}
-                        />
-                      </IconButton>
-                      <AppText variant="caption" tone="secondary">
-                        {post.reactionCount}
-                      </AppText>
-                    </View>
-                    <View style={styles.action}>
-                      <IconButton
-                        accessibilityLabel="Reply to post"
-                        onPress={() => router.push(appRoutes.connectPost(post.id))}
-                        size={36}
-                      >
-                        <Feather name="message-circle" size={14} color={theme.colors.textMuted} />
-                      </IconButton>
-                      <AppText variant="caption" tone="secondary">
-                        Reply
-                      </AppText>
-                    </View>
-                    <View style={styles.action}>
-                      <IconButton
-                        accessibilityLabel="Report post"
-                        onPress={() => router.push(appRoutes.connectReport(post.id))}
-                        size={36}
-                      >
-                        <Feather name="flag" size={14} color={theme.colors.textMuted} />
-                      </IconButton>
-                      <AppText variant="caption" tone="secondary">
-                        Report
-                      </AppText>
-                    </View>
-                    <View style={styles.action}>
-                      <IconButton
-                        accessibilityLabel={`Block options for ${post.authorName}`}
-                        onPress={() =>
-                          setShowBlockMenu(showBlockMenu === post.id ? null : post.id)
-                        }
-                        size={36}
-                      >
-                        <Feather name="slash" size={14} color={theme.colors.textMuted} />
-                      </IconButton>
-                      <AppText variant="caption" tone="secondary">
-                        Block
-                      </AppText>
-                    </View>
-                  </View>
-                  {showBlockMenu === post.id ? (
-                    <Pressable
-                      style={styles.blockRow}
-                      onPress={() => confirmBlock(post.authorId, post.authorName)}
-                    >
-                      <AppText variant="caption" weight="semibold" tone="brand">
-                        Block {post.authorName.split(" · ")[0]}
-                      </AppText>
-                    </Pressable>
-                  ) : null}
-                </Surface>
-              );
-            })}
+            <View style={styles.gutter}>
+              <SectionHeader title={`From ${activeGroup.name}`} />
+              <View style={styles.feed}>
+                {visiblePosts.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    authorName={post.authorName}
+                    timeLabel={formatRelativeTime(post.createdAt)}
+                    body={post.body}
+                    likeCount={post.reactionCount}
+                    commentCount={post.commentCount}
+                    liked={post.reactedByMe ?? false}
+                    onPress={() => router.push(appRoutes.connectPost(post.id))}
+                    onLikePress={() => reactMutation.mutate(post.id)}
+                    actions={
+                      <>
+                        <Pressable
+                          hitSlop={spacing.sm}
+                          accessibilityRole="button"
+                          accessibilityLabel="Reply to post"
+                          onPress={() => router.push(appRoutes.connectPost(post.id))}
+                        >
+                          <Feather name="corner-up-left" size={14} color={theme.colors.textMuted} />
+                        </Pressable>
+                        <Pressable
+                          hitSlop={spacing.sm}
+                          accessibilityRole="button"
+                          accessibilityLabel={`More options for ${post.authorName}`}
+                          accessibilityState={{ expanded: openMenuId === post.id }}
+                          onPress={() => setOpenMenuId(openMenuId === post.id ? null : post.id)}
+                        >
+                          <Feather name="more-horizontal" size={16} color={theme.colors.textMuted} />
+                        </Pressable>
+                      </>
+                    }
+                    footer={
+                      openMenuId === post.id ? (
+                        <View style={[styles.menu, { borderTopColor: theme.colors.borderStrong }]}>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Report post"
+                            onPress={() => router.push(appRoutes.connectReport(post.id))}
+                            style={styles.menuItem}
+                          >
+                            <Feather name="flag" size={14} color={theme.colors.textSecondary} />
+                            <AppText variant="caption" weight="semibold" tone="secondary">
+                              Report
+                            </AppText>
+                          </Pressable>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Block ${post.authorName}`}
+                            onPress={() => confirmBlock(post.authorId, post.authorName)}
+                            style={styles.menuItem}
+                          >
+                            <Feather name="slash" size={14} color={theme.colors.danger} />
+                            <AppText
+                              variant="caption"
+                              weight="semibold"
+                              style={{ color: theme.colors.danger }}
+                            >
+                              Block {post.authorName.split(" · ")[0]}
+                            </AppText>
+                          </Pressable>
+                        </View>
+                      ) : null
+                    }
+                  />
+                ))}
+              </View>
+            </View>
           </>
         )}
 
-        <Surface tone="warm" style={styles.safety}>
-          <Feather name="shield" size={16} color={theme.colors.brandText} />
-          <AppText variant="bodySmall" tone="secondary" style={styles.safetyCopy}>
-            Block and report are always available. Groups are private — not a public feed.
+        <View style={styles.gutter}>
+          <AppText variant="caption" tone="muted" weight="medium">
+            {postsUsedToday} of 10 posts today · comments {commentsUsedToday}/{commentsDailyLimit} ·{" "}
+            {activeGroup.memberCount} members
+            {!linksAllowed ? ` · links paused (day ${accountAgeDays}/14)` : ""}
           </AppText>
-        </Surface>
+        </View>
+
+        <View style={styles.gutter}>
+          <Surface tone="warm" radiusSize="lg" bordered={false} style={styles.safety}>
+            <Feather name="shield" size={16} color={theme.colors.brandText} />
+            <AppText variant="bodySmall" tone="secondary" style={styles.safetyCopy}>
+              Block and report are always available. Groups are private — not a public feed.
+            </AppText>
+          </Surface>
+        </View>
 
         <Pressable onPress={() => router.push(appRoutes.moderation)} style={styles.adminLink}>
-          <AppText variant="caption" tone="secondary">
+          <AppText variant="caption" tone="muted">
             Founder: moderation queue
           </AppText>
         </Pressable>
@@ -342,62 +297,41 @@ export function ConnectScreen() {
 
 const styles = StyleSheet.create({
   scroll: {
-    paddingHorizontal: spacing.page,
-    paddingTop: spacing.lg,
-    paddingBottom: 120,
-    gap: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: layout.tabBarScrollPadding,
+    gap: spacing.xl - 4,
   },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: spacing.md,
-  },
-  headerCopy: { flex: 1, gap: spacing.xs },
-  eyebrow: { letterSpacing: 1, textTransform: "uppercase" },
+  gutter: { paddingHorizontal: spacing.page },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
   },
-  chipRow: { gap: spacing.sm, paddingRight: spacing.md },
-  rulesGate: { gap: spacing.sm },
-  postCard: { gap: 0 },
+  gapSm: { gap: spacing.sm },
   warming: { alignItems: "flex-start", gap: spacing.md },
-  promptStack: { marginTop: spacing.xs },
-  promptCard: { gap: spacing.md, padding: spacing.xl },
-  promptEyebrow: {
-    opacity: 0.78,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
+  promptCard: {
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    gap: spacing.sm,
   },
-  promptMeta: { opacity: 0.82 },
   promptCta: {
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
     alignSelf: "flex-start",
   },
-  authorRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.full,
-    alignItems: "center",
-    justifyContent: "center",
+  honeyLabel: { color: colors.brand.honeyDeep },
+  feed: { gap: spacing.md },
+  menu: {
+    flexDirection: "row",
+    gap: spacing.xl,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth * 2,
   },
-  authorCopy: { gap: 1 },
-  postBody: { marginTop: spacing.sm },
-  commentCount: { marginTop: spacing.xs },
-  postActions: { flexDirection: "row", gap: spacing.lg, marginTop: spacing.md },
-  action: {
+  menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
-  },
-  blockRow: {
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.hairline,
+    gap: spacing.xs + 2,
+    minHeight: 32,
   },
   safety: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
   safetyCopy: { flex: 1 },

@@ -4,17 +4,17 @@ import type { ComponentProps } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useAppTheme } from "@/design-system";
-import { borderWidth, colors, layout, radius, shadows, spacing } from "@/design-system/tokens";
+import { AppText, useAppTheme } from "@/design-system";
+import { layout, radius, shadows, spacing } from "@/design-system/tokens";
 
 type IconName = ComponentProps<typeof Feather>["name"];
 
 const tabIcons: Record<string, IconName> = {
-  index: "sun",
-  journey: "book-open",
+  index: "home",
+  journey: "award",
   connect: "users",
   guide: "compass",
-  family: "home",
+  family: "user",
 };
 
 // Structural subset of @react-navigation/bottom-tabs' BottomTabBarProps —
@@ -35,86 +35,81 @@ type TabBarProps = {
   };
 };
 
-/** Floating pill of circular tab bubbles; the active tab is an ink bubble. */
-function BubbleTabBar({ state, descriptors, navigation }: TabBarProps) {
+/**
+ * Soft Atlas tab bar: a white sheet anchored to the bottom, rounded on its
+ * top corners only, inset 8pt from each edge so the gradient canvas shows
+ * down both sides. Icon over label, ink when active, faint when not.
+ *
+ * It overlays content rather than reserving space, so every scrollable tab
+ * screen must pad its content by `layout.tabBarScrollPadding`.
+ */
+function SoftTabBar({ state, descriptors, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const theme = useAppTheme();
-  const isDark = theme.colorScheme === "dark";
 
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}
+      style={[
+        styles.sheet,
+        shadows.tabBar,
+        {
+          backgroundColor: theme.colors.surface,
+          paddingBottom: Math.max(insets.bottom, spacing.lg),
+        },
+      ]}
     >
-      <View
-        style={[
-          styles.pill,
-          shadows.card,
-          {
-            backgroundColor: isDark ? theme.colors.surfaceElevated : colors.surface.card,
-            borderColor: theme.colors.border,
-          },
-        ]}
-      >
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
-          const isFocused = state.index === index;
-          const icon = tabIcons[route.name] ?? "circle";
+      {state.routes.map((route, index) => {
+        const { options } = descriptors[route.key];
+        const isFocused = state.index === index;
+        const icon = tabIcons[route.name] ?? "circle";
+        const label = options.title ?? route.name;
+        const tint = isFocused ? theme.colors.text : theme.colors.textFaint;
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: "tabPress",
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name, route.params);
-            }
-          };
+        const onPress = () => {
+          const event = navigation.emit({
+            type: "tabPress",
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name, route.params);
+          }
+        };
 
-          return (
-            <Pressable
-              key={route.key}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isFocused }}
-              accessibilityLabel={options.title ?? route.name}
-              onPress={onPress}
-              style={({ pressed }) => [
-                styles.bubble,
-                isFocused && {
-                  backgroundColor: isDark ? colors.brand.honey : colors.brand.ink,
-                },
-                pressed && styles.pressed,
-              ]}
+        return (
+          <Pressable
+            key={route.key}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isFocused }}
+            accessibilityLabel={label}
+            onPress={onPress}
+            style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
+          >
+            <Feather name={icon} size={layout.icon.tab - 2} color={tint} />
+            <AppText
+              variant="label"
+              weight={isFocused ? "bold" : "medium"}
+              numberOfLines={1}
+              style={[styles.label, { color: tint }]}
             >
-              <Feather
-                name={icon}
-                size={layout.icon.tab}
-                color={
-                  isFocused
-                    ? isDark
-                      ? colors.brand.ink
-                      : colors.brand.butter
-                    : theme.colors.textMuted
-                }
-              />
-            </Pressable>
-          );
-        })}
-      </View>
+              {label}
+            </AppText>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
 
 export default function MainTabsLayout() {
-  const theme = useAppTheme();
-
   return (
     <Tabs
-      tabBar={(props) => <BubbleTabBar {...props} />}
+      tabBar={(props) => <SoftTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: theme.colors.background },
+        // Transparent so each screen's gradient canvas runs edge to edge.
+        sceneStyle: { backgroundColor: "transparent" },
       }}
     >
       <Tabs.Screen name="index" options={{ title: "Today" }} />
@@ -127,30 +122,28 @@ export default function MainTabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  wrap: {
+  sheet: {
     position: "absolute",
-    left: 0,
-    right: 0,
+    left: spacing.sm,
+    right: spacing.sm,
     bottom: 0,
-    alignItems: "center",
-  },
-  pill: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: borderWidth.hairline,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    paddingTop: spacing.md - 2,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
   },
-  bubble: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.full,
+  tab: {
+    flex: 1,
     alignItems: "center",
-    justifyContent: "center",
+    paddingVertical: spacing.xs + 2,
+  },
+  label: {
+    marginTop: 3,
+    letterSpacing: 0,
+    textTransform: "none",
   },
   pressed: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
 });

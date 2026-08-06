@@ -1,8 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,7 +11,24 @@ import {
   View,
 } from "react-native";
 
-import { AppText, Screen, Surface, colors, radius, shadows, spacing, useAppTheme } from "@/design-system";
+import {
+  AppText,
+  Avatar,
+  HeroMediaCard,
+  IconButton,
+  ProgressRing,
+  Screen,
+  ScreenHeader,
+  SectionHeader,
+  StatRow,
+  Surface,
+  colors,
+  layout,
+  radius,
+  shadows,
+  spacing,
+  useAppTheme,
+} from "@/design-system";
 import { mockProfile, mockToday } from "@/features/mock/demo-data";
 import { mockOnThisDay, mockPregnancy, mockStageGroups } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
@@ -21,13 +39,11 @@ import {
 import { OfflineBanner } from "@/features/shared/components/offline-banner";
 import { DraftQueuePanel } from "@/features/shared/components/draft-queue-panel";
 import { useRespectReduceMotion } from "@/features/shared/hooks/use-respect-reduce-motion";
+import { formatShortDate } from "@/features/shared/lib/format-date";
 import { ageBucketFromDob, ageBucketLabel, approximateAgeLabel } from "@/features/shared/lib/age-bucket";
-import { CaptureHeroCard } from "@/features/today/components/capture-hero-card";
 import { ConnectBanner } from "@/features/today/components/connect-banner";
 import { InvitePartnerBanner } from "@/features/today/components/invite-partner-banner";
-import { MemoryPreviewCard } from "@/features/today/components/memory-preview-card";
 import { TodayActionTile } from "@/features/today/components/today-action-tile";
-import { TodayProfileBar } from "@/features/today/components/today-profile-bar";
 import {
   queryKeys,
   useFamilyQuery,
@@ -37,6 +53,8 @@ import {
 } from "@/lib/api/hooks";
 import { queryClient } from "@/lib/queryClient";
 import { appRoutes } from "@/navigation/routes";
+
+const FULL_TERM_WEEKS = 40;
 
 export function TodayScreen() {
   const router = useRouter();
@@ -67,15 +85,10 @@ export function TodayScreen() {
   } = useMockUi();
 
   const today = todayQuery.data;
-  const childDisplayName =
-    familyQuery.data?.childDisplayName ?? "your child";
+  const childDisplayName = familyQuery.data?.childDisplayName ?? "your child";
   const resolvedStage = familyQuery.data?.stageMode ?? stageMode;
-  const memoryCount = memoriesQuery.data?.items.length ?? 0;
-  const journeyMemories = (memoriesQuery.data?.items ?? []).map((memory) => ({
-    id: memory.id,
-    title: memory.title,
-    body: memory.body,
-  }));
+  const memories = memoriesQuery.data?.items ?? [];
+  const memoryCount = memories.length;
   const prompt =
     resolvedStage === "pregnancy"
       ? mockPregnancy.bumpPrompt
@@ -96,18 +109,46 @@ export function TodayScreen() {
     activeGroupMock?.posts?.length ?? 0,
     mockToday.connectCard.replyCount,
   );
-  const latestMemory = memoriesQuery.data?.items[0];
+
+  const latestMemory = memories[0];
   const fade = useRef(new Animated.Value(0)).current;
   const { reduceMotion } = useRespectReduceMotion();
   const stageUnknown = resolvedStage === "unknown";
-  const pregnancyWeek = gestationalWeekFromDueDate(
-    familyQuery.data?.dueDate ?? mockPregnancy.dueDate,
-  );
+  const isPregnancy = resolvedStage === "pregnancy";
+  const dueDate = familyQuery.data?.dueDate ?? mockPregnancy.dueDate;
+  const pregnancyWeek = gestationalWeekFromDueDate(dueDate);
   const pregnancyLabel = pregnancyWeekLabel(pregnancyWeek);
   const childBucket = ageBucketFromDob(mockProfile.dob);
   const childStageLabel = `${approximateAgeLabel(mockProfile.dob)} · ${ageBucketLabel(childBucket)}`;
 
-  const onThisDayMemory = journeyMemories.find((m) => m.title === mockOnThisDay.title);
+  const onThisDayMemory = memories.find((m) => m.title === mockOnThisDay.title);
+
+  /**
+   * The design's three stat tiles. The mockup showed sensor readings (body
+   * temp, heart rate) — we have no such source, so these carry the numbers
+   * this app actually knows: how much is captured, where in the stage we are,
+   * and how the soft week is going.
+   */
+  const stats = useMemo(
+    () => [
+      {
+        icon: <Feather name="image" size={16} color={colors.brand.honeyDeep} />,
+        value: String(memoryCount),
+        label: memoryCount === 1 ? "Memory" : "Memories",
+      },
+      {
+        icon: <Feather name="calendar" size={16} color={colors.brand.honeyDeep} />,
+        value: isPregnancy ? `Wk ${pregnancyWeek}` : approximateAgeLabel(mockProfile.dob),
+        label: isPregnancy ? "Pregnancy" : "Age",
+      },
+      {
+        icon: <Feather name="sun" size={16} color={colors.brand.honeyDeep} />,
+        value: `${progress.activeDays}/${progress.goal}`,
+        label: "Calm days",
+      },
+    ],
+    [isPregnancy, memoryCount, pregnancyWeek, progress.activeDays, progress.goal],
+  );
 
   useEffect(() => {
     if (reduceMotion.current) {
@@ -150,26 +191,41 @@ export function TodayScreen() {
           />
         }
       >
-        <Animated.View style={{ opacity: fade }}>
-          <TodayProfileBar
-            displayName={childDisplayName}
-            stageLabel={
+        <Animated.View style={[styles.stack, { opacity: fade }]}>
+          <View style={styles.appBar}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open family settings"
+              onPress={() => router.push(appRoutes.family)}
+            >
+              <Avatar name={childDisplayName} size={44} />
+            </Pressable>
+            <AppText variant="subhead" style={styles.flex}>
+              BumpAtlas
+            </AppText>
+            <IconButton
+              accessibilityLabel="Notification settings"
+              size={40}
+              onPress={() => router.push(appRoutes.notificationSettings)}
+            >
+              <Feather name="bell" size={16} color={theme.colors.text} />
+            </IconButton>
+          </View>
+
+          <ScreenHeader
+            title={childDisplayName}
+            subtitle={
               stageUnknown
-                ? "Finish setup"
-                : resolvedStage === "pregnancy"
+                ? "Finish setup to personalise your week"
+                : isPregnancy
                   ? pregnancyLabel
                   : childStageLabel
             }
-            onSettingsPress={() => router.push(appRoutes.family)}
           />
         </Animated.View>
 
-        <AppText variant="caption" tone="secondary" style={styles.welcomeStrip}>
-          Welcome back — your week still counts. No streak to protect.
-        </AppText>
-
         {stageUnknown ? (
-          <Surface tone="card" radiusSize="xl" style={styles.unknownCard}>
+          <Surface tone="card" radiusSize="lg" elevated bordered={false} style={styles.gapSm}>
             <AppText weight="semibold">Finish setting up your stage</AppText>
             <AppText variant="bodySmall" tone="secondary">
               We don’t know pregnancy vs postpartum yet — complete onboarding so Care, Guide, and
@@ -200,127 +256,90 @@ export function TodayScreen() {
           <DraftQueuePanel onOpenDraft={() => router.push(appRoutes.capture)} />
         ) : null}
 
-        {resolvedStage === "pregnancy" ? (
-          <Pressable onPress={() => router.push(appRoutes.pregnancy)}>
-            <Surface tone="card" radiusSize="xl" style={styles.pregnancyCard}>
-              <AppText variant="caption" weight="semibold" style={styles.honeyLabel}>
-                {mockPregnancy.trimester}
+        <HeroMediaCard
+          uri={latestMemory?.mediaUrl ?? null}
+          title={latestMemory?.title ?? "Capture today"}
+          badge={pendingDraft ? "Draft waiting" : prompt.length > 34 ? "Today’s prompt" : prompt}
+          metric={`${progress.activeDays}/${progress.goal} days`}
+          onPress={() => router.push(appRoutes.capture)}
+          accessibilityLabel="Capture a memory"
+          placeholder={
+            <View style={styles.heroEmpty}>
+              <Feather name="camera" size={24} color={theme.colors.textTertiary} />
+              <AppText variant="bodySmall" tone="tertiary" align="center">
+                {prompt}
               </AppText>
-              <AppText variant="title">{pregnancyLabel}</AppText>
-              <AppText variant="bodySmall" tone="secondary">
-                {mockPregnancy.weeklyTip.title}
-              </AppText>
-              <View style={styles.rowCta}>
-                <AppText variant="caption" weight="semibold" style={styles.honeyLabel}>
-                  Open pregnancy journal
-                </AppText>
-                <Feather name="arrow-right" size={14} color={colors.brand.honeyDeep} />
-              </View>
-            </Surface>
-          </Pressable>
-        ) : null}
-
-        <CaptureHeroCard
-          babyName={childDisplayName}
-          prompt={prompt}
-          activeDays={progress.activeDays}
-          goal={progress.goal}
-          emphasized={primaryGoal === "memories"}
-          onCapture={() => router.push(appRoutes.capture)}
+            </View>
+          }
         />
 
-        <Surface tone="card" radiusSize="xl" style={styles.progressSplit}>
-          <AppText variant="caption" weight="semibold" style={styles.honeyLabel}>
-            Soft week · {progress.activeDays} of {progress.goal}
-          </AppText>
-          <AppText variant="bodySmall" tone="secondary">
-            Story days {storyDays}/{progress.goal} · Wellness days{" "}
-            {wellnessDays}/{progress.goal} · either counts as a calm day
-          </AppText>
-          {primaryGoal ? (
-            <AppText variant="caption" weight="semibold" style={styles.honeyLabel}>
-              Your focus · {primaryGoal}
-            </AppText>
-          ) : null}
-        </Surface>
+        <StatRow items={stats} />
 
-        <View style={styles.quickLinks}>
-          <Pressable
-            onPress={() => router.push(appRoutes.wellnessPacks)}
-            accessibilityRole="button"
-            accessibilityLabel="Open wellness packs"
-            style={[styles.chip, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-          >
-            <Feather name="heart" size={13} color={colors.brand.honeyDeep} />
-            <AppText variant="caption" weight="semibold" style={styles.chipText}>
-              Wellness packs
-            </AppText>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push(appRoutes.badges)}
-            accessibilityRole="button"
-            accessibilityLabel="Open badges"
-            style={[styles.chip, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-          >
-            <Feather name="award" size={13} color={colors.brand.honeyDeep} />
-            <AppText variant="caption" weight="semibold" style={styles.chipText}>
-              Badges
-            </AppText>
-          </Pressable>
-        </View>
+        {isPregnancy ? (
+          <View>
+            <SectionHeader title="Pregnancy" actionLabel="Open journal" onActionPress={() => router.push(appRoutes.pregnancy)} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open pregnancy journal"
+              onPress={() => router.push(appRoutes.pregnancy)}
+              style={[styles.pregnancyCard, shadows.soft, { backgroundColor: theme.colors.surface }]}
+            >
+              <View style={styles.flex}>
+                <AppText variant="title">{pregnancyLabel}</AppText>
+                <AppText variant="caption" tone="muted" weight="medium" style={styles.tight}>
+                  {Math.max(0, FULL_TERM_WEEKS - pregnancyWeek)} weeks to go · due{" "}
+                  {formatShortDate(dueDate)}
+                </AppText>
+              </View>
+              <ProgressRing
+                value={pregnancyWeek / FULL_TERM_WEEKS}
+                label={`${pregnancyWeek} of ${FULL_TERM_WEEKS} weeks`}
+              />
+            </Pressable>
+          </View>
+        ) : null}
 
-        <View style={styles.sectionHead}>
-          <AppText variant="subhead" weight="semibold">
-            Keep going gently
+        <View>
+          <SectionHeader title="Keep going gently" />
+          <View style={[styles.gridRow, primaryGoal === "learn" && styles.gridRowReverse]}>
+            <TodayActionTile
+              icon="wind"
+              label="Care"
+              title={
+                isPregnancy
+                  ? mockToday.pregnancyWellnessAction.title
+                  : mockToday.wellnessAction.title
+              }
+              detail={
+                isPregnancy
+                  ? mockToday.pregnancyWellnessAction.duration
+                  : mockToday.wellnessAction.duration
+              }
+              done={loop.care}
+              emphasized={primaryGoal === "wellness"}
+              onPress={() => router.push(appRoutes.care)}
+            />
+            <TodayActionTile
+              icon="book-open"
+              label="Learn"
+              title={isPregnancy ? mockPregnancy.weeklyTip.title : mockToday.learnCard.title}
+              detail="Stage tip"
+              done={loop.learn}
+              emphasized={primaryGoal === "learn"}
+              onPress={() => {
+                markLearnDone();
+                router.push(
+                  appRoutes.guideArticle(
+                    isPregnancy ? mockPregnancy.weeklyTip.id : mockToday.learnCard.id,
+                  ),
+                );
+              }}
+            />
+          </View>
+          <AppText variant="caption" tone="muted" weight="medium" style={styles.softNote}>
+            Story days {storyDays}/{progress.goal} · Wellness days {wellnessDays}/{progress.goal} —
+            either counts. No streak to protect.
           </AppText>
-          <AppText variant="bodySmall" tone="secondary">
-            Care · Learn · Connect — a few calm minutes
-          </AppText>
-        </View>
-
-        <View
-          style={[
-            styles.gridRow,
-            primaryGoal === "learn" && styles.gridRowReverse,
-          ]}
-        >
-          <TodayActionTile
-            icon="wind"
-            label="Care"
-            title={
-              resolvedStage === "pregnancy"
-                ? mockToday.pregnancyWellnessAction.title
-                : mockToday.wellnessAction.title
-            }
-            detail={
-              resolvedStage === "pregnancy"
-                ? mockToday.pregnancyWellnessAction.duration
-                : mockToday.wellnessAction.duration
-            }
-            done={loop.care}
-            emphasized={primaryGoal === "wellness"}
-            onPress={() => router.push(appRoutes.care)}
-          />
-          <TodayActionTile
-            icon="book-open"
-            label="Learn"
-            title={
-              resolvedStage === "pregnancy"
-                ? mockPregnancy.weeklyTip.title
-                : mockToday.learnCard.title
-            }
-            detail="Stage tip"
-            done={loop.learn}
-            emphasized={primaryGoal === "learn"}
-            onPress={() => {
-              markLearnDone();
-              router.push(
-                appRoutes.guideArticle(
-                  resolvedStage === "pregnancy" ? mockPregnancy.weeklyTip.id : mockToday.learnCard.id,
-                ),
-              );
-            }}
-          />
         </View>
 
         {connectTodayMode === "alone" ? (
@@ -338,15 +357,9 @@ export function TodayScreen() {
           />
         )}
 
-        {loop.connect ? (
-          <AppText variant="caption" tone="secondary">
-            Connect touched today · counts toward your calm week
-          </AppText>
-        ) : null}
-
         {memoryCount >= 3 && !inviteCtaDismissed && connectTodayMode !== "alone" ? (
-          <Surface tone="card" radiusSize="xl" style={styles.inviteCta}>
-            <View style={styles.inviteCtaCopy}>
+          <Surface tone="card" radiusSize="lg" elevated bordered={false} style={styles.gapMd}>
+            <View style={styles.gapXs}>
               <AppText weight="semibold">Invite your partner after 3 memories</AppText>
               <AppText variant="bodySmall" tone="secondary">
                 Both of you can add to {childDisplayName}&apos;s story — free includes 2 adults.
@@ -380,9 +393,9 @@ export function TodayScreen() {
               router.push(onThisDayMemory ? appRoutes.memory(onThisDayMemory.id) : appRoutes.capture)
             }
           >
-            <Surface tone="card" radiusSize="xl" style={styles.onThisDay}>
-              <AppText variant="caption" weight="semibold" style={styles.honeyLabel}>
-                On this day · Premium · {mockOnThisDay.dateLabel}
+            <Surface tone="card" radiusSize="lg" elevated bordered={false} style={styles.gapXs}>
+              <AppText variant="label" style={styles.honeyLabel}>
+                On this day · {mockOnThisDay.dateLabel}
               </AppText>
               <AppText weight="semibold">{mockOnThisDay.title}</AppText>
               <AppText variant="bodySmall" tone="secondary">
@@ -391,8 +404,8 @@ export function TodayScreen() {
             </Surface>
           </Pressable>
         ) : (
-          <Surface tone="card" radiusSize="xl" style={styles.onThisDay}>
-            <AppText variant="caption" weight="semibold" style={styles.honeyLabel}>
+          <Surface tone="card" radiusSize="lg" elevated bordered={false} style={styles.gapXs}>
+            <AppText variant="label" style={styles.honeyLabel}>
               On this day · Premium
             </AppText>
             <AppText weight="semibold">A soft look back after 30+ days</AppText>
@@ -405,7 +418,7 @@ export function TodayScreen() {
               accessibilityRole="button"
               accessibilityLabel="Unlock on this day"
             >
-              <AppText variant="caption" weight="semibold" style={styles.honeyLabel}>
+              <AppText variant="caption" weight="bold" style={styles.honeyText}>
                 Unlock with Premium
               </AppText>
               <Feather name="arrow-up-right" size={14} color={colors.brand.honeyDeep} />
@@ -413,12 +426,43 @@ export function TodayScreen() {
           </Surface>
         )}
 
-        {latestMemory ? (
-          <MemoryPreviewCard
-            title={latestMemory.title}
-            dateLabel={latestMemory.eventDate}
-            onPress={() => router.push(appRoutes.memory(latestMemory.id))}
-          />
+        {memoryCount > 0 ? (
+          <View>
+            <SectionHeader
+              title="Recent memories"
+              actionLabel="See all"
+              onActionPress={() => router.push(appRoutes.journey)}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.thumbRow}
+            >
+              {memories.slice(0, 8).map((memory) => (
+                <Pressable
+                  key={memory.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={memory.title}
+                  onPress={() => router.push(appRoutes.memory(memory.id))}
+                  style={({ pressed }) => pressed && styles.pressed}
+                >
+                  {memory.mediaUrl ? (
+                    <Image
+                      source={{ uri: memory.mediaUrl }}
+                      accessibilityIgnoresInvertColors
+                      style={styles.thumb}
+                    />
+                  ) : (
+                    <View style={[styles.thumb, styles.thumbEmpty, { backgroundColor: theme.colors.surface }]}>
+                      <AppText variant="label" tone="muted" numberOfLines={3} style={styles.thumbText}>
+                        {memory.title}
+                      </AppText>
+                    </View>
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
         ) : null}
       </ScrollView>
 
@@ -442,14 +486,22 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: {
     paddingHorizontal: spacing.page,
-    paddingTop: spacing.lg,
-    paddingBottom: 132,
+    paddingTop: spacing.sm,
+    paddingBottom: layout.tabBarScrollPadding,
+    gap: spacing.xl - 4,
+  },
+  stack: {
     gap: spacing.lg,
   },
-  welcomeStrip: {
-    marginTop: -spacing.sm,
+  appBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
   },
-  unknownCard: { gap: spacing.sm },
+  gapXs: { gap: spacing.xs },
+  gapSm: { gap: spacing.sm },
+  gapMd: { gap: spacing.md },
+  tight: { marginTop: 2 },
   pillButton: {
     alignSelf: "flex-start",
     borderRadius: radius.full,
@@ -458,8 +510,18 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: "center",
   },
-  progressSplit: { gap: 4 },
-  pregnancyCard: { gap: spacing.sm },
+  heroEmpty: {
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+  },
+  pregnancyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.lg,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
   rowCta: {
     flexDirection: "row",
     alignItems: "center",
@@ -468,29 +530,9 @@ const styles = StyleSheet.create({
   },
   honeyLabel: {
     color: colors.brand.honeyDeep,
-    letterSpacing: 0.4,
-    textTransform: "uppercase",
   },
-  quickLinks: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    flexWrap: "wrap",
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  chipText: {
+  honeyText: {
     color: colors.brand.honeyDeep,
-  },
-  sectionHead: {
-    gap: 4,
-    marginTop: spacing.xs,
   },
   gridRow: {
     flexDirection: "row",
@@ -499,18 +541,39 @@ const styles = StyleSheet.create({
   gridRowReverse: {
     flexDirection: "row-reverse",
   },
-  inviteCta: { gap: spacing.md },
-  inviteCtaCopy: { gap: 4 },
+  softNote: {
+    marginTop: spacing.md,
+  },
   inviteCtaActions: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  onThisDay: { gap: 4 },
+  thumbRow: {
+    gap: spacing.sm + 2,
+  },
+  thumb: {
+    width: 84,
+    height: 84,
+    borderRadius: radius.md,
+  },
+  thumbEmpty: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.sm,
+  },
+  thumbText: {
+    letterSpacing: 0,
+    textTransform: "none",
+    textAlign: "center",
+  },
+  pressed: {
+    opacity: 0.7,
+  },
   fab: {
     position: "absolute",
     right: spacing.page,
-    bottom: 132,
+    bottom: layout.tabBarScrollPadding + 4,
     width: 58,
     height: 58,
     borderRadius: 29,

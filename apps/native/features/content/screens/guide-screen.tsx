@@ -1,15 +1,18 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import {
   AppText,
-  CardStack,
+  ChipRow,
+  HeroMediaCard,
   IconButton,
-  Pill,
-  borderWidth,
+  Screen,
+  ScreenHeader,
+  SectionHeader,
   colors,
+  layout,
   radius,
   shadows,
   spacing,
@@ -101,135 +104,85 @@ export function GuideScreen() {
   const rest = filteredGuides.slice(1);
 
   return (
+    <Screen padded={false}>
     <ScrollView
-      style={{ backgroundColor: theme.colors.background }}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.headerRow}>
-        <AppText variant="heading" weight="semibold">
-          Guide
-        </AppText>
-        <View style={styles.headerActions}>
-          <IconButton
-            accessibilityLabel="Ask BumpAtlas about this stage"
-            onPress={() => router.push(appRoutes.assistant)}
-          >
-            <Feather name="message-circle" size={18} color={theme.colors.text} />
-          </IconButton>
-          <IconButton
-            accessibilityLabel="About the Guide tab"
-            onPress={() =>
-              Alert.alert(
-                "Ask BumpAtlas",
-                "Prompts, recaps, and reviewed tips. Educational only — not medical advice.",
-              )
-            }
-          >
-            <Feather name="info" size={18} color={theme.colors.text} />
-          </IconButton>
-        </View>
+      <View style={styles.gutter}>
+        <ScreenHeader
+          title="Guide"
+          subtitle="Reviewed reading for your stage."
+          action={
+            <View style={styles.headerActions}>
+              <IconButton
+                accessibilityLabel="Ask BumpAtlas about this stage"
+                size={40}
+                onPress={() => router.push(appRoutes.assistant)}
+              >
+                <Feather name="message-circle" size={16} color={theme.colors.text} />
+              </IconButton>
+              <IconButton
+                accessibilityLabel="About the Guide tab"
+                size={40}
+                onPress={() =>
+                  Alert.alert(
+                    "Ask BumpAtlas",
+                    "Prompts, recaps, and reviewed tips. Educational only — not medical advice.",
+                  )
+                }
+              >
+                <Feather name="info" size={16} color={theme.colors.text} />
+              </IconButton>
+            </View>
+          }
+        />
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipsRow}
-      >
-        <Pressable
-          onPress={() => setSelectedCategory(null)}
-          accessibilityRole="button"
-          accessibilityLabel={`All topics, ${guides.length}`}
-        >
-          <Pill tone={selectedCategory === null ? "selected" : "neutral"}>
-            All {guides.length}
-          </Pill>
-        </Pressable>
-        {categoryCounts.map(([category, count]) => (
-          <Pressable
-            key={category}
-            onPress={() => setSelectedCategory(category)}
-            accessibilityRole="button"
-            accessibilityLabel={`${category}, ${count}`}
-          >
-            <Pill tone={selectedCategory === category ? "selected" : "neutral"}>
-              {category} {count}
-            </Pill>
-          </Pressable>
-        ))}
-      </ScrollView>
+      <ChipRow
+        chips={[
+          { value: "__all__", label: `All ${guides.length}` },
+          ...categoryCounts.map(([category, count]) => ({
+            value: category,
+            label: `${category} ${count}`,
+          })),
+        ]}
+        value={selectedCategory ?? "__all__"}
+        onChange={(value) => setSelectedCategory(value === "__all__" ? null : value)}
+      />
 
       {featured ? (
-        <Pressable
-          onPress={() => router.push(appRoutes.guideArticle(featured.id))}
-          accessibilityRole="button"
-          accessibilityLabel={`Read ${featured.title}${featured.bookmarked ? ", bookmarked" : ""}`}
-        >
-          <CardStack radiusSize="xl">
-            <View
-              style={[
-                styles.heroCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            >
-              <View style={styles.heroImageWrap}>
-                <Image source={{ uri: heroImageForId(featured.id) }} style={styles.heroImage} />
-                <View style={[styles.timePill, { backgroundColor: theme.colors.surface }]}>
-                  <Feather name="clock" size={12} color={theme.colors.text} />
-                  <AppText variant="label" weight="semibold">
-                    {featured.readMinutes} min
-                  </AppText>
-                </View>
-              </View>
-
-              <View
-                style={[
-                  styles.playBtn,
-                  {
-                    backgroundColor: theme.colors.primary,
-                    borderColor: theme.colors.background,
-                  },
-                ]}
-              >
-                <Feather name="play" size={20} color={theme.colors.primaryText} />
-              </View>
-
-              <View style={styles.heroBody}>
-                {featured.bookmarked ? (
-                  <View style={styles.savedRow}>
-                    <Feather name="bookmark" size={12} color={theme.colors.brandText} />
-                    <AppText variant="label" tone="brand" weight="semibold">
-                      Saved
-                    </AppText>
-                  </View>
-                ) : null}
-                <AppText variant="title" weight="semibold" style={styles.heroTitle}>
-                  {featured.title}
-                </AppText>
-                <AppText variant="bodySmall" tone="secondary" numberOfLines={2}>
-                  {featured.summary}
-                </AppText>
-              </View>
+        <View style={styles.gutter}>
+          <Pressable
+            onPress={() => router.push(appRoutes.guideArticle(featured.id))}
+            accessibilityRole="button"
+            accessibilityLabel={`Read ${featured.title}${featured.bookmarked ? ", bookmarked" : ""}`}
+          >
+            <HeroMediaCard
+              uri={heroImageForId(featured.id)}
+              badge={`${featured.readMinutes} min read`}
+              metric={featured.bookmarked ? "Saved" : undefined}
+              height={200}
+            />
+            <View style={[styles.heroBody, shadows.soft, { backgroundColor: theme.colors.surface }]}>
+              <AppText variant="title" numberOfLines={2}>
+                {featured.title}
+              </AppText>
+              <AppText variant="bodySmall" tone="secondary" numberOfLines={2}>
+                {featured.summary}
+              </AppText>
             </View>
-          </CardStack>
-        </Pressable>
+          </Pressable>
+        </View>
       ) : null}
 
       {rest.length ? (
         <>
-          <View style={styles.sectionHeader}>
-            <AppText variant="title" weight="semibold">
-              More to read
-            </AppText>
-            <AppText variant="bodySmall" tone="secondary">
-              {rest.length} articles
-            </AppText>
+          <View style={styles.gutter}>
+            <SectionHeader title="More to read" actionLabel={`${rest.length} articles`} />
           </View>
 
-          <View style={styles.grid}>
+          <View style={[styles.gutter, styles.grid]}>
             {rest.map((guide, index) => (
               <Pressable
                 key={guide.id}
@@ -241,10 +194,7 @@ export function GuideScreen() {
                 <View
                   style={[
                     styles.smallCard,
-                    {
-                      backgroundColor: theme.colors.surface,
-                      borderColor: theme.colors.border,
-                    },
+                    { backgroundColor: theme.colors.surface },
                   ]}
                 >
                   <View
@@ -277,87 +227,27 @@ export function GuideScreen() {
         </>
       ) : null}
     </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: spacing.page,
-    paddingTop: spacing.lg,
-    paddingBottom: 140,
-    gap: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: layout.tabBarScrollPadding,
+    gap: spacing.xl - 4,
   },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+  gutter: { paddingHorizontal: spacing.page },
   headerActions: {
     flexDirection: "row",
     gap: spacing.sm,
   },
-  chipsRow: {
-    gap: spacing.sm,
-    paddingRight: spacing.page,
-  },
-  heroCard: {
-    borderRadius: radius.xl,
-    borderWidth: borderWidth.hairline,
-    overflow: "visible",
-    ...shadows.card,
-  },
-  heroImageWrap: {
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    overflow: "hidden",
-    height: 200,
-  },
-  heroImage: {
-    width: "100%",
-    height: "100%",
-  },
-  timePill: {
-    position: "absolute",
-    top: spacing.md,
-    right: spacing.md,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    ...shadows.soft,
-  },
-  playBtn: {
-    position: "absolute",
-    right: spacing.lg,
-    top: 200 - 26,
-    width: 52,
-    height: 52,
-    borderRadius: radius.full,
-    borderWidth: borderWidth.emphasis,
-    alignItems: "center",
-    justifyContent: "center",
-    ...shadows.card,
-  },
   heroBody: {
-    padding: spacing.xl,
-    paddingTop: spacing.lg,
+    marginTop: -spacing.xl,
+    marginHorizontal: spacing.md,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     gap: spacing.xs,
-  },
-  heroTitle: {
-    paddingRight: spacing.xxl,
-  },
-  savedRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 2,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
   },
   grid: {
     flexDirection: "row",
@@ -370,7 +260,6 @@ const styles = StyleSheet.create({
   },
   smallCard: {
     borderRadius: radius.lg,
-    borderWidth: borderWidth.hairline,
     padding: spacing.lg,
     gap: spacing.sm,
     ...shadows.soft,
