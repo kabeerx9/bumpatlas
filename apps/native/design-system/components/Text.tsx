@@ -41,17 +41,14 @@ const variantStyle: Record<TextVariant, TextStyle> = {
   hero: {
     fontSize: typography.size.hero,
     lineHeight: typography.lineHeight.hero,
-    letterSpacing: -0.8,
   },
   heading: {
     fontSize: typography.size.heading,
     lineHeight: typography.lineHeight.heading,
-    letterSpacing: -0.6,
   },
   title: {
     fontSize: typography.size.title,
     lineHeight: typography.lineHeight.title,
-    letterSpacing: -0.4,
   },
   subhead: {
     fontSize: typography.size.subhead,
@@ -68,12 +65,11 @@ const variantStyle: Record<TextVariant, TextStyle> = {
   caption: {
     fontSize: typography.size.caption,
     lineHeight: typography.lineHeight.caption,
-    letterSpacing: 0.4,
   },
   label: {
     fontSize: typography.size.label,
     lineHeight: typography.lineHeight.label,
-    letterSpacing: 1.2,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
   },
 };

@@ -1,8 +1,10 @@
+import { LinearGradient } from "expo-linear-gradient";
 import type { ReactNode } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
 import { StyleSheet, View } from "react-native";
 
-import { colors, radius } from "@/design-system/tokens";
+import { useAppTheme } from "@/design-system/theme";
+import { colors } from "@/design-system/tokens";
 
 type AtmosphereVariant = "cream" | "soft" | "brand";
 
@@ -12,25 +14,39 @@ type AtmosphereProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-/** Soft butter-light atmosphere blobs (no native gradient module). */
+/**
+ * The Soft Atlas canvas: a 160deg mint -> cream -> blush wash.
+ *
+ * This replaces the old absolutely-positioned "blob" approximation — that
+ * existed only because we believed there was no gradient module. There is
+ * (`expo-linear-gradient`), and the real wash is the whole point of the design.
+ *
+ *   cream  in-app screens (default) — light enough that white cards still pop
+ *   soft   full-bleed auth / onboarding / splash — more saturated
+ *   brand  flat honey wash for accent-flavoured panels (no gradient)
+ */
 export function Atmosphere({ children, variant = "cream", style }: AtmosphereProps) {
-  const base =
-    variant === "brand" ? colors.brand.peachSoft : colors.surface.app;
-  const subtle = variant === "cream";
+  const theme = useAppTheme();
+
+  if (variant === "brand") {
+    return (
+      <View style={[styles.root, { backgroundColor: theme.colors.accent }, style]}>{children}</View>
+    );
+  }
+
+  const stops =
+    variant === "soft" ? theme.colors.backgroundGradientBold : theme.colors.backgroundGradient;
 
   return (
-    <View style={[styles.root, { backgroundColor: base }, style]}>
-      {!subtle ? (
-        <>
-          <View style={[styles.blob, styles.blobSageTop]} />
-          <View style={[styles.blob, styles.blobPeachMid]} />
-          <View style={[styles.blob, styles.blobSageBottom]} />
-        </>
-      ) : (
-        <View style={styles.blobCreamOnly} />
-      )}
+    <LinearGradient
+      colors={stops as unknown as readonly [string, string, ...string[]]}
+      locations={colors.gradient.canvasLocations as unknown as readonly [number, number, ...number[]]}
+      start={colors.gradient.diagonal.start}
+      end={colors.gradient.diagonal.end}
+      style={[styles.root, style]}
+    >
       {children}
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -38,39 +54,5 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     overflow: "hidden",
-  },
-  blob: {
-    position: "absolute",
-    borderRadius: radius.full,
-  },
-  blobSageTop: {
-    width: 260,
-    height: 260,
-    top: -90,
-    right: -70,
-    backgroundColor: colors.brand.sageSoft,
-  },
-  blobPeachMid: {
-    width: 200,
-    height: 200,
-    top: 180,
-    left: -80,
-    backgroundColor: "rgba(242,200,120,0.20)",
-  },
-  blobSageBottom: {
-    width: 280,
-    height: 280,
-    bottom: -120,
-    right: -40,
-    backgroundColor: "rgba(255,255,255,0.45)",
-  },
-  blobCreamOnly: {
-    position: "absolute",
-    width: 220,
-    height: 220,
-    top: -80,
-    right: -60,
-    borderRadius: radius.full,
-    backgroundColor: "rgba(242,200,120,0.16)",
   },
 });
