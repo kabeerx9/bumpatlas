@@ -11,7 +11,7 @@ import { AppText, Button, Pill, Surface, colors, radius, spacing, useAppTheme } 
 import { mockToday } from "@/features/mock/demo-data";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useRespectReduceMotion } from "@/features/shared/hooks/use-respect-reduce-motion";
-import { useCompleteChallengeMutation, useStageQuery } from "@/lib/api/hooks";
+import { useCompleteChallengeMutation, useStageQuery, useTodayQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 type Phase = "ready" | "clearance" | "in_progress" | "done" | "skipped";
@@ -29,8 +29,14 @@ export function CareScreen() {
   const stageMode = stageQuery.data?.stageMode ?? "postpartum";
   const completeChallenge = useCompleteChallengeMutation();
   const { reduceMotion } = useRespectReduceMotion();
+  const todayQuery = useTodayQuery();
+  // The plan's care card is the source of truth; mock content only bridges the
+  // loading gap. "care" is the server's accepted literal for an unfilled slot.
+  const serverAction = todayQuery.data?.cards.care ?? null;
   const action =
-    stageMode === "pregnancy" ? mockToday.pregnancyWellnessAction : mockToday.wellnessAction;
+    serverAction ??
+    (stageMode === "pregnancy" ? mockToday.pregnancyWellnessAction : mockToday.wellnessAction);
+  const completionChallengeId = serverAction ? serverAction.id : "care";
   const [phase, setPhase] = useState<Phase>("ready");
   const [activeStep, setActiveStep] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(action.durationSeconds);
@@ -50,7 +56,7 @@ export function CareScreen() {
   async function finishCare() {
     setTimerRunning(false);
     try {
-      await completeChallenge.mutateAsync({ challengeId: action.id });
+      await completeChallenge.mutateAsync({ challengeId: completionChallengeId });
     } catch {
       // Local completion still counts; sync retries when the API is reachable.
     }
