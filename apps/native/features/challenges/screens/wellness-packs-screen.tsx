@@ -15,7 +15,7 @@ export function WellnessPacksScreen() {
   const router = useRouter();
 
   return (
-    <SoftStackShell title="Wellness packs" onBack={() => router.back()}>
+    <SoftStackShell title="Wellness packs" closeIcon="x" onBack={() => router.back()}>
       <AppText variant="bodySmall" tone="secondary">
         Parent care only — not workouts. Skip anytime. Completing Care never takes away your
         memory progress.

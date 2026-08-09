@@ -42,7 +42,7 @@ export function SoftStackShell({
           <Pressable
             onPress={onBack ?? (() => router.back())}
             style={styles.iconBtn}
-            accessibilityLabel="Go back"
+            accessibilityLabel={closeIcon === "x" ? "Close" : "Go back"}
             hitSlop={8}
           >
             <Feather name={closeIcon} size={20} color={colors.brand.ink} />

@@ -43,7 +43,7 @@ export function RecapScreen() {
 
   if (recapQuery.isLoading || !recap) {
     return (
-      <SoftStackShell title="Weekly recap" closeIcon="x" onBack={() => router.back()} centered>
+      <SoftStackShell title="Weekly recap" onBack={() => router.back()} centered>
         <ActivityIndicator color={theme.colors.primary} />
       </SoftStackShell>
     );
@@ -51,7 +51,7 @@ export function RecapScreen() {
 
   if (!eligible) {
     return (
-      <SoftStackShell title="Weekly recap" closeIcon="x" onBack={() => router.back()} centered>
+      <SoftStackShell title="Weekly recap" onBack={() => router.back()} centered>
         <Feather name="heart" size={28} color={colors.brand.honeyDeep} />
         <AppText variant="heading" weight="semibold" align="center">
           Keep going gently
@@ -120,7 +120,6 @@ export function RecapScreen() {
   return (
     <SoftStackShell
       title="Weekly recap"
-      closeIcon="x"
       onBack={() => router.back()}
       footer={
         <Button size="lg" disabled={sharing} onPress={() => void shareRecap()}>

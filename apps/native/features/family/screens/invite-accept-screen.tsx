@@ -48,7 +48,6 @@ export function InviteAcceptScreen() {
   return (
     <SoftStackShell
       title="Household invite"
-      closeIcon="x"
       onBack={() => router.back()}
       footer={
         <>
