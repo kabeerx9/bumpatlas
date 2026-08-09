@@ -1,9 +1,11 @@
 import {
   ApiError,
+  adminMetricsResponseSchema,
   createApiClient,
   deleteAccountInputSchema,
   meResponseSchema,
   updateAccountInputSchema,
+  type AdminMetricsResponse,
   type DeleteAccountInput,
   type MeResponse,
   type UpdateAccountInput,
@@ -12,7 +14,7 @@ import { env } from "@bumpatlas/env/web";
 
 import { getClerkAuthToken } from "@/utils/clerk-auth";
 
-export type { DeleteAccountInput, MeResponse, UpdateAccountInput };
+export type { AdminMetricsResponse, DeleteAccountInput, MeResponse, UpdateAccountInput };
 export { ApiError };
 
 const api = createApiClient({
@@ -20,6 +22,11 @@ const api = createApiClient({
   getToken: getClerkAuthToken,
   credentials: "include",
 });
+
+/** Founder-only; the server 404s for everyone else (admin cloaking). */
+export function getAdminMetrics() {
+  return api.requestJson("/api/v1/admin/metrics", adminMetricsResponseSchema);
+}
 
 export function getMe() {
   return api.requestJson("/api/me", meResponseSchema);
