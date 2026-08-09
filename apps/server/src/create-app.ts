@@ -11,6 +11,7 @@ import { registerRequestContext } from "@/plugins/request-context";
 import { registerAccountRoutes } from "@/routes/account";
 import { registerHealthRoutes } from "@/routes/health";
 import { registerMeRoutes } from "@/routes/me";
+import { registerAdminRoutes } from "@/routes/v1/admin";
 import { registerFamilyRoutes } from "@/routes/v1/families";
 import { registerCronRoutes } from "@/routes/cron/index";
 import { registerAiRoutes } from "@/routes/v1/ai";
@@ -147,6 +148,9 @@ export function buildApp() {
   // Phase 8 — community and founder moderation.
   fastify.register(registerCommunityRoutes);
   fastify.register(registerModerationRoutes);
+
+  // Founder dashboard — admin-gated aggregates, 404-cloaked like moderation.
+  fastify.register(registerAdminRoutes);
 
   return fastify;
 }

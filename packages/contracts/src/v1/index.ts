@@ -16,3 +16,4 @@ export * from "./milestones";
 export * from "./consents";
 export * from "./data-requests";
 export * from "./moderation";
+export * from "./admin";
