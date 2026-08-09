@@ -23,6 +23,7 @@ import { DraftQueuePanel } from "@/features/shared/components/draft-queue-panel"
 import { OfflineBanner } from "@/features/shared/components/offline-banner";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { queryKeys, useEntitlementsQuery, useTodayQuery } from "@/lib/api/hooks";
+import { FEATURES } from "@/lib/features";
 import type { PreparedPhoto } from "@/lib/media/pick-and-prepare";
 import { pickAndPreparePhoto } from "@/lib/media/pick-and-prepare";
 import { saveMemoryWithOptionalUpload } from "@/lib/memories/save-memory";
@@ -269,85 +270,87 @@ export function CaptureScreen() {
             />
           ) : null}
 
-          {photoState === "selected" && photo ? (
-            <View style={styles.photoPreview}>
-              <Image source={{ uri: photo.uri }} style={styles.photoImage} />
-              <View style={styles.photoMeta}>
-                <AppText weight="semibold">Photo added</AppText>
-                <AppText variant="caption" tone="secondary">
-                  Compressed · EXIF / GPS stripped
+          {FEATURES.photos ? (
+            photoState === "selected" && photo ? (
+              <View style={styles.photoPreview}>
+                <Image source={{ uri: photo.uri }} style={styles.photoImage} />
+                <View style={styles.photoMeta}>
+                  <AppText weight="semibold">Photo added</AppText>
+                  <AppText variant="caption" tone="secondary">
+                    Compressed · EXIF / GPS stripped
+                  </AppText>
+                  <AppText variant="caption" tone="secondary">
+                    Media uploads {mediaUploadsUsed}/{mediaUploadsLimit} this month
+                  </AppText>
+                  <Pressable
+                    onPress={() => {
+                      setPhoto(null);
+                      setPhotoState("none");
+                      setLocalMediaBump((count) => Math.max(0, count - 1));
+                    }}
+                    accessibilityLabel="Remove photo"
+                  >
+                    <AppText variant="caption" weight="semibold" tone="brand" style={styles.removePhotoSpacing}>
+                      Remove photo
+                    </AppText>
+                  </Pressable>
+                </View>
+              </View>
+            ) : photoState === "failed" || photoState === "denied" ? (
+              <View style={styles.failBox}>
+                <AppText weight="semibold">
+                  {photoState === "denied" ? "Photo permission needed" : "Photo didn’t prepare"}
+                </AppText>
+                <AppText variant="bodySmall" tone="secondary">
+                  Your note is safe. Retry the photo or save text only.
+                </AppText>
+                <View style={styles.failActions}>
+                  <Button size="sm" variant="ghost" onPress={pickPhoto}>
+                    Retry photo
+                  </Button>
+                  <Button size="sm" onPress={() => void saveMoment()}>
+                    Save text only
+                  </Button>
+                </View>
+              </View>
+            ) : (
+              <Pressable
+                style={styles.photoBox}
+                onPress={pickPhoto}
+                accessibilityLabel="Add a photo"
+                disabled={mediaExhausted || picking}
+              >
+                <View style={[styles.cameraCircle, { backgroundColor: theme.colors.primary }]}>
+                  <Feather name="camera" size={22} color={theme.colors.primaryText} />
+                </View>
+                <AppText weight="semibold">
+                  {mediaExhausted
+                    ? "Photo limit reached"
+                    : picking
+                      ? "Preparing photo…"
+                      : "Add a photo"}
                 </AppText>
                 <AppText variant="caption" tone="secondary">
-                  Media uploads {mediaUploadsUsed}/{mediaUploadsLimit} this month
+                  {mediaExhausted
+                    ? `Free tier: ${mediaUploadsLimit} uploads/month · text still saves`
+                    : mediaNearLimit
+                      ? `Almost at free media limit · ${mediaUploadsUsed}/${mediaUploadsLimit}`
+                      : "Optional — compressed & stripped of location data"}
                 </AppText>
-                <Pressable
-                  onPress={() => {
-                    setPhoto(null);
-                    setPhotoState("none");
-                    setLocalMediaBump((count) => Math.max(0, count - 1));
-                  }}
-                  accessibilityLabel="Remove photo"
-                >
-                  <AppText variant="caption" weight="semibold" tone="brand" style={styles.removePhotoSpacing}>
-                    Remove photo
-                  </AppText>
-                </Pressable>
-              </View>
-            </View>
-          ) : photoState === "failed" || photoState === "denied" ? (
-            <View style={styles.failBox}>
-              <AppText weight="semibold">
-                {photoState === "denied" ? "Photo permission needed" : "Photo didn’t prepare"}
-              </AppText>
-              <AppText variant="bodySmall" tone="secondary">
-                Your note is safe. Retry the photo or save text only.
-              </AppText>
-              <View style={styles.failActions}>
-                <Button size="sm" variant="ghost" onPress={pickPhoto}>
-                  Retry photo
-                </Button>
-                <Button size="sm" onPress={() => void saveMoment()}>
-                  Save text only
-                </Button>
-              </View>
-            </View>
-          ) : (
-            <Pressable
-              style={styles.photoBox}
-              onPress={pickPhoto}
-              accessibilityLabel="Add a photo"
-              disabled={mediaExhausted || picking}
-            >
-              <View style={[styles.cameraCircle, { backgroundColor: theme.colors.primary }]}>
-                <Feather name="camera" size={22} color={theme.colors.primaryText} />
-              </View>
-              <AppText weight="semibold">
-                {mediaExhausted
-                  ? "Photo limit reached"
-                  : picking
-                    ? "Preparing photo…"
-                    : "Add a photo"}
-              </AppText>
-              <AppText variant="caption" tone="secondary">
-                {mediaExhausted
-                  ? `Free tier: ${mediaUploadsLimit} uploads/month · text still saves`
-                  : mediaNearLimit
-                    ? `Almost at free media limit · ${mediaUploadsUsed}/${mediaUploadsLimit}`
-                    : "Optional — compressed & stripped of location data"}
-              </AppText>
-              {mediaNearLimit || mediaExhausted ? (
-                <Pressable
-                  onPress={() => router.push(appRoutes.paywall("media-quota"))}
-                  hitSlop={8}
-                  accessibilityLabel="View premium media quota"
-                >
-                  <AppText variant="caption" weight="semibold" tone="brand" style={styles.removePhotoSpacing}>
-                    View premium media options
-                  </AppText>
-                </Pressable>
-              ) : null}
-            </Pressable>
-          )}
+                {mediaNearLimit || mediaExhausted ? (
+                  <Pressable
+                    onPress={() => router.push(appRoutes.paywall("media-quota"))}
+                    hitSlop={8}
+                    accessibilityLabel="View premium media quota"
+                  >
+                    <AppText variant="caption" weight="semibold" tone="brand" style={styles.removePhotoSpacing}>
+                      View premium media options
+                    </AppText>
+                  </Pressable>
+                ) : null}
+              </Pressable>
+            )
+          ) : null}
 
           <AppText weight="semibold">Who can see this?</AppText>
           <View style={styles.dateRow}>

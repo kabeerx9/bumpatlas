@@ -35,6 +35,7 @@ import { mockOnThisDay } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { formatShortDate } from "@/features/shared/lib/format-date";
 import { useFamilyQuery, useMemoriesQuery } from "@/lib/api/hooks";
+import { FEATURES } from "@/lib/features";
 import { appRoutes } from "@/navigation/routes";
 
 type Filter = "all" | "memories" | "milestones" | "recaps";
@@ -186,7 +187,9 @@ export function JourneyScreen() {
           <Feather name="book-open" size={28} color={theme.colors.accentText} />
           <AppText weight="semibold">Start {childDisplayName}&apos;s first page</AppText>
           <AppText variant="bodySmall" tone="secondary">
-            Capture one small moment — a photo or a short note is enough.
+            {FEATURES.photos
+              ? "Capture one small moment — a photo or a short note is enough."
+              : "Capture one small moment — a short note is enough."}
           </AppText>
           <Button onPress={() => router.push(appRoutes.capture)}>Capture moment</Button>
         </Surface>
