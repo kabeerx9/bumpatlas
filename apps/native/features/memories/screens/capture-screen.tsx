@@ -16,6 +16,8 @@ import {
 } from "react-native";
 
 import { AppText, Button, IconButton, Pill, Surface, colors, radius, spacing, useAppTheme } from "@/design-system";
+import { DateField } from "@/features/shared/components/date-field";
+import { formatShortDate } from "@/features/shared/lib/format-date";
 import { pregnancyContent } from "@/features/pregnancy/data/pregnancy-content";
 import { DraftQueuePanel } from "@/features/shared/components/draft-queue-panel";
 import { OfflineBanner } from "@/features/shared/components/offline-banner";
@@ -37,6 +39,7 @@ const CAPTURE_PROMPTS = [
 ];
 
 const BACKDATE_OPTIONS = ["Today", "Yesterday", "2 days ago", "Pick a date…"];
+const TODAY = new Date();
 
 export function CaptureScreen() {
   const router = useRouter();
@@ -121,7 +124,8 @@ export function CaptureScreen() {
 
   async function saveMoment() {
     if (saving) return;
-    const resolvedDate = eventDate === "Pick a date…" ? customDate || "Custom date" : eventDate;
+    const resolvedDate =
+      eventDate === "Pick a date…" ? formatShortDate(customDate) || "Custom date" : eventDate;
     const visibilityValue = visibility === "private" ? "PRIVATE" : "HOUSEHOLD";
 
     if (isOffline) {
@@ -254,12 +258,12 @@ export function CaptureScreen() {
             })}
           </View>
           {eventDate === "Pick a date…" ? (
-            <TextInput
+            <DateField
+              label="Custom date"
               value={customDate}
-              onChangeText={setCustomDate}
-              placeholder="Jul 20, 2026"
-              placeholderTextColor={colors.text.muted}
-              style={styles.dateInput}
+              onChange={setCustomDate}
+              maximumDate={TODAY}
+              accessibilityLabel="Custom event date"
             />
           ) : null}
 
@@ -381,7 +385,7 @@ export function CaptureScreen() {
             {visibility === "private"
               ? "Only you — not shared with household or Connect."
               : "Visible to your household only — not Connect."}{" "}
-            Event date: {eventDate === "Pick a date…" ? customDate || "—" : eventDate}
+            Event date: {eventDate === "Pick a date…" ? formatShortDate(customDate) : eventDate}
           </AppText>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -420,14 +424,6 @@ const styles = StyleSheet.create({
   },
   promptLink: { color: colors.brand.honey },
   dateRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  dateInput: {
-    minHeight: 48,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface.card,
-    paddingHorizontal: spacing.lg,
-    color: colors.text.primary,
-    fontFamily: "Poppins_400Regular",
-  },
   photoBox: {
     minHeight: 160,
     borderRadius: radius.xl,

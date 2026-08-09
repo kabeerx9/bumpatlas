@@ -13,11 +13,16 @@ import {
   useAppTheme,
 } from "@/design-system";
 import { useAppState } from "@/features/shared/providers/app-state-provider";
+import { DateField } from "@/features/shared/components/date-field";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useStageQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 type Mode = "choose" | "pregnancy" | "parent";
+
+const TODAY = new Date();
+const DUE_DATE_MAX = new Date();
+DUE_DATE_MAX.setMonth(DUE_DATE_MAX.getMonth() + 10);
 
 /** Reachable after onboarding when stage is UNKNOWN — finishes profile setup. */
 export function StageSetupScreen() {
@@ -127,13 +132,12 @@ export function StageSetupScreen() {
 
       {mode === "pregnancy" ? (
         <>
-          <AppText weight="semibold">Due date</AppText>
-          <TextInput
+          <DateField
+            label="Due date"
             value={dueDate}
-            onChangeText={setDueDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={theme.colors.textMuted}
-            style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
+            onChange={setDueDate}
+            minimumDate={TODAY}
+            maximumDate={DUE_DATE_MAX}
             accessibilityLabel="Due date"
           />
           <Button
@@ -157,13 +161,11 @@ export function StageSetupScreen() {
             style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
             accessibilityLabel="Child name"
           />
-          <AppText weight="semibold">Date of birth</AppText>
-          <TextInput
+          <DateField
+            label="Date of birth"
             value={childDob}
-            onChangeText={setChildDob}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={theme.colors.textMuted}
-            style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
+            onChange={setChildDob}
+            maximumDate={TODAY}
             accessibilityLabel="Child date of birth"
           />
           <Button

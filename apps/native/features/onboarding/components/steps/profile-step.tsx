@@ -1,7 +1,12 @@
 import { StyleSheet, TextInput, View } from "react-native";
 
 import { AppText, borderWidth, radius, spacing, useAppTheme } from "@/design-system";
+import { DateField } from "@/features/shared/components/date-field";
 import type { OnboardingRole } from "@/features/onboarding/components/steps/role-step";
+
+const TODAY = new Date();
+const DUE_DATE_MAX = new Date();
+DUE_DATE_MAX.setMonth(DUE_DATE_MAX.getMonth() + 10);
 
 type ProfileStepProps = {
   role: OnboardingRole | null;
@@ -54,18 +59,14 @@ export function ProfileStep({
       </AppText>
 
       {expecting ? (
-        <View style={styles.field}>
-          <AppText variant="label" tone="secondary">
-            Due date
-          </AppText>
-          <TextInput
-            value={dueDate}
-            onChangeText={onChangeDueDate}
-            placeholder="Aug 15, 2026"
-            placeholderTextColor={theme.colors.textMuted}
-            style={inputStyle}
-          />
-        </View>
+        <DateField
+          label="Due date"
+          value={dueDate}
+          onChange={onChangeDueDate}
+          minimumDate={TODAY}
+          maximumDate={DUE_DATE_MAX}
+          style={styles.field}
+        />
       ) : (
         <>
           <View style={styles.field}>
@@ -82,18 +83,13 @@ export function ProfileStep({
               autoCorrect={false}
             />
           </View>
-          <View style={styles.field}>
-            <AppText variant="label" tone="secondary">
-              Date of birth
-            </AppText>
-            <TextInput
-              value={childDob}
-              onChangeText={onChangeChildDob}
-              placeholder="Apr 28, 2026"
-              placeholderTextColor={theme.colors.textMuted}
-              style={inputStyle}
-            />
-          </View>
+          <DateField
+            label="Date of birth"
+            value={childDob}
+            onChange={onChangeChildDob}
+            maximumDate={TODAY}
+            style={styles.field}
+          />
         </>
       )}
     </View>

@@ -4,9 +4,12 @@ import { useState } from "react";
 import { Alert, StyleSheet, TextInput, View } from "react-native";
 
 import { AppText, Button, Surface, colors, radius, spacing, useAppTheme } from "@/design-system";
+import { DateField } from "@/features/shared/components/date-field";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useConvertPregnancyMutation } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
+
+const TODAY = new Date();
 
 export function ConvertBirthScreen() {
   const router = useRouter();
@@ -93,18 +96,13 @@ export function ConvertBirthScreen() {
         />
       </View>
 
-      <View style={styles.field}>
-        <AppText variant="label" tone="secondary">
-          Date of birth
-        </AppText>
-        <TextInput
-          value={birthDate}
-          onChangeText={setBirthDate}
-          placeholder="Jul 29, 2026"
-          placeholderTextColor={theme.colors.textMuted}
-          style={[styles.input, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, color: theme.colors.text }]}
-        />
-      </View>
+      <DateField
+        label="Date of birth"
+        value={birthDate}
+        onChange={setBirthDate}
+        maximumDate={TODAY}
+        accessibilityLabel="Baby's date of birth"
+      />
 
       <AppText variant="caption" tone="secondary">
         Educational note: this does not replace hospital paperwork. It only updates your
