@@ -4,13 +4,10 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 
 import { AppText, IconButton, Screen, colors, radius, spacing, useAppTheme } from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
+import { formatShortDate } from "@/features/shared/lib/format-date";
 import { useBadgesQuery } from "@/lib/api/hooks";
 
 const TILE_PASTELS = [colors.pastel.petal, colors.pastel.mint, colors.pastel.lemon, colors.pastel.sky];
-
-function formatEarnedDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
 
 export function BadgesScreen() {
   const router = useRouter();
@@ -85,7 +82,7 @@ export function BadgesScreen() {
                   {earned
                     ? justEarned
                       ? "Just earned"
-                      : `Earned ${formatEarnedDate(badge.earnedAt as string)}`
+                      : `Earned ${formatShortDate(badge.earnedAt)}`
                     : "Not yet earned"}
                 </AppText>
               </View>
