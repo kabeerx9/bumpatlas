@@ -6,7 +6,6 @@ import {
   getOnboardingComplete,
   setOnboardingComplete,
 } from "@/features/onboarding/storage/onboarding-storage";
-import { useMockData } from "@/lib/api/client";
 import * as familiesApi from "@/lib/api/families";
 import { queryKeys } from "@/lib/api/hooks";
 
@@ -66,11 +65,9 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
    * default family; `GET /families/current` 404s with FAMILY_NOT_FOUND when
    * onboarding genuinely hasn't run yet (a legitimate response, not an error
    * to retry). Skipped entirely once the local flag is already true (fast
-   * path — no need to hit the network on every launch) and in mock mode
-   * (there is no server-side family to disagree with the flag).
+   * path — no need to hit the network on every launch).
    */
-  const shouldCheckServer =
-    !useMockData && isLoaded && !!userId && localFlagLoaded && !isLocalOnboardingComplete;
+  const shouldCheckServer = isLoaded && !!userId && localFlagLoaded && !isLocalOnboardingComplete;
 
   const familyCheckQuery = useQuery({
     // Same key `useFamilyQuery` (lib/api/hooks.ts) uses for `GET

@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, Button, Surface, colors, radius, spacing } from "@/design-system";
-import { mockNotificationCategories } from "@/features/mock/mock-content";
-import type { NotificationPrefKey } from "@/features/mock/mock-ui-context";
+import {
+  notificationCategories,
+  type NotificationPrefKey,
+} from "@/features/family/data/notification-categories";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import {
   useNotificationPreferencesQuery,
@@ -24,7 +26,7 @@ const QUIET_HOUR_PRESETS: Array<{ start: string; end: string; label: string }> =
 ];
 
 const DEFAULT_NOTIFICATION_PREFS = Object.fromEntries(
-  mockNotificationCategories.map((category) => [category.id, category.defaultOn]),
+  notificationCategories.map((category) => [category.id, category.defaultOn]),
 ) as Record<NotificationPrefKey, boolean>;
 
 export function NotificationSettingsScreen() {
@@ -195,7 +197,7 @@ export function NotificationSettingsScreen() {
         <AppText weight="semibold">Categories</AppText>
       </View>
 
-      {mockNotificationCategories.map((category) => {
+      {notificationCategories.map((category) => {
         const key = category.id as NotificationPrefKey;
         const enabled = notificationPrefs[key];
         return (

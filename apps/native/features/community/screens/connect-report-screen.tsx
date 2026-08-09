@@ -12,7 +12,7 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { HighRiskEscalatePanel } from "@/features/shared/components/high-risk-escalate";
 import { useCreateReportMutation, useGroupPostDetailQuery } from "@/lib/api/hooks";
 
@@ -32,7 +32,7 @@ export function ConnectReportScreen() {
   const router = useRouter();
   const theme = useAppTheme();
   const { postId } = useLocalSearchParams<{ postId?: string }>();
-  const { activeGroupId } = useMockUi();
+  const { activeGroupId } = useAppState();
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [highRiskAcknowledged, setHighRiskAcknowledged] = useState(false);

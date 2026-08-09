@@ -13,7 +13,7 @@ import { ProfileStep } from "@/features/onboarding/components/steps/profile-step
 import { RoleStep, type OnboardingRole } from "@/features/onboarding/components/steps/role-step";
 import { WelcomeStep } from "@/features/onboarding/components/steps/welcome-step";
 import { useOnboarding } from "@/features/onboarding/providers/onboarding-provider";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { enablePushAndRegister } from "@/lib/notifications/push";
 import { appRoutes } from "@/navigation/routes";
 
@@ -32,7 +32,7 @@ const TOTAL_STEPS = ONBOARDING_STEPS.length;
 
 export function OnboardingScreen() {
   const { completeOnboarding } = useOnboarding();
-  const { applyOnboardingProfile } = useMockUi();
+  const { applyOnboardingProfile } = useAppState();
   const router = useRouter();
 
   const [stepIndex, setStepIndex] = useState(0);

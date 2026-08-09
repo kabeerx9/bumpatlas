@@ -20,7 +20,7 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { formatRelativeTime } from "@/features/shared/lib/format-date";
 import {
   useBlockUserMutation,
@@ -48,7 +48,7 @@ export function ConnectScreen() {
     markConnectRulesSeen,
     accountAgeDays,
     linksAllowed,
-  } = useMockUi();
+  } = useAppState();
   const groupsQuery = useGroupsQuery();
   // The stored id predates the server wiring and may be a mock id; resolve to a
   // real group (the joined one first) so the posts query never asks for a

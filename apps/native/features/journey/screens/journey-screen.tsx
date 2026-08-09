@@ -30,11 +30,15 @@ import {
   useAppTheme,
 } from "@/design-system";
 import type { TimelineEntry } from "@/design-system";
-import { mockRecaps } from "@/features/mock/demo-data";
-import { mockOnThisDay } from "@/features/mock/mock-content";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { formatShortDate } from "@/features/shared/lib/format-date";
-import { useFamilyQuery, useMemoriesQuery, useMilestonesQuery } from "@/lib/api/hooks";
+import {
+  useCurrentRecapQuery,
+  useEntitlementsQuery,
+  useFamilyQuery,
+  useMemoriesQuery,
+  useMilestonesQuery,
+} from "@/lib/api/hooks";
 import { FEATURES } from "@/lib/features";
 import { appRoutes } from "@/navigation/routes";
 
@@ -55,17 +59,15 @@ const PREGNANCY_SUBJECT = "__pregnancy__";
 export function JourneyScreen() {
   const router = useRouter();
   const theme = useAppTheme();
-  const {
-    showEmptyJourney,
-    journalQuery,
-    setJournalQuery,
-    isPremiumPreview,
-    recapEligible,
-    childDisplayName,
-  } = useMockUi();
+  const { journalQuery, setJournalQuery } = useAppState();
   const memoriesQuery = useMemoriesQuery();
   const familyQuery = useFamilyQuery();
   const milestonesQuery = useMilestonesQuery();
+  const recapQuery = useCurrentRecapQuery();
+  const entitlementsQuery = useEntitlementsQuery();
+  const childDisplayName = familyQuery.data?.childDisplayName ?? "your child";
+  const isPremium = entitlementsQuery.data?.isPremium ?? false;
+  const recapEligible = recapQuery.data?.eligible ?? false;
   const milestoneDefinitions = useMemo(
     () => milestonesQuery.data?.definitions ?? [],
     [milestonesQuery.data?.definitions],
@@ -117,12 +119,12 @@ export function JourneyScreen() {
 
   const filteredMemories = useMemo(() => {
     const q = journalQuery.trim().toLowerCase();
-    if (!q || !isPremiumPreview) return subjectMemories;
+    if (!q || !isPremium) return subjectMemories;
     return subjectMemories.filter(
       (memory) =>
         memory.title.toLowerCase().includes(q) || memory.body.toLowerCase().includes(q),
     );
-  }, [journalQuery, isPremiumPreview, subjectMemories]);
+  }, [journalQuery, isPremium, subjectMemories]);
 
   const timelineEntries: TimelineEntry[] = useMemo(
     () =>
@@ -139,7 +141,7 @@ export function JourneyScreen() {
   const hasMore =
     visibleCount < filteredMemories.length && (filter === "all" || filter === "memories");
 
-  const recapsCount = recapEligible ? mockRecaps.length : 0;
+  const recapsCount = recapEligible && recapQuery.data ? 1 : 0;
   const totalCount = subjectMemories.length + milestoneDefinitions.length + recapsCount;
 
   const filterChips = [
@@ -187,7 +189,7 @@ export function JourneyScreen() {
     );
   }
 
-  if (showEmptyJourney || rawMemories.length === 0) {
+  if (rawMemories.length === 0) {
     return (
       <Screen contentStyle={styles.screenContent}>
         {header}
@@ -231,13 +233,13 @@ export function JourneyScreen() {
             <TextInput
               value={journalQuery}
               onChangeText={setJournalQuery}
-              placeholder={isPremiumPreview ? "Search your journal…" : "Journal search · Premium"}
+              placeholder={isPremium ? "Search your journal…" : "Journal search · Premium"}
               placeholderTextColor={theme.colors.textMuted}
               style={[styles.searchInput, { color: theme.colors.text }]}
-              editable={isPremiumPreview}
+              editable={isPremium}
               accessibilityLabel="Search journal"
             />
-            {!isPremiumPreview ? (
+            {!isPremium ? (
               <Pressable
                 onPress={() => router.push(appRoutes.paywall("search"))}
                 hitSlop={8}
@@ -251,41 +253,33 @@ export function JourneyScreen() {
 
         <ChipRow chips={filterChips} value={filter} onChange={setFilter} />
 
+        {/*
+          "On this day" resurfacing has no real content source yet — there is
+          no server endpoint that picks a past memory for a given date. Rather
+          than fake a memory (the old mock branch navigated to a hardcoded
+          id), this always renders the upsell card until that ships.
+        */}
         <View style={styles.gutter}>
-          {isPremiumPreview ? (
-            <Pressable onPress={() => router.push(appRoutes.memory("2"))}>
-              <Surface tone="lavender" radiusSize="lg" bordered={false} style={styles.gapCard}>
-                <AppText variant="label" style={styles.honeyLabel}>
-                  On this day · {mockOnThisDay.dateLabel}
-                </AppText>
-                <AppText weight="semibold">{mockOnThisDay.title}</AppText>
-                <AppText variant="bodySmall" tone="secondary">
-                  {mockOnThisDay.body}
-                </AppText>
-              </Surface>
+          <Surface tone="lavender" radiusSize="lg" bordered={false} style={styles.gapCard}>
+            <AppText variant="label" style={styles.honeyLabel}>
+              On this day · Premium
+            </AppText>
+            <AppText weight="semibold">Resurface a moment from 30+ days ago</AppText>
+            <AppText variant="bodySmall" tone="secondary">
+              Free keeps your full private timeline. Premium unlocks “on this day” cards.
+            </AppText>
+            <Pressable
+              onPress={() => router.push(appRoutes.paywall("on-this-day"))}
+              accessibilityRole="button"
+              accessibilityLabel="Unlock on this day"
+              style={styles.inlineLink}
+            >
+              <AppText variant="caption" weight="bold" style={styles.honeyLabel}>
+                Unlock on this day
+              </AppText>
+              <Feather name="arrow-up-right" size={13} color={colors.brand.honeyDeep} />
             </Pressable>
-          ) : (
-            <Surface tone="lavender" radiusSize="lg" bordered={false} style={styles.gapCard}>
-              <AppText variant="label" style={styles.honeyLabel}>
-                On this day · Premium
-              </AppText>
-              <AppText weight="semibold">Resurface a moment from 30+ days ago</AppText>
-              <AppText variant="bodySmall" tone="secondary">
-                Free keeps your full private timeline. Premium unlocks “on this day” cards.
-              </AppText>
-              <Pressable
-                onPress={() => router.push(appRoutes.paywall("on-this-day"))}
-                accessibilityRole="button"
-                accessibilityLabel="Unlock on this day"
-                style={styles.inlineLink}
-              >
-                <AppText variant="caption" weight="bold" style={styles.honeyLabel}>
-                  Unlock on this day
-                </AppText>
-                <Feather name="arrow-up-right" size={13} color={colors.brand.honeyDeep} />
-              </Pressable>
-            </Surface>
-          )}
+          </Surface>
         </View>
 
         {showRecaps ? (
@@ -302,23 +296,21 @@ export function JourneyScreen() {
                   Capture a moment
                 </Button>
               </Surface>
-            ) : (
+            ) : recapQuery.data ? (
               <View style={styles.stackSm}>
-                {mockRecaps.map((recap) => (
-                  <Pressable key={recap.id} onPress={() => router.push(appRoutes.recap(recap.id))}>
-                    <Surface tone="card" radiusSize="lg" elevated bordered={false} style={styles.gapCard}>
-                      <AppText variant="label" style={styles.honeyLabel}>
-                        {recap.weekLabel}
-                      </AppText>
-                      <AppText weight="semibold">{recap.title}</AppText>
-                      <AppText variant="bodySmall" tone="secondary">
-                        {recap.summary}
-                      </AppText>
-                    </Surface>
-                  </Pressable>
-                ))}
+                <Pressable onPress={() => router.push(appRoutes.recap(recapQuery.data.id))}>
+                  <Surface tone="card" radiusSize="lg" elevated bordered={false} style={styles.gapCard}>
+                    <AppText variant="label" style={styles.honeyLabel}>
+                      {recapQuery.data.weekLabel}
+                    </AppText>
+                    <AppText weight="semibold">{recapQuery.data.title}</AppText>
+                    <AppText variant="bodySmall" tone="secondary">
+                      {recapQuery.data.highlights.join(" · ")}
+                    </AppText>
+                  </Surface>
+                </Pressable>
               </View>
-            )}
+            ) : null}
           </View>
         ) : null}
 

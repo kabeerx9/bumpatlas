@@ -12,7 +12,7 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useBookmarkContentMutation, useContentDetailQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
@@ -40,7 +40,7 @@ export function GuideDetailScreen() {
   const router = useRouter();
   const theme = useAppTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { markLearnDone } = useMockUi();
+  const { markLearnDone } = useAppState();
   const guideQuery = useContentDetailQuery(id ?? "");
   const bookmarkMutation = useBookmarkContentMutation();
   const guide = guideQuery.data;

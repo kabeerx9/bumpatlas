@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 
 import { AppText, IconButton, Screen, colors, radius, spacing, useAppTheme } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { formatShortDate } from "@/features/shared/lib/format-date";
 import { useBadgesQuery } from "@/lib/api/hooks";
 
@@ -12,7 +12,7 @@ const TILE_PASTELS = [colors.pastel.petal, colors.pastel.mint, colors.pastel.lem
 export function BadgesScreen() {
   const router = useRouter();
   const theme = useAppTheme();
-  const { newlyEarnedBadgeId } = useMockUi();
+  const { newlyEarnedBadgeId } = useAppState();
   const badgesQuery = useBadgesQuery();
   const badges = badgesQuery.data?.items ?? [];
 

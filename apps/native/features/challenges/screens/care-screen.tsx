@@ -8,10 +8,9 @@ import {
 } from "react-native";
 
 import { AppText, Button, Pill, Surface, colors, radius, spacing, useAppTheme } from "@/design-system";
-import { mockToday } from "@/features/mock/demo-data";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useRespectReduceMotion } from "@/features/shared/hooks/use-respect-reduce-motion";
-import { useCompleteChallengeMutation, useStageQuery, useTodayQuery } from "@/lib/api/hooks";
+import { useCompleteChallengeMutation, useTodayQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 type Phase = "ready" | "clearance" | "in_progress" | "done" | "skipped";
@@ -25,38 +24,36 @@ function formatSeconds(total: number) {
 export function CareScreen() {
   const router = useRouter();
   const theme = useAppTheme();
-  const stageQuery = useStageQuery();
-  const stageMode = stageQuery.data?.stageMode ?? "postpartum";
   const completeChallenge = useCompleteChallengeMutation();
   const { reduceMotion } = useRespectReduceMotion();
   const todayQuery = useTodayQuery();
-  // The plan's care card is the source of truth; mock content only bridges the
-  // loading gap. "care" is the server's accepted literal for an unfilled slot.
-  const serverAction = todayQuery.data?.cards.care ?? null;
-  const action =
-    serverAction ??
-    (stageMode === "pregnancy" ? mockToday.pregnancyWellnessAction : mockToday.wellnessAction);
-  const completionChallengeId = serverAction ? serverAction.id : "care";
+  // Nullable by contract: a card can legitimately have nothing to show (no
+  // wellness action seeded for the stage yet) — that renders as an empty
+  // state below, not a fixture.
+  const action = todayQuery.data?.cards.care ?? null;
   const [phase, setPhase] = useState<Phase>("ready");
   const [activeStep, setActiveStep] = useState(0);
-  const [secondsLeft, setSecondsLeft] = useState(action.durationSeconds);
+  const [secondsLeft, setSecondsLeft] = useState(action?.durationSeconds ?? 0);
   const [timerRunning, setTimerRunning] = useState(false);
   const [clearanceAcknowledged, setClearanceAcknowledged] = useState(false);
   const [badgeAwarded, setBadgeAwarded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    if (!action) return;
     setSecondsLeft(action.durationSeconds);
     setPhase("ready");
     setActiveStep(0);
     setTimerRunning(false);
     setClearanceAcknowledged(false);
-  }, [action.id, action.durationSeconds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [action?.id, action?.durationSeconds]);
 
   async function finishCare() {
+    if (!action) return;
     setTimerRunning(false);
     try {
-      await completeChallenge.mutateAsync({ challengeId: completionChallengeId });
+      await completeChallenge.mutateAsync({ challengeId: action.id });
     } catch {
       // Local completion still counts; sync retries when the API is reachable.
     }
@@ -92,7 +89,7 @@ export function CareScreen() {
   }
 
   function startCare() {
-    if (!clearanceAcknowledged) return;
+    if (!clearanceAcknowledged || !action) return;
     setPhase("in_progress");
     setActiveStep(0);
     setSecondsLeft(action.durationSeconds);
@@ -114,6 +111,32 @@ export function CareScreen() {
 
   function goHome() {
     router.back();
+  }
+
+  if (todayQuery.isLoading) {
+    return (
+      <SoftStackShell title="Care" closeIcon="x" onBack={goHome} centered>
+        <AppText tone="secondary">Loading today's Care action…</AppText>
+      </SoftStackShell>
+    );
+  }
+
+  if (!action) {
+    return (
+      <SoftStackShell title="Care" closeIcon="x" onBack={goHome} centered>
+        <Feather name="wind" size={28} color={colors.brand.honeyDeep} />
+        <AppText variant="heading" align="center">
+          Nothing scheduled today
+        </AppText>
+        <AppText variant="body" tone="secondary" align="center">
+          No wellness action is seeded for your stage yet. Check back soon, or browse the wellness
+          packs.
+        </AppText>
+        <Button size="lg" variant="ghost" onPress={() => router.push(appRoutes.wellnessPacks)}>
+          Browse wellness packs
+        </Button>
+      </SoftStackShell>
+    );
   }
 
   if (phase === "done" || phase === "skipped") {

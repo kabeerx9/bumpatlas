@@ -18,8 +18,6 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { mockGuides } from "@/features/mock/demo-data";
-import { useMockData } from "@/lib/api/client";
 import { useContentQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
@@ -68,36 +66,20 @@ export function GuideScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   /**
-   * The mock fallback only applies in mock mode. Content is unpublished by
-   * design in most live environments, so a live `{ items: [] }` must render
-   * as a genuine empty state rather than silently filling in with fixture
-   * articles — and the fallback must not flash real users fake content while
-   * `contentQuery` is still loading.
+   * Content is unpublished by design in most environments — a live
+   * `{ items: [] }` renders as a genuine empty state below.
    */
   const guides: GuideCard[] = useMemo(() => {
-    if (contentQuery.data) {
-      return contentQuery.data.items.map((item) => ({
-        id: item.id,
-        slug: item.slug,
-        title: item.title,
-        summary: item.summary,
-        readMinutes: item.readingMinutes,
-        bookmarked: item.bookmarked ?? false,
-        category: item.stageTags?.[0] ? formatCategory(item.stageTags[0]) : "General",
-      }));
-    }
-    if (useMockData) {
-      return mockGuides.map((guide) => ({
-        id: guide.id,
-        slug: guide.slug,
-        title: guide.title,
-        summary: guide.summary,
-        readMinutes: guide.readMinutes ?? 4,
-        bookmarked: false,
-        category: guide.category ?? "General",
-      }));
-    }
-    return [];
+    if (!contentQuery.data) return [];
+    return contentQuery.data.items.map((item) => ({
+      id: item.id,
+      slug: item.slug,
+      title: item.title,
+      summary: item.summary,
+      readMinutes: item.readingMinutes,
+      bookmarked: item.bookmarked ?? false,
+      category: item.stageTags?.[0] ? formatCategory(item.stageTags[0]) : "General",
+    }));
   }, [contentQuery.data]);
 
   const categoryCounts = useMemo(() => {

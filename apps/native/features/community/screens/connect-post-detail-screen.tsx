@@ -21,7 +21,7 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { formatRelativeTime } from "@/features/shared/lib/format-date";
 import { useCreateCommentMutation, useGroupPostDetailQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
@@ -37,7 +37,7 @@ export function ConnectPostDetailScreen() {
   const router = useRouter();
   const theme = useAppTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { commentsUsedToday, commentsDailyLimit, activeGroupId } = useMockUi();
+  const { commentsUsedToday, commentsDailyLimit, activeGroupId, incrementCommentCount } = useAppState();
   const [comment, setComment] = useState("");
 
   const postQuery = useGroupPostDetailQuery(activeGroupId, id ?? "");
@@ -51,6 +51,7 @@ export function ConnectPostDetailScreen() {
     if (!trimmed || atCommentLimit || !post) return;
     try {
       await createCommentMutation.mutateAsync({ postId: post.id, body: trimmed });
+      incrementCommentCount();
       setComment("");
     } catch {
       Alert.alert("Couldn’t reply", "Check your connection and try again.");

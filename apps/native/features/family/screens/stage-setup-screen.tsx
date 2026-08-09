@@ -12,8 +12,9 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useStageQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 type Mode = "choose" | "pregnancy" | "parent";
@@ -22,7 +23,9 @@ type Mode = "choose" | "pregnancy" | "parent";
 export function StageSetupScreen() {
   const router = useRouter();
   const theme = useAppTheme();
-  const { applyOnboardingProfile, stageMode } = useMockUi();
+  const { applyOnboardingProfile } = useAppState();
+  const stageQuery = useStageQuery();
+  const stageMode = stageQuery.data?.stageMode ?? "unknown";
   const [mode, setMode] = useState<Mode>("choose");
   const [dueDate, setDueDate] = useState("");
   const [childName, setChildName] = useState("");

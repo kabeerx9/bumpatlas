@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, colors, radius, spacing } from "@/design-system";
-import type { NotificationPrefKey } from "@/features/mock/mock-ui-context";
+import type { NotificationPrefKey } from "@/features/family/data/notification-categories";
 
 type NotificationPrefs = Record<NotificationPrefKey, boolean>;
 

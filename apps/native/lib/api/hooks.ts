@@ -1,15 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type {
-  Child,
   DeleteAccountInput,
   EntitlementsResponse,
   FamilySummary,
   ListMilestonesResponse,
   MeResponse,
-  Memory,
-  MilestoneDefinition,
-  MilestoneObservation,
   Recap,
   StageResponse,
   TodayResponse,
@@ -20,7 +16,6 @@ import type {
 import * as accountApi from "@/lib/api/account";
 import * as aiApi from "@/lib/api/ai";
 import * as billingApi from "@/lib/api/billing";
-import { useMockData } from "@/lib/api/client";
 import * as communityApi from "@/lib/api/community";
 import * as contentApi from "@/lib/api/content";
 import * as dataRequestsApi from "@/lib/api/data-requests";
@@ -32,19 +27,6 @@ import * as notificationsApi from "@/lib/api/notifications";
 import * as profilesApi from "@/lib/api/profiles";
 import * as recapsApi from "@/lib/api/recaps";
 import * as todayApi from "@/lib/api/today";
-import {
-  mockGuides,
-  mockGroupPosts,
-  mockMemories,
-  mockRecaps,
-  mockToday as mockTodayContent,
-} from "@/features/mock/demo-data";
-import {
-  mockBadges,
-  mockMilestoneDetails,
-  mockModerationQueue,
-  mockStageGroups,
-} from "@/features/mock/mock-content";
 
 export const queryKeys = {
   today: ["today"] as const,
@@ -65,183 +47,17 @@ export const queryKeys = {
   milestones: (childId?: string) => ["milestones", childId ?? "current"] as const,
 };
 
-/**
- * The mock builders are annotated with the contract types on purpose: a contract
- * change then fails to compile *here*, at the fixture, instead of surfacing as an
- * unrelated `{}` inference failure inside every screen's useQuery call.
- */
-const mockChild: Child = {
-  id: "child-mock",
-  displayName: "Ava",
-  dateOfBirth: "2026-05-01",
-  birthOrder: 0,
-  isActive: true,
-  archivedAt: null,
-};
-
-function mockToday(): TodayResponse {
-  const prompt = "What made today feel like yours?";
-  return {
-    date: new Date().toISOString().slice(0, 10),
-    prompt,
-    cards: {
-      capture: { promptId: "prompt-mock", prompt },
-      care: mockTodayContent.wellnessAction,
-      learn: {
-        id: mockTodayContent.learnCard.id,
-        slug: mockTodayContent.learnCard.id,
-        title: mockTodayContent.learnCard.title,
-        summary: mockTodayContent.learnCard.detail,
-        readingMinutes: 3,
-        stageTags: ["postpartum"],
-      },
-      connect: {
-        mode: mockTodayContent.connectCard.mode,
-        groupId: null,
-        groupName: mockTodayContent.connectCard.groupName,
-        prompt: mockTodayContent.connectCard.prompt,
-        replyCount: mockTodayContent.connectCard.replyCount,
-      },
-    },
-    loopCompletion: { capture: true, care: false, learn: false, connect: false },
-    weekProgress: { storyDays: 3, wellnessDays: 2, activeDays: 3, goal: 4 },
-    mediaUploadsUsed: 8,
-    mediaUploadsLimit: 30,
-    aiMessagesUsed: 2,
-    aiDailyLimit: 10,
-    isPremium: false,
-  };
-}
-
-function mockMemoryItems(): Memory[] {
-  return mockMemories.map((memory) => ({
-    id: memory.id,
-    title: memory.title,
-    body: memory.body,
-    eventDate: memory.dateLabel,
-    authorName: memory.author,
-    visibility: memory.visibility,
-    childId: mockChild.id,
-    pregnancyId: null,
-    mediaStorageKey: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }));
-}
-
-function mockFamily(): FamilySummary {
-  return {
-    id: "fam-mock",
-    name: "The Rivera household",
-    stageMode: "postpartum" as const,
-    childDisplayName: "Ava",
-    children: [mockChild],
-    dueDate: null as string | null,
-    members: [
-      {
-        id: "m1",
-        displayName: "You",
-        role: "OWNER" as const,
-        status: "active" as const,
-      },
-      {
-        id: "m2",
-        displayName: "Jordan",
-        role: "CONTRIBUTOR" as const,
-        status: "active" as const,
-      },
-    ],
-  };
-}
-
-function mockGroupPostItems(groupId: string) {
-  const group = mockStageGroups.find((item) => item.id === groupId);
-  const source =
-    group && "posts" in group && Array.isArray(group.posts) && group.posts.length > 0
-      ? group.posts
-      : mockGroupPosts;
-
-  return source.map((post) => ({
-    id: post.id,
-    groupId,
-    authorId: post.authorId,
-    authorName: post.author,
-    body: post.body,
-    reactionCount: post.reactions,
-    reactedByMe: false,
-    commentCount: post.comments?.length ?? 0,
-    createdAt: new Date().toISOString(),
-    comments: (post.comments ?? []).map((comment) => ({
-      id: comment.id,
-      authorId: comment.authorId,
-      authorName: comment.author,
-      body: comment.body,
-      createdAt: comment.createdAt,
-    })),
-  }));
-}
-
-/** Mock status labels ("Observed", "Not observed", …) mapped onto the contract's snake_case enum. */
-function mockMilestoneStatus(label: string): MilestoneObservation["status"] {
-  switch (label.trim().toLowerCase()) {
-    case "observed":
-      return "observed";
-    case "emerging":
-      return "emerging";
-    case "skipped":
-      return "skipped";
-    default:
-      return "not_observed";
-  }
-}
-
-function mockMilestoneDefinitions(): MilestoneDefinition[] {
-  return mockMilestoneDetails.map((item) => ({
-    id: item.id,
-    slug: item.id,
-    title: item.title,
-    guidance: item.note,
-    domain: "general",
-    stageTags: [],
-    reviewerName: null,
-    reviewedOn: null,
-  }));
-}
-
-function mockMilestoneObservations(): MilestoneObservation[] {
-  return mockMilestoneDetails.map((item) => ({
-    definitionId: item.id,
-    childId: mockChild.id,
-    status: mockMilestoneStatus(item.status),
-    observedAt: null,
-    memoryId: null,
-  }));
-}
-
-function mockMilestonesResponse(): ListMilestonesResponse {
-  return {
-    childId: mockChild.id,
-    definitions: mockMilestoneDefinitions(),
-    observations: mockMilestoneObservations(),
-  };
-}
-
 export function useTodayQuery() {
   return useQuery({
     queryKey: queryKeys.today,
-    queryFn: () => (useMockData ? Promise.resolve(mockToday()) : todayApi.getToday()),
+    queryFn: () => todayApi.getToday(),
   });
 }
 
 export function useMemoriesQuery() {
   return useQuery({
     queryKey: queryKeys.memories,
-    queryFn: async () => {
-      if (useMockData) {
-        return { items: mockMemoryItems(), nextCursor: null };
-      }
-      return memoriesApi.listMemories();
-    },
+    queryFn: () => memoriesApi.listMemories(),
   });
 }
 
@@ -249,84 +65,35 @@ export function useMemoryQuery(id: string) {
   return useQuery({
     queryKey: queryKeys.memory(id),
     enabled: Boolean(id),
-    queryFn: async () => {
-      if (useMockData) {
-        const found = mockMemoryItems().find((item) => item.id === id);
-        if (!found) throw new Error("Memory not found");
-        return found;
-      }
-      return memoriesApi.getMemory(id);
-    },
+    queryFn: () => memoriesApi.getMemory(id),
   });
 }
 
 export function useFamilyQuery() {
   return useQuery({
     queryKey: queryKeys.family,
-    queryFn: () => (useMockData ? Promise.resolve(mockFamily()) : familiesApi.getCurrentFamily()),
+    queryFn: () => familiesApi.getCurrentFamily(),
   });
 }
 
 export function useStageQuery() {
   return useQuery({
     queryKey: queryKeys.stage,
-    queryFn: async () => {
-      if (useMockData) {
-        const family = mockFamily();
-        const stage: StageResponse = {
-          stageMode: family.stageMode,
-          childDisplayName: family.childDisplayName,
-          activeChildId: family.children.find((child) => child.isActive)?.id ?? null,
-          children: family.children,
-          dueDate: family.dueDate,
-          gestationalWeek: null,
-        };
-        return stage;
-      }
-      return familiesApi.getStage();
-    },
+    queryFn: (): Promise<StageResponse> => familiesApi.getStage(),
   });
 }
 
 export function useEntitlementsQuery() {
   return useQuery({
     queryKey: queryKeys.entitlements,
-    queryFn: (): Promise<EntitlementsResponse> =>
-      useMockData
-        ? Promise.resolve({
-            isPremium: false,
-            planId: null,
-            renewsAt: null,
-            mediaUploadsLimit: 30,
-            maxChildren: 2,
-            aiDailyLimit: 10,
-            source: "free" as const,
-          })
-        : billingApi.getEntitlements(),
+    queryFn: (): Promise<EntitlementsResponse> => billingApi.getEntitlements(),
   });
 }
 
 export function useGroupsQuery() {
   return useQuery({
     queryKey: queryKeys.groups,
-    queryFn: () =>
-      useMockData
-        ? Promise.resolve({
-            items: mockStageGroups.map((group) => ({
-              id: group.id,
-              name: group.name,
-              stageLabel: group.name,
-              description: null,
-              kind: "stage" as const,
-              role: "member" as const,
-              memberCount: group.memberCount ?? 12,
-              memberLimit: 200,
-              postingEnabled: true,
-              archived: false,
-              joined: true,
-            })),
-          })
-        : communityApi.listGroups(),
+    queryFn: () => communityApi.listGroups(),
   });
 }
 
@@ -334,29 +101,15 @@ export function useGroupPostsQuery(groupId: string) {
   return useQuery({
     queryKey: queryKeys.groupPosts(groupId),
     enabled: Boolean(groupId),
-    queryFn: async () => {
-      if (useMockData) {
-        return {
-          items: mockGroupPostItems(groupId).map(({ comments: _comments, ...post }) => post),
-          nextCursor: null,
-        };
-      }
-      return communityApi.listGroupPosts(groupId);
-    },
+    queryFn: () => communityApi.listGroupPosts(groupId),
   });
 }
 
-/** Mock-friendly post detail including nested comments for UI threads. */
 export function useGroupPostDetailQuery(groupId: string, postId: string) {
   return useQuery({
     queryKey: [...queryKeys.groupPosts(groupId), postId] as const,
     enabled: Boolean(groupId && postId),
     queryFn: async () => {
-      if (useMockData) {
-        const found = mockGroupPostItems(groupId).find((post) => post.id === postId);
-        if (!found) throw new Error("Post not found");
-        return found;
-      }
       const detail = await communityApi.getPostDetail(postId);
       return { ...detail.post, comments: detail.comments.items };
     },
@@ -366,21 +119,7 @@ export function useGroupPostDetailQuery(groupId: string, postId: string) {
 export function useContentQuery() {
   return useQuery({
     queryKey: queryKeys.content,
-    queryFn: () =>
-      useMockData
-        ? Promise.resolve({
-            items: mockGuides.map((guide) => ({
-              id: guide.id,
-              slug: guide.slug,
-              title: guide.title,
-              summary: guide.summary,
-              readingMinutes: guide.readMinutes ?? 4,
-              stageTags: guide.stageTags ?? [],
-              bookmarked: false,
-            })),
-            nextCursor: null,
-          })
-        : contentApi.listContent(),
+    queryFn: () => contentApi.listContent(),
   });
 }
 
@@ -388,161 +127,56 @@ export function useContentDetailQuery(slugOrId: string) {
   return useQuery({
     queryKey: queryKeys.contentDetail(slugOrId),
     enabled: Boolean(slugOrId),
-    queryFn: async () => {
-      if (useMockData) {
-        const guide =
-          mockGuides.find((item) => item.id === slugOrId || item.slug === slugOrId) ??
-          mockGuides[0];
-        return {
-          id: guide.id,
-          slug: guide.slug,
-          title: guide.title,
-          summary: guide.summary,
-          readingMinutes: guide.readMinutes ?? 4,
-          stageTags: guide.stageTags ?? [],
-          bookmarked: false,
-          bodyMarkdown: Array.isArray(guide.body) ? guide.body.join("\n\n") : guide.summary,
-          citations: [
-            {
-              title: guide.title,
-              source: guide.sourceName,
-              url: undefined as string | undefined,
-            },
-          ],
-        };
-      }
-      return contentApi.getContent(slugOrId);
-    },
+    queryFn: () => contentApi.getContent(slugOrId),
   });
 }
 
 export function useCurrentRecapQuery() {
   return useQuery({
     queryKey: queryKeys.recap,
-    queryFn: (): Promise<Recap> =>
-      useMockData
-        ? Promise.resolve({
-            id: mockRecaps[0].id,
-            weekLabel: mockRecaps[0].weekLabel,
-            title: mockRecaps[0].title,
-            highlights: mockRecaps[0].highlights,
-            eligible: true,
-            childId: mockChild.id,
-            childDisplayName: mockChild.displayName,
-          })
-        : recapsApi.getCurrentRecap(),
+    queryFn: (): Promise<Recap> => recapsApi.getCurrentRecap(),
   });
 }
 
 export function useAiUsageQuery() {
   return useQuery({
     queryKey: queryKeys.aiUsage,
-    queryFn: () =>
-      useMockData
-        ? Promise.resolve({
-            dailyUsed: 2,
-            dailyLimit: 10,
-            hourlyUsed: 4,
-            hourlyLimit: 20,
-          })
-        : aiApi.getAiUsage(),
+    queryFn: () => aiApi.getAiUsage(),
   });
 }
 
 export function useNotificationPreferencesQuery() {
   return useQuery({
     queryKey: queryKeys.notificationPrefs,
-    queryFn: () =>
-      useMockData
-        ? Promise.resolve({
-            prefs: {
-              dailyPrompt: true,
-              wellnessReminder: true,
-              partnerActivity: true,
-              weeklyRecap: true,
-              communityReply: false,
-              subscription: true,
-            },
-            quietHoursEnabled: true,
-            quietStart: "21:00",
-            quietEnd: "08:00",
-            groupRelatedAlerts: true,
-          })
-        : notificationsApi.getNotificationPreferences(),
+    queryFn: () => notificationsApi.getNotificationPreferences(),
   });
 }
 
 export function useBadgesQuery() {
   return useQuery({
     queryKey: queryKeys.badges,
-    queryFn: () =>
-      useMockData
-        ? Promise.resolve({
-            items: mockBadges.map((badge) => ({
-              id: badge.id,
-              title: badge.title,
-              description: badge.description,
-              earnedAt: badge.earned ? "2026-07-12T00:00:00.000Z" : null,
-            })),
-          })
-        : todayApi.listBadges(),
+    queryFn: () => todayApi.listBadges(),
   });
 }
 
 export function useModerationQueueQuery() {
   return useQuery({
     queryKey: queryKeys.moderation,
-    queryFn: () =>
-      useMockData
-        ? Promise.resolve({
-            items: mockModerationQueue.map((item) => ({
-              id: item.id,
-              type: item.type,
-              summary: item.summary,
-              postPreview: item.postPreview,
-              reporter: item.reporter,
-              priority: item.severity === "high" ? ("high" as const) : ("normal" as const),
-              status: item.status,
-              groupId: null,
-              groupKind: null,
-              createdAt: item.createdAt,
-            })),
-          })
-        : moderationApi.listModerationQueue(),
+    queryFn: () => moderationApi.listModerationQueue(),
   });
 }
 
 export function useMilestonesQuery(childId?: string) {
   return useQuery({
     queryKey: queryKeys.milestones(childId),
-    queryFn: () =>
-      useMockData
-        ? Promise.resolve(mockMilestonesResponse())
-        : milestonesApi.listMilestones(childId),
+    queryFn: () => milestonesApi.listMilestones(childId),
   });
 }
 
-/**
- * Mock mode keeps the optimistic update in the cache rather than refetching
- * (the mock queryFn always recomputes from the static fixture, which would
- * otherwise wipe the just-recorded observation). Real mode invalidates so the
- * server's persisted state — the actual source of truth — comes back.
- */
 export function useUpsertMilestoneObservationMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: { definitionId: string; body: UpsertMilestoneObservationInput }) => {
-      if (useMockData) {
-        const now = new Date().toISOString();
-        const observation: MilestoneObservation = {
-          definitionId: input.definitionId,
-          childId: input.body.childId,
-          status: input.body.status,
-          observedAt: input.body.status === "not_observed" ? null : now,
-          memoryId: input.body.memoryId ?? null,
-        };
-        return observation;
-      }
       return milestonesApi.upsertMilestoneObservation(input.definitionId, input.body);
     },
     onSuccess: async (observation) => {
@@ -556,9 +190,7 @@ export function useUpsertMilestoneObservationMutation() {
           return { ...current, observations: [...others, observation] };
         },
       );
-      if (!useMockData) {
-        await queryClient.invalidateQueries({ queryKey: ["milestones"] });
-      }
+      await queryClient.invalidateQueries({ queryKey: ["milestones"] });
     },
   });
 }
@@ -570,29 +202,15 @@ export function useCreateMemoryMutation() {
       body: Parameters<typeof memoriesApi.createMemory>[0];
       idempotencyKey?: string;
     }) => {
-      if (useMockData) {
-        const now = new Date().toISOString();
-        const memory: Memory = {
-          id: `mem-${Date.now()}`,
-          title: input.body.body.slice(0, 48),
-          body: input.body.body,
-          eventDate: input.body.eventDate,
-          authorName: "You",
-          visibility: input.body.visibility ?? "HOUSEHOLD",
-          childId: input.body.childId ?? mockChild.id,
-          pregnancyId: input.body.pregnancyId ?? null,
-          mediaStorageKey: input.body.mediaStorageKey ?? null,
-          createdAt: now,
-          updatedAt: now,
-        };
-        return memory;
-      }
       return memoriesApi.createMemory(input.body, input.idempotencyKey);
     },
     onSuccess: async (memory) => {
       queryClient.setQueryData(queryKeys.memory(memory.id), memory);
       await queryClient.invalidateQueries({ queryKey: queryKeys.memories });
       await queryClient.invalidateQueries({ queryKey: queryKeys.today });
+      // A memory can be the "first capture" that earns a badge — refresh the
+      // badges list so the celebration diff in the app-state provider sees it.
+      await queryClient.invalidateQueries({ queryKey: queryKeys.badges });
     },
   });
 }
@@ -601,17 +219,6 @@ export function useUpdateMemoryMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; patch: Parameters<typeof memoriesApi.updateMemory>[1] }) => {
-      if (useMockData) {
-        const current =
-          queryClient.getQueryData<ReturnType<typeof mockMemoryItems>[number]>(queryKeys.memory(input.id)) ??
-          mockMemoryItems().find((item) => item.id === input.id);
-        if (!current) throw new Error("Memory not found");
-        return {
-          ...current,
-          ...input.patch,
-          updatedAt: new Date().toISOString(),
-        };
-      }
       return memoriesApi.updateMemory(input.id, input.patch);
     },
     onSuccess: async (memory) => {
@@ -625,7 +232,7 @@ export function useDeleteMemoryMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      if (!useMockData) await memoriesApi.deleteMemory(id);
+      await memoriesApi.deleteMemory(id);
       return id;
     },
     onSuccess: async (id) => {
@@ -640,21 +247,6 @@ export function useCompleteChallengeMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: Parameters<typeof todayApi.completeChallenge>[0]) => {
-      if (useMockData) {
-        const today = queryClient.getQueryData<ReturnType<typeof mockToday>>(queryKeys.today) ?? mockToday();
-        return {
-          ...today,
-          loopCompletion: { ...today.loopCompletion, care: true },
-          weekProgress: {
-            ...today.weekProgress,
-            wellnessDays: Math.min(today.weekProgress.goal, today.weekProgress.wellnessDays + 1),
-            activeDays: Math.min(
-              today.weekProgress.goal,
-              Math.max(today.weekProgress.activeDays, today.weekProgress.wellnessDays + 1),
-            ),
-          },
-        };
-      }
       return todayApi.completeChallenge(input);
     },
     onSuccess: async (today) => {
@@ -668,24 +260,12 @@ export function useCreateGroupPostMutation(groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: Parameters<typeof communityApi.createGroupPost>[1]) => {
-      if (useMockData) {
-        return {
-          id: `post-${Date.now()}`,
-          groupId,
-          authorId: "me",
-          authorName: "You",
-          body: input.body,
-          reactionCount: 0,
-          reactedByMe: false,
-          commentCount: 0,
-          createdAt: new Date().toISOString(),
-        };
-      }
       return communityApi.createGroupPost(groupId, input);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.groupPosts(groupId) });
       await queryClient.invalidateQueries({ queryKey: queryKeys.today });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.badges });
     },
   });
 }
@@ -694,15 +274,6 @@ export function useCreateCommentMutation(groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: { postId: string; body: string }) => {
-      if (useMockData) {
-        return {
-          id: `c-${Date.now()}`,
-          authorId: "me",
-          authorName: "You",
-          body: input.body,
-          createdAt: "Just now",
-        };
-      }
       return communityApi.createComment(input.postId, { body: input.body });
     },
     onSuccess: async () => {
@@ -720,12 +291,10 @@ export function useReactToPostMutation(groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: { postId: string; reacted: boolean }) => {
-      if (!useMockData) {
-        if (input.reacted) {
-          await communityApi.removeReaction(input.postId);
-        } else {
-          await communityApi.setReaction(input.postId);
-        }
+      if (input.reacted) {
+        await communityApi.removeReaction(input.postId);
+      } else {
+        await communityApi.setReaction(input.postId);
       }
       return input.postId;
     },
@@ -738,7 +307,7 @@ export function useReactToPostMutation(groupId: string) {
 export function useCreateReportMutation() {
   return useMutation({
     mutationFn: async (input: Parameters<typeof communityApi.createReport>[0]) => {
-      if (!useMockData) await communityApi.createReport(input);
+      await communityApi.createReport(input);
       return input;
     },
   });
@@ -747,7 +316,7 @@ export function useCreateReportMutation() {
 export function useBlockUserMutation() {
   return useMutation({
     mutationFn: async (input: Parameters<typeof communityApi.blockUser>[0]) => {
-      if (!useMockData) await communityApi.blockUser(input);
+      await communityApi.blockUser(input);
       return input.userId;
     },
   });
@@ -757,7 +326,7 @@ export function useBookmarkContentMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      if (!useMockData) await contentApi.bookmarkContent(id);
+      await contentApi.bookmarkContent(id);
       return id;
     },
     onSuccess: async (_id, variables) => {
@@ -770,14 +339,6 @@ export function useBookmarkContentMutation() {
 export function useCreateInviteMutation() {
   return useMutation({
     mutationFn: async (input: Parameters<typeof familiesApi.createInvite>[0]) => {
-      if (useMockData) {
-        const token = `mock-invite-${Date.now()}`;
-        return {
-          token,
-          inviteUrl: `https://bumpatlas.app/invite/${token}`,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        };
-      }
       return familiesApi.createInvite(input);
     },
   });
@@ -787,18 +348,7 @@ export function useInvitePreviewQuery(token: string) {
   return useQuery({
     queryKey: ["invites", token, "preview"] as const,
     enabled: Boolean(token),
-    queryFn: () => {
-      if (useMockData) {
-        const family = mockFamily();
-        return Promise.resolve({
-          familyName: family.name,
-          inviterDisplayName: family.members[0]?.displayName ?? "A household member",
-          role: "CONTRIBUTOR" as const,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        });
-      }
-      return familiesApi.getInvitePreview(token);
-    },
+    queryFn: () => familiesApi.getInvitePreview(token),
   });
 }
 
@@ -806,7 +356,6 @@ export function useAcceptInviteMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: Parameters<typeof familiesApi.acceptInvite>[0]) => {
-      if (useMockData) return mockFamily();
       return familiesApi.acceptInvite(input);
     },
     onSuccess: async (family) => {
@@ -816,10 +365,6 @@ export function useAcceptInviteMutation() {
   });
 }
 
-/**
- * Mock mode edits the cached family summary in place rather than the static
- * fixture, so a role change is visible immediately without a mock role-store.
- */
 export function useUpdateMemberMutation() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -827,17 +372,6 @@ export function useUpdateMemberMutation() {
       memberId: string;
       patch: Parameters<typeof familiesApi.updateMember>[1];
     }) => {
-      if (useMockData) {
-        const current = queryClient.getQueryData<FamilySummary>(queryKeys.family) ?? mockFamily();
-        return {
-          ...current,
-          members: current.members.map((member) =>
-            member.id === input.memberId && input.patch.role
-              ? { ...member, role: input.patch.role }
-              : member,
-          ),
-        };
-      }
       return familiesApi.updateMember(input.memberId, input.patch);
     },
     onSuccess: (family) => {
@@ -850,16 +384,9 @@ export function useRemoveMemberMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (memberId: string): Promise<FamilySummary> => {
-      if (useMockData) {
-        const current = queryClient.getQueryData<FamilySummary>(queryKeys.family) ?? mockFamily();
-        return {
-          ...current,
-          members: current.members.filter((member) => member.id !== memberId),
-        };
-      }
       await familiesApi.removeMember(memberId);
       // The route returns 204, so the client re-derives the new roster itself
-      // rather than refetching — mirrors the mock branch's shape.
+      // rather than refetching.
       const current = queryClient.getQueryData<FamilySummary>(queryKeys.family);
       if (!current) return familiesApi.getCurrentFamily();
       return { ...current, members: current.members.filter((member) => member.id !== memberId) };
@@ -877,20 +404,6 @@ export function useModerationActionMutation() {
       id: string;
       action: Parameters<typeof moderationApi.applyModerationAction>[1];
     }) => {
-      if (useMockData) {
-        return {
-          id: input.id,
-          type: "Report",
-          summary: "Resolved locally",
-          postPreview: "",
-          reporter: "You",
-          priority: "normal" as const,
-          status: input.action.action,
-          groupId: null,
-          groupKind: null,
-          createdAt: new Date().toISOString(),
-        };
-      }
       return moderationApi.applyModerationAction(input.id, input.action);
     },
     onSuccess: async () => {
@@ -902,51 +415,23 @@ export function useModerationActionMutation() {
 export function useCreateDataRequestMutation() {
   return useMutation({
     mutationFn: async (input: Parameters<typeof dataRequestsApi.createDataRequest>[0]) => {
-      if (useMockData) {
-        return {
-          id: `req-${Date.now()}`,
-          type: input.type,
-          status: "queued" as const,
-          createdAt: new Date().toISOString(),
-        };
-      }
       return dataRequestsApi.createDataRequest(input);
     },
   });
 }
 
-/** Mock mode echoes the patch back as the "current user" rather than persisting it anywhere. */
-function mockAccountResponse(patch: UpdateAccountInput): MeResponse {
-  const now = new Date().toISOString();
-  const name = [patch.firstName, patch.lastName].filter(Boolean).join(" ").trim();
-  return {
-    id: "user-mock",
-    clerkId: "clerk-mock",
-    email: "you@example.com",
-    name: name || null,
-    imageUrl: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
 export function useUpdateAccountMutation() {
   return useMutation({
-    mutationFn: (input: UpdateAccountInput): Promise<MeResponse> =>
-      useMockData ? Promise.resolve(mockAccountResponse(input)) : accountApi.updateAccount(input),
+    mutationFn: (input: UpdateAccountInput): Promise<MeResponse> => accountApi.updateAccount(input),
   });
 }
 
-/**
- * Danger domain: account deletion. Mock mode never hits the server (there is
- * nothing to delete), but still clears the cache so the UI behaves the same
- * way it would after a real account teardown.
- */
+/** Danger domain: account deletion. Clears the cache after the server confirms the teardown. */
 export function useDeleteAccountMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: DeleteAccountInput) => {
-      if (!useMockData) await accountApi.deleteAccount(input);
+      await accountApi.deleteAccount(input);
     },
     onSuccess: () => {
       queryClient.clear();
@@ -961,26 +446,6 @@ export function useConvertPregnancyMutation() {
       pregnancyId: string;
       body: Parameters<typeof profilesApi.convertPregnancy>[1];
     }) => {
-      if (useMockData) {
-        // The convert contract is a union: one baby, or several sharing a birth
-        // date (twins). Mock mode has to handle both branches now that the
-        // contract can express them.
-        const babies =
-          "babies" in input.body
-            ? input.body.babies.map((baby) => baby.displayName)
-            : [input.body.childName];
-
-        const children: Child[] = babies.map((displayName, index) => ({
-          id: `child-${Date.now()}-${index}`,
-          displayName,
-          dateOfBirth: input.body.birthDate,
-          birthOrder: index,
-          isActive: index === 0,
-          archivedAt: null,
-        }));
-
-        return { ...children[0], children };
-      }
       return profilesApi.convertPregnancy(input.pregnancyId, input.body);
     },
     onSuccess: async () => {
@@ -996,27 +461,6 @@ export function useUpdateNotificationPreferencesMutation() {
     mutationFn: async (
       input: Parameters<typeof notificationsApi.updateNotificationPreferences>[0],
     ) => {
-      if (useMockData) {
-        const current = queryClient.getQueryData<
-          Awaited<ReturnType<typeof notificationsApi.getNotificationPreferences>>
-        >(queryKeys.notificationPrefs);
-        return {
-          prefs: {
-            dailyPrompt: true,
-            wellnessReminder: true,
-            partnerActivity: true,
-            weeklyRecap: true,
-            communityReply: false,
-            subscription: true,
-            ...current?.prefs,
-            ...input.prefs,
-          },
-          quietHoursEnabled: input.quietHoursEnabled ?? current?.quietHoursEnabled ?? true,
-          quietStart: input.quietStart ?? current?.quietStart ?? "21:00",
-          quietEnd: input.quietEnd ?? current?.quietEnd ?? "08:00",
-          groupRelatedAlerts: input.groupRelatedAlerts ?? current?.groupRelatedAlerts ?? true,
-        };
-      }
       return notificationsApi.updateNotificationPreferences(input);
     },
     onSuccess: async (data) => {
@@ -1029,37 +473,6 @@ export function useSendAiChatMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: Parameters<typeof aiApi.sendAiChat>[0]) => {
-      if (useMockData) {
-        const usage = queryClient.getQueryData<{
-          dailyUsed: number;
-          dailyLimit: number;
-          hourlyUsed: number;
-          hourlyLimit: number;
-        }>(queryKeys.aiUsage) ?? {
-          dailyUsed: 2,
-          dailyLimit: 10,
-          hourlyUsed: 4,
-          hourlyLimit: 20,
-        };
-        const nextUsage = {
-          ...usage,
-          dailyUsed: usage.dailyUsed + 1,
-          hourlyUsed: usage.hourlyUsed + 1,
-        };
-        queryClient.setQueryData(queryKeys.aiUsage, nextUsage);
-        return {
-          conversationId: "mock-conversation",
-          message: {
-            id: `a-${Date.now()}`,
-            role: "assistant" as const,
-            body: "Here's a calm, stage-aware thought based on reviewed BumpAtlas content.",
-            citations: [],
-            escalate: null,
-            createdAt: new Date().toISOString(),
-          },
-          usage: nextUsage,
-        };
-      }
       return aiApi.sendAiChat(input);
     },
     onSuccess: async () => {
@@ -1068,26 +481,21 @@ export function useSendAiChatMutation() {
   });
 }
 
+/** Sets the entitlements cache directly after a store purchase/restore response. */
 export function useSetPremiumEntitlement() {
   const queryClient = useQueryClient();
   return (isPremium: boolean) => {
-    const current = queryClient.getQueryData<{
-      isPremium: boolean;
-      planId: string | null;
-      renewsAt: string | null;
-      mediaUploadsLimit: number;
-      aiDailyLimit: number;
-      source: "free" | "store" | "promo";
-    }>(queryKeys.entitlements);
-    queryClient.setQueryData(queryKeys.entitlements, {
+    const current = queryClient.getQueryData<EntitlementsResponse>(queryKeys.entitlements);
+    queryClient.setQueryData<EntitlementsResponse>(queryKeys.entitlements, {
       isPremium,
       planId: isPremium ? current?.planId ?? "premium" : null,
       renewsAt: isPremium ? current?.renewsAt ?? null : null,
       mediaUploadsLimit: isPremium ? 1000 : 30,
+      maxChildren: current?.maxChildren ?? 2,
       aiDailyLimit: isPremium ? 30 : 10,
-      source: isPremium ? ("store" as const) : ("free" as const),
+      source: isPremium ? "revenuecat" : "free",
     });
-    const today = queryClient.getQueryData<ReturnType<typeof mockToday>>(queryKeys.today);
+    const today = queryClient.getQueryData<TodayResponse>(queryKeys.today);
     if (today) {
       queryClient.setQueryData(queryKeys.today, { ...today, isPremium });
     }

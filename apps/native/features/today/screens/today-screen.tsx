@@ -29,15 +29,14 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { mockProfile, mockToday } from "@/features/mock/demo-data";
-import { mockOnThisDay, mockPregnancy, mockStageGroups } from "@/features/mock/mock-content";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { pregnancyContent } from "@/features/pregnancy/data/pregnancy-content";
 import {
   gestationalWeekFromDueDate,
   pregnancyWeekLabel,
 } from "@/features/pregnancy/lib/gestational-week";
 import { OfflineBanner } from "@/features/shared/components/offline-banner";
 import { DraftQueuePanel } from "@/features/shared/components/draft-queue-panel";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { useRespectReduceMotion } from "@/features/shared/hooks/use-respect-reduce-motion";
 import { formatShortDate } from "@/features/shared/lib/format-date";
 import { ageBucketFromDob, ageBucketLabel, approximateAgeLabel } from "@/features/shared/lib/age-bucket";
@@ -47,7 +46,6 @@ import { TodayActionTile } from "@/features/today/components/today-action-tile";
 import {
   queryKeys,
   useFamilyQuery,
-  useGroupsQuery,
   useMemoriesQuery,
   useTodayQuery,
 } from "@/lib/api/hooks";
@@ -63,65 +61,54 @@ export function TodayScreen() {
   const todayQuery = useTodayQuery();
   const familyQuery = useFamilyQuery();
   const memoriesQuery = useMemoriesQuery();
-  const groupsQuery = useGroupsQuery();
   const {
     isOffline,
     offlineBannerDismissed,
     dismissOfflineBanner,
     pendingDraft,
     connectTodayMode,
-    stageMode,
     inviteCtaDismissed,
     dismissInviteCta,
-    weekProgress,
-    loopCompletion,
-    storyDaysThisWeek,
-    wellnessDaysThisWeek,
+    learnDoneToday,
     markLearnDone,
-    isPremiumPreview,
-    activeGroupId,
     primaryGoal,
     flushDraftQueue,
-  } = useMockUi();
+  } = useAppState();
 
   const today = todayQuery.data;
   const childDisplayName = familyQuery.data?.childDisplayName ?? "your child";
-  const resolvedStage = familyQuery.data?.stageMode ?? stageMode;
+  const resolvedStage = familyQuery.data?.stageMode ?? "unknown";
   const memories = memoriesQuery.data?.items ?? [];
   const memoryCount = memories.length;
-  const prompt =
-    resolvedStage === "pregnancy"
-      ? mockPregnancy.bumpPrompt
-      : (today?.prompt ?? mockToday.memoryPrompt);
-  const progress = today?.weekProgress ?? weekProgress;
-  const loop = today?.loopCompletion ?? loopCompletion;
-  const storyDays = today?.weekProgress.storyDays ?? storyDaysThisWeek;
-  const wellnessDays = today?.weekProgress.wellnessDays ?? wellnessDaysThisWeek;
-  const premium = today?.isPremium ?? isPremiumPreview;
+  const prompt = today?.prompt ?? (resolvedStage === "pregnancy" ? pregnancyContent.bumpPrompt : "");
+  const progress = today?.weekProgress ?? { storyDays: 0, wellnessDays: 0, activeDays: 0, goal: 4 };
+  const loop = today?.loopCompletion ?? { capture: false, care: false, learn: false, connect: false };
+  const storyDays = progress.storyDays;
+  const wellnessDays = progress.wellnessDays;
 
-  const activeGroupMock =
-    mockStageGroups.find((group) => group.id === activeGroupId) ?? mockStageGroups[1];
-  const activeGroupFromQuery = groupsQuery.data?.items.find((group) => group.id === activeGroupId);
-  const connectPrompt = activeGroupMock?.prompt ?? mockToday.connectCard.prompt;
-  const connectGroupName =
-    activeGroupFromQuery?.name ?? activeGroupMock?.name ?? mockToday.connectCard.groupName;
-  const connectReplyCount = Math.max(
-    activeGroupMock?.posts?.length ?? 0,
-    mockToday.connectCard.replyCount,
-  );
+  // "connect" is nullable when the plan has nothing to show (no group, no
+  // content seeded); `mode === "invite"` is the server telling us to nudge an
+  // invite instead of a group prompt.
+  const connectCard = today?.cards.connect ?? null;
+  const connectPrompt = connectCard?.prompt ?? "";
+  const connectGroupName = connectCard?.groupName ?? "your stage group";
+  const connectReplyCount = connectCard?.replyCount ?? 0;
+  const learnCard = today?.cards.learn ?? null;
+  const careCard = today?.cards.care ?? null;
 
   const latestMemory = memories[0];
   const fade = useRef(new Animated.Value(0)).current;
   const { reduceMotion } = useRespectReduceMotion();
   const stageUnknown = resolvedStage === "unknown";
   const isPregnancy = resolvedStage === "pregnancy";
-  const dueDate = familyQuery.data?.dueDate ?? mockPregnancy.dueDate;
-  const pregnancyWeek = gestationalWeekFromDueDate(dueDate);
+  const dueDate = familyQuery.data?.dueDate ?? null;
+  const pregnancyWeek = dueDate ? gestationalWeekFromDueDate(dueDate) : 0;
   const pregnancyLabel = pregnancyWeekLabel(pregnancyWeek);
-  const childBucket = ageBucketFromDob(mockProfile.dob);
-  const childStageLabel = `${approximateAgeLabel(mockProfile.dob)} · ${ageBucketLabel(childBucket)}`;
-
-  const onThisDayMemory = memories.find((m) => m.title === mockOnThisDay.title);
+  const activeChild = familyQuery.data?.children.find((child) => child.isActive) ?? null;
+  const childBucket = activeChild ? ageBucketFromDob(activeChild.dateOfBirth) : null;
+  const childStageLabel = activeChild
+    ? `${approximateAgeLabel(activeChild.dateOfBirth)} · ${ageBucketLabel(childBucket!)}`
+    : "";
 
   /**
    * The design's three stat tiles. The mockup showed sensor readings (body
@@ -138,7 +125,11 @@ export function TodayScreen() {
       },
       {
         icon: <Feather name="calendar" size={16} color={colors.brand.honeyDeep} />,
-        value: isPregnancy ? `Wk ${pregnancyWeek}` : approximateAgeLabel(mockProfile.dob),
+        value: isPregnancy
+          ? `Wk ${pregnancyWeek}`
+          : activeChild
+            ? approximateAgeLabel(activeChild.dateOfBirth)
+            : "—",
         label: isPregnancy ? "Pregnancy" : "Age",
       },
       {
@@ -147,7 +138,7 @@ export function TodayScreen() {
         label: "Calm days",
       },
     ],
-    [isPregnancy, memoryCount, pregnancyWeek, progress.activeDays, progress.goal],
+    [activeChild, isPregnancy, memoryCount, pregnancyWeek, progress.activeDays, progress.goal],
   );
 
   useEffect(() => {
@@ -305,16 +296,8 @@ export function TodayScreen() {
             <TodayActionTile
               icon="wind"
               label="Care"
-              title={
-                isPregnancy
-                  ? mockToday.pregnancyWellnessAction.title
-                  : mockToday.wellnessAction.title
-              }
-              detail={
-                isPregnancy
-                  ? mockToday.pregnancyWellnessAction.duration
-                  : mockToday.wellnessAction.duration
-              }
+              title={careCard?.title ?? "Nothing scheduled"}
+              detail={careCard?.duration ?? "Check back soon"}
               done={loop.care}
               emphasized={primaryGoal === "wellness"}
               onPress={() => router.push(appRoutes.care)}
@@ -322,17 +305,14 @@ export function TodayScreen() {
             <TodayActionTile
               icon="book-open"
               label="Learn"
-              title={isPregnancy ? mockPregnancy.weeklyTip.title : mockToday.learnCard.title}
+              title={learnCard?.title ?? "Nothing to read yet"}
               detail="Stage tip"
-              done={loop.learn}
+              done={loop.learn || learnDoneToday}
               emphasized={primaryGoal === "learn"}
               onPress={() => {
+                if (!learnCard) return;
                 markLearnDone();
-                router.push(
-                  appRoutes.guideArticle(
-                    isPregnancy ? mockPregnancy.weeklyTip.id : mockToday.learnCard.id,
-                  ),
-                );
+                router.push(appRoutes.guideArticle(learnCard.id));
               }}
             />
           </View>
@@ -387,44 +367,33 @@ export function TodayScreen() {
           </Surface>
         ) : null}
 
-        {premium ? (
+        {/*
+          "On this day" resurfacing has no real content source yet — there is
+          no server endpoint that picks a past memory for a given date. The
+          premium-active variant used to navigate to a hardcoded mock memory
+          id; that's gone, and this always renders the upsell until a real
+          "on this day" endpoint ships.
+        */}
+        <Surface tone="card" radiusSize="lg" elevated bordered={false} style={styles.gapXs}>
+          <AppText variant="label" style={styles.honeyLabel}>
+            On this day · Premium
+          </AppText>
+          <AppText weight="semibold">A soft look back after 30+ days</AppText>
+          <AppText variant="bodySmall" tone="secondary">
+            Free keeps your private timeline. Premium resurfaces moments from this day.
+          </AppText>
           <Pressable
-            onPress={() =>
-              router.push(onThisDayMemory ? appRoutes.memory(onThisDayMemory.id) : appRoutes.capture)
-            }
+            onPress={() => router.push(appRoutes.paywall("on-this-day"))}
+            style={styles.rowCta}
+            accessibilityRole="button"
+            accessibilityLabel="Unlock on this day"
           >
-            <Surface tone="card" radiusSize="lg" elevated bordered={false} style={styles.gapXs}>
-              <AppText variant="label" style={styles.honeyLabel}>
-                On this day · {mockOnThisDay.dateLabel}
-              </AppText>
-              <AppText weight="semibold">{mockOnThisDay.title}</AppText>
-              <AppText variant="bodySmall" tone="secondary">
-                {mockOnThisDay.body}
-              </AppText>
-            </Surface>
+            <AppText variant="caption" weight="bold" style={styles.honeyText}>
+              Unlock with Premium
+            </AppText>
+            <Feather name="arrow-up-right" size={14} color={colors.brand.honeyDeep} />
           </Pressable>
-        ) : (
-          <Surface tone="card" radiusSize="lg" elevated bordered={false} style={styles.gapXs}>
-            <AppText variant="label" style={styles.honeyLabel}>
-              On this day · Premium
-            </AppText>
-            <AppText weight="semibold">A soft look back after 30+ days</AppText>
-            <AppText variant="bodySmall" tone="secondary">
-              Free keeps your private timeline. Premium resurfaces moments from this day.
-            </AppText>
-            <Pressable
-              onPress={() => router.push(appRoutes.paywall("on-this-day"))}
-              style={styles.rowCta}
-              accessibilityRole="button"
-              accessibilityLabel="Unlock on this day"
-            >
-              <AppText variant="caption" weight="bold" style={styles.honeyText}>
-                Unlock with Premium
-              </AppText>
-              <Feather name="arrow-up-right" size={14} color={colors.brand.honeyDeep} />
-            </Pressable>
-          </Surface>
-        )}
+        </Surface>
 
         {memoryCount > 0 ? (
           <View>

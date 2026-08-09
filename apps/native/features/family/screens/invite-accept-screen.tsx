@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
 import { AppText, Button, Surface, colors, radius, spacing } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useAcceptInviteMutation, useInvitePreviewQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
@@ -17,7 +17,7 @@ type AcceptedFamily = {
 export function InviteAcceptScreen() {
   const router = useRouter();
   const { token } = useLocalSearchParams<{ token: string }>();
-  const { markPartnerJoined } = useMockUi();
+  const { markPartnerJoined } = useAppState();
   const previewQuery = useInvitePreviewQuery(token ?? "");
   const acceptInvite = useAcceptInviteMutation();
   const [accepted, setAccepted] = useState(false);

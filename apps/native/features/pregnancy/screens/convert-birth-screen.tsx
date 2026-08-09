@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Alert, StyleSheet, TextInput, View } from "react-native";
 
 import { AppText, Button, Surface, colors, radius, spacing, useAppTheme } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useConvertPregnancyMutation } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
@@ -12,7 +11,6 @@ import { appRoutes } from "@/navigation/routes";
 export function ConvertBirthScreen() {
   const router = useRouter();
   const theme = useAppTheme();
-  const { convertPregnancy } = useMockUi();
   const convertPregnancyMutation = useConvertPregnancyMutation();
   const [childName, setChildName] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -29,7 +27,6 @@ export function ConvertBirthScreen() {
         pregnancyId: "current",
         body: { childName: childName.trim(), birthDate: birthDate.trim() },
       });
-      convertPregnancy(childName.trim(), birthDate.trim());
       setDone(true);
     } catch {
       Alert.alert("Couldn’t convert", "Check your connection and try again.");

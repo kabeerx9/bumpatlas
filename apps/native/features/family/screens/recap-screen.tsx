@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useRef, useState } from "react";
+import { useRouter } from "expo-router";
+import { useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, Share, StyleSheet, View } from "react-native";
 
 import {
@@ -12,9 +12,7 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { mockRecaps } from "@/features/mock/demo-data";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
-import { useMockData } from "@/lib/api/client";
 import { useCurrentRecapQuery, useEntitlementsQuery, useFamilyQuery } from "@/lib/api/hooks";
 import { createRecapShareLink } from "@/lib/api/recaps";
 import { shareViewAsImage } from "@/lib/share/share-view-as-image";
@@ -23,7 +21,6 @@ import { appRoutes } from "@/navigation/routes";
 export function RecapScreen() {
   const router = useRouter();
   const theme = useAppTheme();
-  const { id } = useLocalSearchParams<{ id: string }>();
   const recapQuery = useCurrentRecapQuery();
   const entitlementsQuery = useEntitlementsQuery();
   const familyQuery = useFamilyQuery();
@@ -36,25 +33,13 @@ export function RecapScreen() {
   const displayName =
     recapQuery.data?.childDisplayName ?? familyQuery.data?.childDisplayName ?? "your little one";
 
-  /**
-   * The server route is id-parameterized in name only — it always serves the
-   * caller's current recap, so a real query result is used whenever it's
-   * present. The `mockRecaps` fallback only fires in mock mode; a live app
-   * that hasn't loaded yet falls through to the loading branch below instead
-   * of flashing fixture content.
-   */
-  const recap = useMemo(() => {
-    if (recapQuery.data) return recapQuery.data;
-    if (useMockData) {
-      if (id === "latest") return mockRecaps[0];
-      return mockRecaps.find((item) => item.id === id) ?? mockRecaps[0];
-    }
-    return null;
-  }, [id, recapQuery.data]);
+  // The server route is id-parameterized in name only — it always serves the
+  // caller's current recap, so the real query result is the only source of
+  // truth. A live app that hasn't loaded yet falls through to the loading
+  // branch below rather than flashing fixture content.
+  const recap = recapQuery.data ?? null;
 
-  const [privateWebLink, setPrivateWebLink] = useState(
-    `https://bumpatlas.app/recap/${recap?.id ?? "pending"}?t=mock-private-token`,
-  );
+  const [privateWebLink, setPrivateWebLink] = useState<string | null>(null);
 
   if (recapQuery.isLoading || !recap) {
     return (
@@ -109,14 +94,17 @@ export function RecapScreen() {
   async function copyPrivateLink() {
     setLinkCopied(true);
     let link = privateWebLink;
-    if (!useMockData) {
-      try {
-        const created = await createRecapShareLink();
-        link = created.url;
-        setPrivateWebLink(created.url);
-      } catch {
-        // Keep local link if API is unavailable mid-transition.
-      }
+    try {
+      const created = await createRecapShareLink();
+      link = created.url;
+      setPrivateWebLink(created.url);
+    } catch {
+      // Keep whatever link we already have, if any, if the API is unreachable.
+    }
+
+    if (!link) {
+      Alert.alert("Couldn’t prepare link", "Check your connection and try again.");
+      return;
     }
 
     await Share.share({

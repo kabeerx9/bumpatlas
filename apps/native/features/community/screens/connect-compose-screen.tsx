@@ -22,7 +22,7 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import {
   useCreateCommentMutation,
   useCreateGroupPostMutation,
@@ -53,12 +53,14 @@ export function ConnectComposeScreen() {
     communityRulesAccepted,
     acceptCommunityRules,
     postsUsedToday,
+    incrementPostCount,
     commentsUsedToday,
+    incrementCommentCount,
     commentsDailyLimit,
     linksAllowed,
     accountAgeDays,
     activeGroupId,
-  } = useMockUi();
+  } = useAppState();
 
   const groupsQuery = useGroupsQuery();
   const groupPostsQuery = useGroupPostsQuery(activeGroupId);
@@ -100,8 +102,10 @@ export function ConnectComposeScreen() {
     try {
       if (isReply && postId) {
         await createCommentMutation.mutateAsync({ postId, body: trimmed });
+        incrementCommentCount();
       } else {
         await createPostMutation.mutateAsync({ body: trimmed });
+        incrementPostCount();
       }
       router.back();
     } catch {

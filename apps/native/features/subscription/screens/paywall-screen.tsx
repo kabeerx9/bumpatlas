@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, Button, Pill, borderWidth, radius, spacing, useAppTheme } from "@/design-system";
-import { mockPaywall } from "@/features/mock/demo-data";
+import { paywallContent } from "@/features/subscription/data/paywall-content";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useSetPremiumEntitlement } from "@/lib/api/hooks";
 import {
@@ -52,14 +52,14 @@ export function PaywallScreen() {
   }, [userId]);
 
   const headline =
-    (source && mockPaywall.contextualHeadlines[source]) ??
-    mockPaywall.contextualHeadlines.default;
+    (source && paywallContent.contextualHeadlines[source]) ??
+    paywallContent.contextualHeadlines.default;
 
   const price =
-    cycle === "annual" ? mockPaywall.foundingAnnualPrice : mockPaywall.monthlyPrice;
+    cycle === "annual" ? paywallContent.foundingAnnualPrice : paywallContent.monthlyPrice;
   const priceDetail =
     cycle === "annual"
-      ? `${mockPaywall.foundingLabel} · then ${mockPaywall.annualPrice}/yr`
+      ? `${paywallContent.foundingLabel} · then ${paywallContent.annualPrice}/yr`
       : "Cancel anytime in your store settings";
 
   function pickPackage(): PurchasesPackage | null {
@@ -153,7 +153,7 @@ export function PaywallScreen() {
       </View>
 
       <View style={styles.perks}>
-        {mockPaywall.premiumIncludes.map((perk) => (
+        {paywallContent.premiumIncludes.map((perk) => (
           <View key={perk} style={styles.perkRow}>
             <View style={[styles.checkChip, { backgroundColor: theme.colors.secondary }]}>
               <Feather name="check" size={12} color={theme.colors.secondaryText} />
@@ -183,9 +183,9 @@ export function PaywallScreen() {
             <AppText weight="semibold">Annual</AppText>
             <Pill tone="selected">Best value</Pill>
           </View>
-          <AppText variant="heading">{mockPaywall.foundingAnnualPrice}</AppText>
+          <AppText variant="heading">{paywallContent.foundingAnnualPrice}</AppText>
           <AppText variant="bodySmall" tone="secondary">
-            {mockPaywall.foundingLabel} · then {mockPaywall.annualPrice}/yr
+            {paywallContent.foundingLabel} · then {paywallContent.annualPrice}/yr
           </AppText>
         </Pressable>
 
@@ -205,7 +205,7 @@ export function PaywallScreen() {
           <View style={styles.planHeaderRow}>
             <AppText weight="semibold">Monthly</AppText>
           </View>
-          <AppText variant="heading">{mockPaywall.monthlyPrice}</AppText>
+          <AppText variant="heading">{paywallContent.monthlyPrice}</AppText>
           <AppText variant="bodySmall" tone="secondary">
             Cancel anytime in your store settings
           </AppText>

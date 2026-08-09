@@ -22,12 +22,12 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
 import { CitationCard, type Citation } from "@/features/shared/components/citation-card";
 import { EscalateCard } from "@/features/shared/components/escalate-card";
 import { QuotaMeter } from "@/features/shared/components/quota-meter";
 import { SoftPanel } from "@/features/shared/components/soft-panel";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { useAiUsageQuery, useSendAiChatMutation } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
@@ -58,7 +58,7 @@ export function AssistantScreen() {
   const router = useRouter();
   const theme = useAppTheme();
   const dynamicStyles = themedStyles(theme);
-  const { weekSummaryConsent, setWeekSummaryConsent } = useMockUi();
+  const { weekSummaryConsent, setWeekSummaryConsent } = useAppState();
   const aiUsageQuery = useAiUsageQuery();
   const sendAi = useSendAiChatMutation();
   const [message, setMessage] = useState("");
