@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import {
   AppText,
@@ -27,29 +27,47 @@ export function StageSetupScreen() {
   const [dueDate, setDueDate] = useState("");
   const [childName, setChildName] = useState("");
   const [childDob, setChildDob] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const canSavePregnancy = dueDate.trim().length > 0;
   const canSaveParent = childName.trim().length > 0 && childDob.trim().length > 0;
 
-  function savePregnancy() {
-    if (!canSavePregnancy) return;
-    applyOnboardingProfile({
-      role: "expecting",
-      dueDate: dueDate.trim(),
-      householdName: "Our household",
-    });
-    router.replace(appRoutes.home);
+  async function savePregnancy() {
+    if (!canSavePregnancy || saving) return;
+    setSaving(true);
+    try {
+      // `existingFamily: true` — the household was already created during
+      // onboarding (stage setup only runs post-onboarding); this must not
+      // call createFamily again and spawn a second household.
+      await applyOnboardingProfile({
+        role: "expecting",
+        dueDate: dueDate.trim(),
+        existingFamily: true,
+      });
+      router.replace(appRoutes.home);
+    } catch {
+      Alert.alert("Couldn’t save", "Check your connection and try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function saveParent() {
-    if (!canSaveParent) return;
-    applyOnboardingProfile({
-      role: "parent",
-      childName: childName.trim(),
-      childDob: childDob.trim(),
-      householdName: `${childName.trim()}'s household`,
-    });
-    router.replace(appRoutes.home);
+  async function saveParent() {
+    if (!canSaveParent || saving) return;
+    setSaving(true);
+    try {
+      await applyOnboardingProfile({
+        role: "parent",
+        childName: childName.trim(),
+        childDob: childDob.trim(),
+        existingFamily: true,
+      });
+      router.replace(appRoutes.home);
+    } catch {
+      Alert.alert("Couldn’t save", "Check your connection and try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -115,8 +133,12 @@ export function StageSetupScreen() {
             style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
             accessibilityLabel="Due date"
           />
-          <Button size="lg" disabled={!canSavePregnancy} onPress={savePregnancy}>
-            Save pregnancy stage
+          <Button
+            size="lg"
+            disabled={!canSavePregnancy || saving}
+            onPress={() => void savePregnancy()}
+          >
+            {saving ? "Saving…" : "Save pregnancy stage"}
           </Button>
         </>
       ) : null}
@@ -141,8 +163,12 @@ export function StageSetupScreen() {
             style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
             accessibilityLabel="Child date of birth"
           />
-          <Button size="lg" disabled={!canSaveParent} onPress={saveParent}>
-            Save child stage
+          <Button
+            size="lg"
+            disabled={!canSaveParent || saving}
+            onPress={() => void saveParent()}
+          >
+            {saving ? "Saving…" : "Save child stage"}
           </Button>
         </>
       ) : null}

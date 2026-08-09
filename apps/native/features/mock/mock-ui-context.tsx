@@ -101,6 +101,13 @@ export type OnboardingProfileInput = {
   householdName?: string;
   primaryGoal?: PrimaryGoal | null;
   notificationPrefs?: Partial<Record<NotificationPrefKey, boolean>>;
+  /**
+   * True when the caller already has a default family (e.g. stage setup,
+   * reachable only after onboarding). Skips `createFamily` and the
+   * onboarding consent writes so a post-onboarding stage pick doesn't spawn
+   * a second household and orphan the first one's data.
+   */
+  existingFamily?: boolean;
 };
 
 type CaptureInput = {
@@ -736,41 +743,46 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
       }
 
       if (!useMockData) {
-        try {
+        // Deliberately not swallowed: a failure here means the household
+        // (or pregnancy/child/consent record) was never written server-side.
+        // Letting the caller catch this keeps `completeOnboarding()` from
+        // running and the local "onboarding complete" flag from being set
+        // on a household that doesn't actually exist yet.
+        if (!input.existingFamily) {
           const familyName =
             input.householdName?.trim() ||
             (input.childName?.trim() ? `${input.childName.trim()}'s household` : "Our household");
           await familiesApi.createFamily({ name: familyName });
+        }
 
-          if (input.role === "expecting" && input.dueDate?.trim()) {
-            await profilesApi.createPregnancy({ dueDate: input.dueDate.trim() });
-          }
-          if (input.role === "parent" && input.childName?.trim() && input.childDob?.trim()) {
-            await profilesApi.createChild({
-              displayName: input.childName.trim(),
-              dateOfBirth: input.childDob.trim(),
-            });
-          }
+        if (input.role === "expecting" && input.dueDate?.trim()) {
+          await profilesApi.createPregnancy({ dueDate: input.dueDate.trim() });
+        }
+        if (input.role === "parent" && input.childName?.trim() && input.childDob?.trim()) {
+          await profilesApi.createChild({
+            displayName: input.childName.trim(),
+            dateOfBirth: input.childDob.trim(),
+          });
+        }
 
+        if (!input.existingFamily) {
           await consentsApi.createConsent({ type: "age_attestation", version: "mvp-1" });
           await consentsApi.createConsent({ type: "terms", version: "mvp-1" });
           await consentsApi.createConsent({ type: "privacy", version: "mvp-1" });
+        }
 
-          if (input.notificationPrefs) {
-            await notificationsApi.updateNotificationPreferences({
-              prefs: {
-                dailyPrompt: true,
-                wellnessReminder: true,
-                partnerActivity: true,
-                weeklyRecap: true,
-                communityReply: false,
-                subscription: true,
-                ...input.notificationPrefs,
-              },
-            });
-          }
-        } catch {
-          // Local onboarding still completes; API retry happens when backend is up.
+        if (input.notificationPrefs) {
+          await notificationsApi.updateNotificationPreferences({
+            prefs: {
+              dailyPrompt: true,
+              wellnessReminder: true,
+              partnerActivity: true,
+              weeklyRecap: true,
+              communityReply: false,
+              subscription: true,
+              ...input.notificationPrefs,
+            },
+          });
         }
       }
 
