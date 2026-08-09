@@ -45,8 +45,18 @@ async function onboard(app: App, clerkId: string) {
   return { userId: user.id, familyId: family.json().id as string };
 }
 
-const getMetrics = (app: App, clerkId: string) =>
-  app.inject({ method: "GET", url: "/api/v1/admin/metrics", headers: asUser(clerkId) });
+const getMetrics = (app: App, clerkId: string, range?: "30d" | "90d") =>
+  app.inject({
+    method: "GET",
+    url: range ? `/api/v1/admin/metrics?range=${range}` : "/api/v1/admin/metrics",
+    headers: asUser(clerkId),
+  });
+
+/** ISO calendar date for a point `daysAgo` days before now, matching the
+ * service's UTC bucketing. */
+function isoDateDaysAgo(daysAgo: number): string {
+  return new Date(Date.now() - daysAgo * DAY_MS).toISOString().slice(0, 10);
+}
 
 beforeEach(resetDatabase);
 after(disconnectDatabase);
@@ -192,6 +202,180 @@ describe("GET /api/v1/admin/metrics", () => {
     assert.equal(response.body.includes("private@example.com"), false);
     assert.equal(response.body.includes("Secret memory"), false);
     assert.equal(response.body.includes(a.userId), false);
+    await app.close();
+  });
+});
+
+describe("GET /api/v1/admin/metrics — timeseries (slice 2)", () => {
+  it("zero-fills days with no signups and buckets a backdated signup on its own day", async () => {
+    const app = await createApp();
+    const a = await onboard(app, "clerk_a");
+
+    // Distinct from "today", where the admin's own JIT-provisioned signup lands.
+    const fiveDaysAgo = new Date(Date.now() - 5 * DAY_MS);
+    await prisma.user.update({
+      where: { id: a.userId },
+      data: { createdAt: fiveDaysAgo },
+    });
+
+    const response = await getMetrics(app, ADMIN_CLERK_ID, "30d");
+    assert.equal(response.statusCode, 200);
+    const { signupsByDay } = response.json() as {
+      signupsByDay: { date: string; count: number }[];
+    };
+
+    const today = isoDateDaysAgo(0);
+    const fiveDaysAgoIso = isoDateDaysAgo(5);
+    const threeDaysAgoIso = isoDateDaysAgo(3);
+
+    const byDate = new Map(signupsByDay.map((d) => [d.date, d.count]));
+    assert.equal(byDate.get(fiveDaysAgoIso), 1);
+    // A day with no signups still appears in the series, zero-filled.
+    assert.equal(byDate.get(threeDaysAgoIso), 0);
+    // The admin's own JIT-provisioned account signed up "today".
+    assert.equal(byDate.get(today), 1);
+    // Full 31-day inclusive series for a 30d range.
+    assert.equal(signupsByDay.length, 31);
+    await app.close();
+  });
+
+  it("respects the range param: a 40-day-old signup is in 90d but not 30d", async () => {
+    const app = await createApp();
+    const a = await onboard(app, "clerk_a");
+
+    const fortyDaysAgo = new Date(Date.now() - 40 * DAY_MS);
+    await prisma.user.update({
+      where: { id: a.userId },
+      data: { createdAt: fortyDaysAgo },
+    });
+
+    const fortyDaysAgoIso = isoDateDaysAgo(40);
+
+    const response30 = await getMetrics(app, ADMIN_CLERK_ID, "30d");
+    const dates30 = (
+      response30.json().signupsByDay as { date: string; count: number }[]
+    ).map((d) => d.date);
+    assert.equal(dates30.includes(fortyDaysAgoIso), false);
+
+    const response90 = await getMetrics(app, ADMIN_CLERK_ID, "90d");
+    const byDate90 = new Map(
+      (response90.json().signupsByDay as { date: string; count: number }[]).map((d) => [
+        d.date,
+        d.count,
+      ]),
+    );
+    assert.equal(byDate90.get(fortyDaysAgoIso), 1);
+    await app.close();
+  });
+
+  it("defaults to 30d when range is omitted", async () => {
+    const app = await createApp();
+    await onboard(app, "clerk_a");
+
+    const response = await getMetrics(app, ADMIN_CLERK_ID);
+    assert.equal(response.statusCode, 200);
+    const { signupsByDay } = response.json() as {
+      signupsByDay: { date: string; count: number }[];
+    };
+    assert.equal(signupsByDay.length, 31);
+    await app.close();
+  });
+
+  it("buckets memories and challenge completions per day, zero-filling gaps", async () => {
+    const app = await createApp();
+    const a = await onboard(app, "clerk_a");
+
+    const twoDaysAgo = new Date(Date.now() - 2 * DAY_MS);
+    await prisma.memoryEntry.create({
+      data: {
+        familyId: a.familyId,
+        authorUserId: a.userId,
+        title: "First smile",
+        body: "First smile",
+        eventDate: twoDaysAgo,
+        createdAt: twoDaysAgo,
+      },
+    });
+    await prisma.challengeCompletion.create({
+      data: {
+        userId: a.userId,
+        familyId: a.familyId,
+        planDate: twoDaysAgo,
+        kind: "STORY",
+        createdAt: twoDaysAgo,
+      },
+    });
+
+    const response = await getMetrics(app, ADMIN_CLERK_ID, "30d");
+    assert.equal(response.statusCode, 200);
+    const { engagementByDay } = response.json() as {
+      engagementByDay: { date: string; memories: number; challengeCompletions: number }[];
+    };
+
+    const twoDaysAgoIso = isoDateDaysAgo(2);
+    const oneDayAgoIso = isoDateDaysAgo(1);
+    const byDate = new Map(engagementByDay.map((d) => [d.date, d]));
+
+    assert.deepEqual(byDate.get(twoDaysAgoIso), {
+      date: twoDaysAgoIso,
+      memories: 1,
+      challengeCompletions: 1,
+    });
+    // A day with no engagement still appears, zero-filled on both counters.
+    assert.deepEqual(byDate.get(oneDayAgoIso), {
+      date: oneDayAgoIso,
+      memories: 0,
+      challengeCompletions: 0,
+    });
+    await app.close();
+  });
+
+  it("counts invites sent and redeemed within the range", async () => {
+    const app = await createApp();
+    const a = await onboard(app, "clerk_a");
+
+    const inRange = new Date(Date.now() - 5 * DAY_MS);
+    const outOfRange = new Date(Date.now() - 40 * DAY_MS);
+
+    // Sent within range, not yet redeemed.
+    await prisma.familyInvite.create({
+      data: {
+        familyId: a.familyId,
+        tokenHash: "hash-sent-in-range",
+        role: "PARENT",
+        expiresAt: new Date(Date.now() + DAY_MS),
+        createdByUserId: a.userId,
+        createdAt: inRange,
+      },
+    });
+    // Sent within range and redeemed within range.
+    await prisma.familyInvite.create({
+      data: {
+        familyId: a.familyId,
+        tokenHash: "hash-sent-and-redeemed",
+        role: "PARENT",
+        expiresAt: new Date(Date.now() + DAY_MS),
+        createdByUserId: a.userId,
+        createdAt: inRange,
+        acceptedAt: inRange,
+        acceptedByUserId: a.userId,
+      },
+    });
+    // Sent outside the 30d range — must not be counted for a 30d query.
+    await prisma.familyInvite.create({
+      data: {
+        familyId: a.familyId,
+        tokenHash: "hash-sent-out-of-range",
+        role: "PARENT",
+        expiresAt: new Date(Date.now() + DAY_MS),
+        createdByUserId: a.userId,
+        createdAt: outOfRange,
+      },
+    });
+
+    const response = await getMetrics(app, ADMIN_CLERK_ID, "30d");
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.json().invites, { sent: 2, redeemed: 1 });
     await app.close();
   });
 });

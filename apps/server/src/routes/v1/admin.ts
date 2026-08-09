@@ -1,9 +1,10 @@
-import { adminMetricsResponseSchema } from "@bumpatlas/contracts/v1";
+import { adminMetricsQuerySchema, adminMetricsResponseSchema } from "@bumpatlas/contracts/v1";
 import type { FastifyInstance } from "fastify";
 
 import { requireAdmin } from "@/middleware/require-admin";
 import { requireAuth } from "@/middleware/require-auth";
 import { getAdminMetrics } from "@/services/admin-metrics";
+import { invalidInput } from "@/services/errors";
 
 export type AdminRouteDeps = {
   requireAuth: typeof requireAuth;
@@ -27,6 +28,13 @@ export async function registerAdminRoutes(
     // 404 rather than 403: a non-admin probing this path learns nothing about it.
     requireAdmin(auth);
 
-    return reply.send(adminMetricsResponseSchema.parse(await getAdminMetrics()));
+    const parsedQuery = adminMetricsQuerySchema.safeParse(request.query);
+    if (!parsedQuery.success) {
+      return reply.code(400).send(invalidInput(parsedQuery.error, request.id));
+    }
+
+    return reply.send(
+      adminMetricsResponseSchema.parse(await getAdminMetrics(parsedQuery.data.range)),
+    );
   });
 }

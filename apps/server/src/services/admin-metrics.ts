@@ -15,21 +15,150 @@ import { table } from "@/services/db-raw";
 
 const DAY_MS = 86_400_000;
 
+export type AdminMetricsRange = "30d" | "90d";
+
+const RANGE_DAYS: Record<AdminMetricsRange, number> = { "30d": 30, "90d": 90 };
+
 export type AdminMetrics = {
   totals: { users: number; families: number; children: number; pregnancies: number };
   activeUsers: { last1d: number; last7d: number; last30d: number };
+  signupsByDay: { date: string; count: number }[];
+  engagementByDay: { date: string; memories: number; challengeCompletions: number }[];
+  invites: { sent: number; redeemed: number };
 };
 
-export async function getAdminMetrics(now = new Date()): Promise<AdminMetrics> {
-  const [users, families, children, pregnancies, activeUsers] = await Promise.all([
+export async function getAdminMetrics(
+  range: AdminMetricsRange = "30d",
+  now = new Date(),
+): Promise<AdminMetrics> {
+  const days = RANGE_DAYS[range];
+  const since = new Date(now.getTime() - days * DAY_MS);
+
+  const [
+    users,
+    families,
+    children,
+    pregnancies,
+    activeUsers,
+    signupsByDay,
+    engagementByDay,
+    invites,
+  ] = await Promise.all([
     prisma.user.count(),
     prisma.family.count(),
     prisma.childProfile.count(),
     prisma.pregnancyProfile.count(),
     countActiveUsers(now),
+    countSignupsByDay(since, now),
+    countEngagementByDay(since, now),
+    countInvites(since, now),
   ]);
 
-  return { totals: { users, families, children, pregnancies }, activeUsers };
+  return {
+    totals: { users, families, children, pregnancies },
+    activeUsers,
+    signupsByDay,
+    engagementByDay,
+    invites,
+  };
+}
+
+/**
+ * Builds the full list of UTC calendar dates from `since` through `now`,
+ * inclusive, as `YYYY-MM-DD` strings. Days with zero underlying rows still
+ * need an entry — the chart on the other end must render zeroes, not gaps —
+ * so the series is generated here rather than left to whatever dates the
+ * aggregate happens to return.
+ */
+function dayRange(since: Date, now: Date): string[] {
+  const start = Date.UTC(since.getUTCFullYear(), since.getUTCMonth(), since.getUTCDate());
+  const end = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+  const days: string[] = [];
+  for (let t = start; t <= end; t += DAY_MS) {
+    days.push(new Date(t).toISOString().slice(0, 10));
+  }
+
+  return days;
+}
+
+/**
+ * Signups per UTC day, bucketed with `date_trunc` because Prisma `groupBy`
+ * cannot bucket by day. Zero-filled server-side against the full day series
+ * so the web chart never has to reason about missing dates.
+ */
+async function countSignupsByDay(
+  since: Date,
+  now: Date,
+): Promise<{ date: string; count: number }[]> {
+  const rows = await prisma.$queryRawUnsafe<{ day: Date; count: bigint }[]>(
+    `SELECT date_trunc('day', "createdAt") AS day, COUNT(*) AS count
+     FROM ${table("User")}
+     WHERE "createdAt" >= $1
+     GROUP BY day`,
+    since,
+  );
+
+  const byDay = new Map(rows.map((row) => [row.day.toISOString().slice(0, 10), Number(row.count)]));
+
+  return dayRange(since, now).map((date) => ({ date, count: byDay.get(date) ?? 0 }));
+}
+
+/**
+ * Memories and challenge completions per UTC day. Two independent `date_trunc`
+ * aggregates joined in JS rather than one raw-SQL join, so the zero-fill logic
+ * stays in one place (`dayRange`) instead of duplicated across a SQL FULL JOIN.
+ */
+async function countEngagementByDay(
+  since: Date,
+  now: Date,
+): Promise<{ date: string; memories: number; challengeCompletions: number }[]> {
+  const [memoryRows, challengeRows] = await Promise.all([
+    prisma.$queryRawUnsafe<{ day: Date; count: bigint }[]>(
+      `SELECT date_trunc('day', "createdAt") AS day, COUNT(*) AS count
+       FROM ${table("MemoryEntry")}
+       WHERE "createdAt" >= $1
+       GROUP BY day`,
+      since,
+    ),
+    prisma.$queryRawUnsafe<{ day: Date; count: bigint }[]>(
+      `SELECT date_trunc('day', "createdAt") AS day, COUNT(*) AS count
+       FROM ${table("ChallengeCompletion")}
+       WHERE "createdAt" >= $1
+       GROUP BY day`,
+      since,
+    ),
+  ]);
+
+  const memoriesByDay = new Map(
+    memoryRows.map((row) => [row.day.toISOString().slice(0, 10), Number(row.count)]),
+  );
+  const challengesByDay = new Map(
+    challengeRows.map((row) => [row.day.toISOString().slice(0, 10), Number(row.count)]),
+  );
+
+  return dayRange(since, now).map((date) => ({
+    date,
+    memories: memoriesByDay.get(date) ?? 0,
+    challengeCompletions: challengesByDay.get(date) ?? 0,
+  }));
+}
+
+/**
+ * Invite funnel over the range: invites created (`sent`) vs invites accepted
+ * (`redeemed`) in the window. Counts only — no email, no token, per the
+ * module-level invariant.
+ */
+async function countInvites(
+  since: Date,
+  now: Date,
+): Promise<{ sent: number; redeemed: number }> {
+  const [sent, redeemed] = await Promise.all([
+    prisma.familyInvite.count({ where: { createdAt: { gte: since, lte: now } } }),
+    prisma.familyInvite.count({ where: { acceptedAt: { gte: since, lte: now } } }),
+  ]);
+
+  return { sent, redeemed };
 }
 
 /**
