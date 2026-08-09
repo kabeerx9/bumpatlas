@@ -4,10 +4,14 @@ import type {
   Child,
   EntitlementsResponse,
   FamilySummary,
+  ListMilestonesResponse,
   Memory,
+  MilestoneDefinition,
+  MilestoneObservation,
   Recap,
   StageResponse,
   TodayResponse,
+  UpsertMilestoneObservationInput,
 } from "@bumpatlas/contracts";
 
 import * as aiApi from "@/lib/api/ai";
@@ -18,6 +22,7 @@ import * as contentApi from "@/lib/api/content";
 import * as dataRequestsApi from "@/lib/api/data-requests";
 import * as familiesApi from "@/lib/api/families";
 import * as memoriesApi from "@/lib/api/memories";
+import * as milestonesApi from "@/lib/api/milestones";
 import * as moderationApi from "@/lib/api/moderation";
 import * as notificationsApi from "@/lib/api/notifications";
 import * as profilesApi from "@/lib/api/profiles";
@@ -30,7 +35,12 @@ import {
   mockRecaps,
   mockToday as mockTodayContent,
 } from "@/features/mock/demo-data";
-import { mockBadges, mockModerationQueue, mockStageGroups } from "@/features/mock/mock-content";
+import {
+  mockBadges,
+  mockMilestoneDetails,
+  mockModerationQueue,
+  mockStageGroups,
+} from "@/features/mock/mock-content";
 
 export const queryKeys = {
   today: ["today"] as const,
@@ -48,6 +58,7 @@ export const queryKeys = {
   notificationPrefs: ["notifications", "preferences"] as const,
   badges: ["badges"] as const,
   moderation: ["moderation", "queue"] as const,
+  milestones: (childId?: string) => ["milestones", childId ?? "current"] as const,
 };
 
 /**
@@ -164,6 +175,51 @@ function mockGroupPostItems(groupId: string) {
       createdAt: comment.createdAt,
     })),
   }));
+}
+
+/** Mock status labels ("Observed", "Not observed", …) mapped onto the contract's snake_case enum. */
+function mockMilestoneStatus(label: string): MilestoneObservation["status"] {
+  switch (label.trim().toLowerCase()) {
+    case "observed":
+      return "observed";
+    case "emerging":
+      return "emerging";
+    case "skipped":
+      return "skipped";
+    default:
+      return "not_observed";
+  }
+}
+
+function mockMilestoneDefinitions(): MilestoneDefinition[] {
+  return mockMilestoneDetails.map((item) => ({
+    id: item.id,
+    slug: item.id,
+    title: item.title,
+    guidance: item.note,
+    domain: "general",
+    stageTags: [],
+    reviewerName: null,
+    reviewedOn: null,
+  }));
+}
+
+function mockMilestoneObservations(): MilestoneObservation[] {
+  return mockMilestoneDetails.map((item) => ({
+    definitionId: item.id,
+    childId: mockChild.id,
+    status: mockMilestoneStatus(item.status),
+    observedAt: null,
+    memoryId: null,
+  }));
+}
+
+function mockMilestonesResponse(): ListMilestonesResponse {
+  return {
+    childId: mockChild.id,
+    definitions: mockMilestoneDefinitions(),
+    observations: mockMilestoneObservations(),
+  };
 }
 
 export function useTodayQuery() {
@@ -449,6 +505,57 @@ export function useModerationQueueQuery() {
             })),
           })
         : moderationApi.listModerationQueue(),
+  });
+}
+
+export function useMilestonesQuery(childId?: string) {
+  return useQuery({
+    queryKey: queryKeys.milestones(childId),
+    queryFn: () =>
+      useMockData
+        ? Promise.resolve(mockMilestonesResponse())
+        : milestonesApi.listMilestones(childId),
+  });
+}
+
+/**
+ * Mock mode keeps the optimistic update in the cache rather than refetching
+ * (the mock queryFn always recomputes from the static fixture, which would
+ * otherwise wipe the just-recorded observation). Real mode invalidates so the
+ * server's persisted state — the actual source of truth — comes back.
+ */
+export function useUpsertMilestoneObservationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { definitionId: string; body: UpsertMilestoneObservationInput }) => {
+      if (useMockData) {
+        const now = new Date().toISOString();
+        const observation: MilestoneObservation = {
+          definitionId: input.definitionId,
+          childId: input.body.childId,
+          status: input.body.status,
+          observedAt: input.body.status === "not_observed" ? null : now,
+          memoryId: input.body.memoryId ?? null,
+        };
+        return observation;
+      }
+      return milestonesApi.upsertMilestoneObservation(input.definitionId, input.body);
+    },
+    onSuccess: async (observation) => {
+      queryClient.setQueriesData<ListMilestonesResponse>(
+        { queryKey: ["milestones"] },
+        (current) => {
+          if (!current) return current;
+          const others = current.observations.filter(
+            (item) => item.definitionId !== observation.definitionId,
+          );
+          return { ...current, observations: [...others, observation] };
+        },
+      );
+      if (!useMockData) {
+        await queryClient.invalidateQueries({ queryKey: ["milestones"] });
+      }
+    },
   });
 }
 

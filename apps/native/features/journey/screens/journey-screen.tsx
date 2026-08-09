@@ -30,11 +30,11 @@ import {
   useAppTheme,
 } from "@/design-system";
 import type { TimelineEntry } from "@/design-system";
-import { mockMilestones, mockRecaps } from "@/features/mock/demo-data";
+import { mockRecaps } from "@/features/mock/demo-data";
 import { mockOnThisDay } from "@/features/mock/mock-content";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { formatShortDate } from "@/features/shared/lib/format-date";
-import { useFamilyQuery, useMemoriesQuery } from "@/lib/api/hooks";
+import { useFamilyQuery, useMemoriesQuery, useMilestonesQuery } from "@/lib/api/hooks";
 import { FEATURES } from "@/lib/features";
 import { appRoutes } from "@/navigation/routes";
 
@@ -42,10 +42,10 @@ type Filter = "all" | "memories" | "milestones" | "recaps";
 
 const PAGE_SIZE = 6;
 const STATUS_LABEL: Record<string, string> = {
-  NOT_OBSERVED: "Not observed",
-  EMERGING: "Emerging",
-  OBSERVED: "Observed",
-  SKIPPED: "Skipped",
+  not_observed: "Not observed",
+  emerging: "Emerging",
+  observed: "Observed",
+  skipped: "Skipped",
 };
 const PASTEL_CHIPS = [colors.pastel.petal, colors.pastel.mint, colors.pastel.lemon, colors.pastel.sky];
 
@@ -60,12 +60,20 @@ export function JourneyScreen() {
     journalQuery,
     setJournalQuery,
     isPremiumPreview,
-    milestoneStatuses,
     recapEligible,
     childDisplayName,
   } = useMockUi();
   const memoriesQuery = useMemoriesQuery();
   const familyQuery = useFamilyQuery();
+  const milestonesQuery = useMilestonesQuery();
+  const milestoneDefinitions = useMemo(
+    () => milestonesQuery.data?.definitions ?? [],
+    [milestonesQuery.data?.definitions],
+  );
+  const milestoneObservations = useMemo(
+    () => milestonesQuery.data?.observations ?? [],
+    [milestonesQuery.data?.observations],
+  );
   const [filter, setFilter] = useState<Filter>("all");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -132,12 +140,12 @@ export function JourneyScreen() {
     visibleCount < filteredMemories.length && (filter === "all" || filter === "memories");
 
   const recapsCount = recapEligible ? mockRecaps.length : 0;
-  const totalCount = subjectMemories.length + mockMilestones.length + recapsCount;
+  const totalCount = subjectMemories.length + milestoneDefinitions.length + recapsCount;
 
   const filterChips = [
     { value: "all" as const, label: `All ${totalCount}` },
     { value: "memories" as const, label: `Memories ${subjectMemories.length}` },
-    { value: "milestones" as const, label: `Milestones ${mockMilestones.length}` },
+    { value: "milestones" as const, label: `Milestones ${milestoneDefinitions.length}` },
     { value: "recaps" as const, label: `Recaps ${recapsCount}` },
   ];
 
@@ -328,9 +336,10 @@ export function JourneyScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.milestoneRow}
             >
-              {mockMilestones.map((item, index) => {
+              {milestoneDefinitions.map((item, index) => {
                 const status =
-                  milestoneStatuses[item.id] ?? item.status.toUpperCase().replace(" ", "_");
+                  milestoneObservations.find((observation) => observation.definitionId === item.id)
+                    ?.status ?? "not_observed";
                 const pastelChip = PASTEL_CHIPS[index % PASTEL_CHIPS.length];
                 return (
                   <Pressable
@@ -344,7 +353,7 @@ export function JourneyScreen() {
                       <Feather name="star" size={16} color={theme.colors.text} />
                     </View>
                     <AppText variant="label" style={styles.honeyLabel}>
-                      {STATUS_LABEL[status] ?? item.status}
+                      {STATUS_LABEL[status] ?? status}
                     </AppText>
                     <AppText variant="bodySmall" weight="bold">
                       {item.title}
