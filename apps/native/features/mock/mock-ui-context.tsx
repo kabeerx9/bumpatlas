@@ -475,19 +475,14 @@ export function MockUiProvider({ children }: { children: ReactNode }) {
     setSyncingDrafts(true);
     try {
       const flushed = await flushMemoryDrafts(drafts);
-      if (flushed.length === 0) {
-        // Drop empty drafts that can never sync so we don't retry forever.
-        setDrafts((current) => {
-          const next = current.filter((draft) => draft.body.trim().length > 0);
-          setPendingDraft(next.length > 0);
-          return next;
-        });
-        return 0;
-      }
-
       const flushedIds = new Set(flushed.map((item) => item.draftId));
+      // Drop synced drafts and any body-less stragglers (e.g. a photo-only
+      // draft queued before photos were stubbed out) that can never sync,
+      // so a single bad draft doesn't wedge the rest of the queue forever.
       setDrafts((current) => {
-        const next = current.filter((draft) => !flushedIds.has(draft.id));
+        const next = current.filter(
+          (draft) => !flushedIds.has(draft.id) && draft.body.trim().length > 0,
+        );
         setPendingDraft(next.length > 0);
         return next;
       });
