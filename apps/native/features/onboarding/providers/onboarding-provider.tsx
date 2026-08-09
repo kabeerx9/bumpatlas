@@ -2,7 +2,10 @@ import { useAuth } from "@clerk/expo";
 import { useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { ApiError } from "@bumpatlas/contracts";
+
 import {
+  clearOnboardingComplete,
   getOnboardingComplete,
   setOnboardingComplete,
 } from "@/features/onboarding/storage/onboarding-storage";
@@ -64,10 +67,13 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
    * says "not complete", ask the server whether the user already has a
    * default family; `GET /families/current` 404s with FAMILY_NOT_FOUND when
    * onboarding genuinely hasn't run yet (a legitimate response, not an error
-   * to retry). Skipped entirely once the local flag is already true (fast
-   * path — no need to hit the network on every launch).
+   * to retry). The check always runs (it shares the Today screen's family
+   * cache entry, so it costs no extra request): the local flag is only an
+   * optimistic fast path, because SecureStore is keychain-backed and survives
+   * app reinstall — after a server-side reset a stale "complete" flag would
+   * otherwise strand a family-less user on Today forever.
    */
-  const shouldCheckServer = isLoaded && !!userId && localFlagLoaded && !isLocalOnboardingComplete;
+  const shouldCheckServer = isLoaded && !!userId && localFlagLoaded;
 
   const familyCheckQuery = useQuery({
     // Same key `useFamilyQuery` (lib/api/hooks.ts) uses for `GET
@@ -90,6 +96,18 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     void setOnboardingComplete(userId);
   }, [familyCheckQuery.isSuccess, shouldCheckServer, userId]);
 
+  useEffect(() => {
+    if (!shouldCheckServer || !userId) return;
+    const error = familyCheckQuery.error;
+    // Only the server's definitive "no household" downgrades the cached flag.
+    // Network/500 errors leave the optimistic verdict alone so an outage never
+    // kicks a genuinely onboarded user back into onboarding.
+    if (error instanceof ApiError && error.code === "FAMILY_NOT_FOUND") {
+      setIsLocalOnboardingComplete(false);
+      void clearOnboardingComplete(userId);
+    }
+  }, [familyCheckQuery.error, shouldCheckServer, userId]);
+
   const isOnboardingComplete = isLocalOnboardingComplete;
 
   // Still resolving if: the local flag hasn't loaded yet, or the local flag
@@ -99,7 +117,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   // on a splash screen forever.
   const isOnboardingLoading =
     isLocalFlagLoading ||
-    (shouldCheckServer && familyCheckQuery.isPending);
+    (shouldCheckServer && !isLocalOnboardingComplete && familyCheckQuery.isPending);
 
   const value = useMemo<OnboardingContextValue>(
     () => ({

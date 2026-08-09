@@ -11,3 +11,7 @@ export async function getOnboardingComplete(userId: string) {
 export async function setOnboardingComplete(userId: string) {
   await SecureStore.setItemAsync(getOnboardingKey(userId), "true");
 }
+
+export async function clearOnboardingComplete(userId: string) {
+  await SecureStore.deleteItemAsync(getOnboardingKey(userId));
+}
