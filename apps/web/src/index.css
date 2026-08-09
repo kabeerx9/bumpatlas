@@ -27,28 +27,6 @@
   --ring: oklch(58% 0.09 150);
 }
 
-.dark {
-  /* No dark mockup exists yet — keep the product palette's hues rather than
-     the generic shadcn dark theme so the toggle doesn't clash visually. */
-  --background: #1b1e19;
-  --foreground: #f2f4ee;
-  --card: #23271f;
-  --card-foreground: #f2f4ee;
-  --popover: #23271f;
-  --popover-foreground: #f2f4ee;
-  --primary: oklch(68% 0.09 150);
-  --primary-foreground: #12150f;
-  --secondary: #2b2f26;
-  --secondary-foreground: #f2f4ee;
-  --muted: #2b2f26;
-  --muted-foreground: #a8ac9f;
-  --accent: oklch(30% 0.04 150);
-  --accent-foreground: oklch(80% 0.09 150);
-  --destructive: #d97a55;
-  --border: rgba(242, 244, 238, 0.12);
-  --input: rgba(242, 244, 238, 0.16);
-  --ring: oklch(68% 0.09 150);
-}
 
 /*
  * Admin dashboard — deliberately cooler/denser navy palette. Scoped to a
@@ -98,9 +76,6 @@
   color: #4b4f45;
 }
 
-.dark .landing-prose {
-  color: #c7cabf;
-}
 
 /* Shared "soft" card treatment from the mockup spec: 14px radius, faint
    shadow. Kept as a class so every card across the app matches exactly

@@ -5,7 +5,6 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import Footer from "@/components/footer";
 import Header from "@/components/header";
 import { NotFound } from "@/components/not-found";
-import { ThemeProvider } from "@/components/theme-provider";
 import { MeProvider } from "@/context/me-context";
 
 import "../index.css";
@@ -44,21 +43,14 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="light"
-        disableTransitionOnChange
-        storageKey="vite-ui-theme"
-      >
-        <MeProvider>
+      <MeProvider>
           <div className="grid min-h-svh grid-rows-[auto_1fr_auto] bg-background">
             <Header />
             <Outlet />
             <Footer />
           </div>
-        </MeProvider>
-        <Toaster richColors />
-      </ThemeProvider>
+      </MeProvider>
+      <Toaster richColors />
       {showRouterDevtools ? <TanStackRouterDevtools position="bottom-left" /> : null}
     </>
   );

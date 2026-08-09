@@ -20,7 +20,6 @@
     "@tanstack/react-router": "^1.168.22",
     "dotenv": "catalog:",
     "lucide-react": "^1.8.0",
-    "next-themes": "catalog:",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "sonner": "^2.0.7",

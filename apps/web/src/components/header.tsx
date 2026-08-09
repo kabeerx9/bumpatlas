@@ -6,7 +6,6 @@ import { ArrowRight, LogIn, ShieldCheck } from "lucide-react";
 import { useMe } from "@/context/me-context";
 import { clerkAppearance } from "@/lib/clerk-appearance";
 
-import { ModeToggle } from "./mode-toggle";
 
 export default function Header() {
   const { isSignedIn } = useAuth();
@@ -74,7 +73,6 @@ export default function Header() {
               </Link>
             </>
           )}
-          <ModeToggle />
         </div>
       </div>
     </header>
