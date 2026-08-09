@@ -2,15 +2,6 @@ import { useClerk, useUser } from "@clerk/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { Button } from "@bumpatlas/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@bumpatlas/ui/components/card";
 import { Input } from "@bumpatlas/ui/components/input";
 import { Label } from "@bumpatlas/ui/components/label";
 
@@ -81,78 +72,99 @@ function AccountPage() {
   return (
     <PageShell className="flex max-w-2xl flex-col gap-6">
       <div>
-        <h1 className="font-display text-3xl text-foreground">Account</h1>
+        <h1 className="font-display text-3xl font-semibold text-foreground">Account</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Update your profile or delete your account.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Changes are saved through the server and synced to Clerk.</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSave}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First name</Label>
+      <div className="card-soft flex flex-col gap-6 border border-border bg-card p-6">
+        <form onSubmit={handleSave} className="flex flex-col gap-4">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-foreground">Display name</Label>
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Input
-                id="firstName"
+                aria-label="First name"
                 value={firstName}
                 onChange={(event) => setFirstName(event.target.value)}
                 autoComplete="given-name"
+                placeholder="First name"
+                className="h-10 rounded-[9px] border-border"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last name</Label>
               <Input
-                id="lastName"
+                aria-label="Last name"
                 value={lastName}
                 onChange={(event) => setLastName(event.target.value)}
                 autoComplete="family-name"
+                placeholder="Last name"
+                className="h-10 rounded-[9px] border-border"
               />
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex h-10 shrink-0 items-center justify-center rounded-[9px] bg-primary px-5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
             </div>
             {saveError ? <p className="text-sm text-destructive">{saveError}</p> : null}
-            {saveSuccess ? <p className="text-sm text-green-600">Profile updated.</p> : null}
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save changes"}
-            </Button>
-          </CardFooter>
+            {saveSuccess ? <p className="text-sm text-[oklch(45%_0.1_150)]">Profile updated.</p> : null}
+          </div>
         </form>
-      </Card>
 
-      <Card className="border-destructive/40">
-        <CardHeader>
-          <CardTitle className="text-destructive">Delete account</CardTitle>
-          <CardDescription>
-            This permanently deletes your Clerk identity and local account data.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="deleteConfirmation">Type DELETE to confirm</Label>
+        <div className="border-t border-border pt-6">
+          <Label className="text-sm font-medium text-foreground">Email</Label>
+          <div className="mt-2 flex items-center gap-2">
+            <p className="text-sm text-foreground">{user?.primaryEmailAddress?.emailAddress}</p>
+            <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+              Managed by Clerk
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="flex flex-col gap-4 rounded-[14px] border px-7 py-[26px]"
+        style={{ background: "#F6E9DD", borderColor: "#E0C3A9" }}
+      >
+        <div>
+          <p className="text-[15px] font-semibold" style={{ color: "#7A3C1E" }}>
+            Danger zone
+          </p>
+          <p className="mt-1 text-[13.5px]" style={{ color: "#8A5A3B" }}>
+            Deleting your account removes your profile and access permanently. This can&apos;t be
+            undone.
+          </p>
+        </div>
+
+        <div
+          className="flex flex-col gap-3 rounded-[11px] border bg-white p-4 sm:flex-row sm:items-end sm:justify-between"
+          style={{ borderColor: "#E0C3A9" }}
+        >
+          <div className="flex-1 space-y-1.5">
+            <Label htmlFor="deleteConfirmation" className="text-xs font-medium text-foreground">
+              Type DELETE to confirm
+            </Label>
             <Input
               id="deleteConfirmation"
               value={deleteConfirmation}
               onChange={(event) => setDeleteConfirmation(event.target.value)}
               placeholder="DELETE"
+              className="h-9 rounded-[9px] border-border"
             />
           </div>
-          {deleteError ? <p className="text-sm text-destructive">{deleteError}</p> : null}
-        </CardContent>
-        <CardFooter>
-          <Button
+          <button
             type="button"
-            variant="destructive"
             disabled={!canDelete || deleting}
             onClick={() => void handleDelete()}
+            className="inline-flex h-9 shrink-0 items-center justify-center rounded-[9px] px-4 text-sm font-medium text-white transition disabled:cursor-not-allowed"
+            style={{ background: "#B5502E", opacity: canDelete ? 1 : 0.5 }}
           >
-            {deleting ? "Deleting..." : "Delete account"}
-          </Button>
-        </CardFooter>
-      </Card>
+            {deleting ? "Deleting…" : "Delete account"}
+          </button>
+        </div>
+        {deleteError ? <p className="text-sm text-destructive">{deleteError}</p> : null}
+      </div>
     </PageShell>
   );
 }

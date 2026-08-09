@@ -1,56 +1,73 @@
 @import "@bumpatlas/ui/globals.css";
 
 /*
- * "Soft Atlas" — the web app's slice of the tokens in
- * apps/native/design-system/tokens.ts (ink / honey / cream). Overriding the
- * shadcn CSS variables here, after the shared import, keeps the palette
- * scoped to apps/web instead of changing every consumer of packages/ui.
+ * "Soft Atlas" — the approved web mockup palette
+ * (docs/design/web-mockups-reference.md). Overriding the shared shadcn CSS
+ * variables here, after the shared import, keeps this scoped to apps/web
+ * instead of changing every consumer of packages/ui.
  */
 :root {
-  --background: #fbefe4;
-  --foreground: #2b231f;
+  --background: #fafaf6;
+  --foreground: #1f2420;
   --card: #ffffff;
-  --card-foreground: #2b231f;
+  --card-foreground: #1f2420;
   --popover: #ffffff;
-  --popover-foreground: #2b231f;
-  --primary: #f4b942;
-  --primary-foreground: #2b231f;
-  --secondary: #fcebc8;
-  --secondary-foreground: #2b231f;
-  --muted: #fcf1e7;
-  --muted-foreground: #6a5a51;
-  --accent: #fcebc8;
-  --accent-foreground: #a9741a;
-  --destructive: #c9736a;
-  --border: #efe1d2;
-  --input: #efe1d2;
-  --ring: #f4b942;
+  --popover-foreground: #1f2420;
+  --primary: oklch(58% 0.09 150);
+  --primary-foreground: #ffffff;
+  --secondary: #eff1ec;
+  --secondary-foreground: #1f2420;
+  --muted: #eff1ec;
+  --muted-foreground: #6e7268;
+  --accent: oklch(94% 0.03 150);
+  --accent-foreground: oklch(45% 0.1 150);
+  --destructive: #b5502e;
+  --border: #e1e4dc;
+  --input: #e1e4dc;
+  --ring: oklch(58% 0.09 150);
 }
 
 .dark {
-  --background: #2b231f;
-  --foreground: #fbefe4;
-  --card: #362d27;
-  --card-foreground: #fbefe4;
-  --popover: #362d27;
-  --popover-foreground: #fbefe4;
-  --primary: #f4b942;
-  --primary-foreground: #2b231f;
-  --secondary: #3e332c;
-  --secondary-foreground: #fbefe4;
-  --muted: #3e332c;
-  --muted-foreground: #c9bdb4;
-  --accent: #4a3d30;
-  --accent-foreground: #f4b942;
-  --destructive: #c9736a;
-  --border: rgba(251, 239, 228, 0.1);
-  --input: rgba(251, 239, 228, 0.14);
-  --ring: #f4b942;
+  /* No dark mockup exists yet — keep the product palette's hues rather than
+     the generic shadcn dark theme so the toggle doesn't clash visually. */
+  --background: #1b1e19;
+  --foreground: #f2f4ee;
+  --card: #23271f;
+  --card-foreground: #f2f4ee;
+  --popover: #23271f;
+  --popover-foreground: #f2f4ee;
+  --primary: oklch(68% 0.09 150);
+  --primary-foreground: #12150f;
+  --secondary: #2b2f26;
+  --secondary-foreground: #f2f4ee;
+  --muted: #2b2f26;
+  --muted-foreground: #a8ac9f;
+  --accent: oklch(30% 0.04 150);
+  --accent-foreground: oklch(80% 0.09 150);
+  --destructive: #d97a55;
+  --border: rgba(242, 244, 238, 0.12);
+  --input: rgba(242, 244, 238, 0.16);
+  --ring: oklch(68% 0.09 150);
+}
+
+/*
+ * Admin dashboard — deliberately cooler/denser navy palette. Scoped to a
+ * wrapper class on the admin route only (see routes/_auth/admin.tsx) so it
+ * never leaks into the product palette above.
+ */
+.admin-theme {
+  --admin-ink: #0b1220;
+  --admin-secondary: #5b6472;
+  --admin-muted: #6b7280;
+  --admin-border: #dee2e8;
+  --admin-segmented-bg: #f4f6f8;
+  --admin-primary: #14304f;
+  --admin-series-2: #b8c2ce;
 }
 
 @theme inline {
-  --font-display: "Gloock", Georgia, "Times New Roman", serif;
-  --font-editorial: "Source Sans 3", system-ui, sans-serif;
+  --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
 @keyframes rise {
@@ -64,45 +81,37 @@
   }
 }
 
-@keyframes line-grow {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
-}
-
 .landing-rise {
   animation: rise 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: var(--rise-delay, 0ms);
 }
 
-.landing-line {
-  transform-origin: left center;
-  animation: line-grow 1.2s cubic-bezier(0.16, 1, 0.3, 1) 200ms both;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .landing-rise,
-  .landing-line {
+  .landing-rise {
     animation: none;
   }
 }
 
 .landing-prose {
-  font-family: var(--font-editorial);
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   line-height: 1.65;
-  color: oklch(0.32 0.02 280);
+  color: #4b4f45;
 }
 
 .dark .landing-prose {
-  color: oklch(0.82 0.01 280);
+  color: #c7cabf;
 }
 
-.landing-display {
-  font-family: var(--font-display);
-  letter-spacing: -0.03em;
-  text-wrap: balance;
+/* Shared "soft" card treatment from the mockup spec: 14px radius, faint
+   shadow. Kept as a class so every card across the app matches exactly
+   instead of repeating the arbitrary-value Tailwind utilities everywhere. */
+.card-soft {
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(42, 32, 19, 0.04);
+}
+
+/* Admin equivalent — tighter radius, cooler shadow tint. */
+.admin-theme .admin-card {
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }

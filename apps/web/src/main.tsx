@@ -5,6 +5,7 @@ import ReactDOM from "react-dom/client";
 
 import Loader from "./components/loader";
 import { ClerkAuthSetup } from "./components/clerk-auth-setup";
+import { clerkAppearance } from "./lib/clerk-appearance";
 import { routeTree } from "./routeTree.gen";
 
 const router = createRouter({
@@ -21,6 +22,7 @@ const router = createRouter({
         signUpUrl="/sign-up"
         signInFallbackRedirectUrl="/dashboard"
         signUpFallbackRedirectUrl="/dashboard"
+        appearance={clerkAppearance}
       >
         <ClerkAuthSetup>{children}</ClerkAuthSetup>
       </ClerkProvider>
