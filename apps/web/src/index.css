@@ -1,5 +1,53 @@
 @import "@bumpatlas/ui/globals.css";
 
+/*
+ * "Soft Atlas" — the web app's slice of the tokens in
+ * apps/native/design-system/tokens.ts (ink / honey / cream). Overriding the
+ * shadcn CSS variables here, after the shared import, keeps the palette
+ * scoped to apps/web instead of changing every consumer of packages/ui.
+ */
+:root {
+  --background: #fbefe4;
+  --foreground: #2b231f;
+  --card: #ffffff;
+  --card-foreground: #2b231f;
+  --popover: #ffffff;
+  --popover-foreground: #2b231f;
+  --primary: #f4b942;
+  --primary-foreground: #2b231f;
+  --secondary: #fcebc8;
+  --secondary-foreground: #2b231f;
+  --muted: #fcf1e7;
+  --muted-foreground: #6a5a51;
+  --accent: #fcebc8;
+  --accent-foreground: #a9741a;
+  --destructive: #c9736a;
+  --border: #efe1d2;
+  --input: #efe1d2;
+  --ring: #f4b942;
+}
+
+.dark {
+  --background: #2b231f;
+  --foreground: #fbefe4;
+  --card: #362d27;
+  --card-foreground: #fbefe4;
+  --popover: #362d27;
+  --popover-foreground: #fbefe4;
+  --primary: #f4b942;
+  --primary-foreground: #2b231f;
+  --secondary: #3e332c;
+  --secondary-foreground: #fbefe4;
+  --muted: #3e332c;
+  --muted-foreground: #c9bdb4;
+  --accent: #4a3d30;
+  --accent-foreground: #f4b942;
+  --destructive: #c9736a;
+  --border: rgba(251, 239, 228, 0.1);
+  --input: rgba(251, 239, 228, 0.14);
+  --ring: #f4b942;
+}
+
 @theme inline {
   --font-display: "Gloock", Georgia, "Times New Roman", serif;
   --font-editorial: "Source Sans 3", system-ui, sans-serif;

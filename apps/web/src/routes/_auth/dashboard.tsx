@@ -1,25 +1,17 @@
-import { UserButton, useUser } from "@clerk/react";
+import { useUser } from "@clerk/react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 
-import { ApiError, getMe, type MeResponse } from "@/lib/api";
+import { PageShell } from "@/components/page-shell";
+import { useMe } from "@/context/me-context";
 
 export const Route = createFileRoute("/_auth/dashboard")({
+  head: () => ({ meta: [{ title: "Dashboard · BumpAtlas" }] }),
   component: DashboardPage,
 });
 
 function DashboardPage() {
   const { user } = useUser();
-  const [me, setMe] = useState<MeResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getMe()
-      .then(setMe)
-      .catch((err: unknown) => {
-        setError(err instanceof ApiError ? err.message : "Failed to load account");
-      });
-  }, []);
+  const { me, error } = useMe();
 
   const name =
     user?.fullName ||
@@ -28,23 +20,17 @@ function DashboardPage() {
     "there";
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">BumpAtlas</h1>
-        <UserButton />
-      </div>
-      <p className="text-muted-foreground">Welcome, {name}</p>
-      <div className="rounded-lg border p-6">
+    <PageShell className="max-w-3xl">
+      <h1 className="font-display text-3xl text-foreground">Welcome, {name}</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        This is your dashboard — your account and settings live here.
+      </p>
+
+      <div className="mt-8 rounded-2xl border border-border bg-card p-6">
         <p className="text-sm text-muted-foreground">Signed-in account</p>
-        <p className="mt-1 font-medium">{me?.email ?? "Loading..."}</p>
+        <p className="mt-1 font-medium text-foreground">{me?.email ?? "Loading…"}</p>
         {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
       </div>
-      <div className="rounded-lg border p-6">
-        <h2 className="font-medium">Welcome</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Your dashboard is ready. Start building your product here.
-        </p>
-      </div>
-    </div>
+    </PageShell>
   );
 }

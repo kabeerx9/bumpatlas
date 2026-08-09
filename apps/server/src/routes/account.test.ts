@@ -11,6 +11,7 @@ const sampleMe = {
   email: "user@example.com",
   name: "Ada Lovelace",
   imageUrl: null,
+  isAdmin: false,
   createdAt: "2026-06-14T12:00:00.000Z",
   updatedAt: "2026-06-14T12:30:00.000Z",
 };

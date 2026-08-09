@@ -10,12 +10,18 @@ describe("meResponseSchema", () => {
     email: "user@example.com",
     name: "Ada Lovelace",
     imageUrl: "https://example.com/avatar.png",
+    isAdmin: false,
     createdAt: "2026-06-14T12:00:00.000Z",
     updatedAt: "2026-06-14T12:30:00.000Z",
   };
 
   it("accepts a complete valid response", () => {
     assert.deepEqual(meResponseSchema.parse(validMe), validMe);
+  });
+
+  it("accepts an admin response", () => {
+    const payload = { ...validMe, isAdmin: true };
+    assert.deepEqual(meResponseSchema.parse(payload), payload);
   });
 
   it("accepts nullable profile fields", () => {
@@ -32,6 +38,11 @@ describe("meResponseSchema", () => {
   it("rejects missing ids", () => {
     const { id: _id, ...withoutId } = validMe;
     assert.throws(() => meResponseSchema.parse(withoutId));
+  });
+
+  it("rejects a missing isAdmin flag", () => {
+    const { isAdmin: _isAdmin, ...withoutIsAdmin } = validMe;
+    assert.throws(() => meResponseSchema.parse(withoutIsAdmin));
   });
 
   it("rejects invalid date strings", () => {
