@@ -3,6 +3,7 @@ import { Navigate, createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { AuthLoading } from "@/components/auth-loading";
+import { clerkAppearance } from "@/lib/clerk-appearance";
 
 const signInSearchSchema = z.object({
   redirect: z.string().optional(),
@@ -28,12 +29,13 @@ function SignInPage() {
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center gap-6 bg-background px-4 py-16">
-      <h1 className="font-display text-3xl text-foreground">BumpAtlas</h1>
+      <h1 className="font-display text-2xl font-semibold text-foreground">BumpAtlas</h1>
       <SignIn
         routing="path"
         path="/sign-in"
         signUpUrl="/sign-up"
         fallbackRedirectUrl={redirect ?? "/dashboard"}
+        appearance={clerkAppearance}
       />
     </div>
   );

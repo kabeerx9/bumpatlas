@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, LogIn, ShieldCheck } from "lucide-react";
 
 import { useMe } from "@/context/me-context";
+import { clerkAppearance } from "@/lib/clerk-appearance";
 
 import { ModeToggle } from "./mode-toggle";
 
@@ -12,9 +13,9 @@ export default function Header() {
   const { isAdmin } = useMe();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl flex-row items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link to="/" className="font-display text-xl text-foreground">
+        <Link to="/" className="font-display text-xl font-semibold text-foreground">
           BumpAtlas
         </Link>
 
@@ -55,18 +56,18 @@ export default function Header() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           {isSignedIn ? (
-            <UserButton />
+            <UserButton appearance={clerkAppearance} />
           ) : (
             <>
-              <SignInButton mode="modal">
-                <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
+              <SignInButton mode="modal" appearance={clerkAppearance}>
+                <Button variant="ghost" size="sm" className="hidden rounded-[9px] sm:inline-flex">
                   <LogIn className="size-3.5" aria-hidden="true" />
                   Sign in
                 </Button>
               </SignInButton>
               <Link
                 to="/sign-up"
-                className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full bg-primary px-3.5 text-xs font-medium text-primary-foreground transition hover:opacity-90"
+                className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[9px] bg-primary px-3.5 text-xs font-medium text-primary-foreground transition hover:opacity-90"
               >
                 Get started
                 <ArrowRight className="size-3.5" aria-hidden="true" />
