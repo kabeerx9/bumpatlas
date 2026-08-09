@@ -21,7 +21,9 @@
     "seed:content": "node --env-file=../../apps/server/.env --import tsx seed/seed.ts",
     "seed:validate": "node --env-file=../../apps/server/.env --import tsx seed/validate.ts",
     "seed:demo": "node --env-file=../../apps/server/.env --import tsx seed/demo.ts",
-    "seed:user": "node --env-file=../../apps/server/.env --import tsx seed/attach-user.ts"
+    "seed:user": "node --env-file=../../apps/server/.env --import tsx seed/attach-user.ts",
+    "seed:full-demo": "node --env-file=../../apps/server/.env --import tsx seed/full-demo.ts",
+    "admin:grant": "node --import tsx seed/admin-grant.ts"
   },
   "dependencies": {
     "@bumpatlas/env": "workspace:*",
