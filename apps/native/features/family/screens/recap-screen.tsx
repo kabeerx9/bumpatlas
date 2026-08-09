@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useRef, useState } from "react";
-import { Alert, Pressable, Share, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, Share, StyleSheet, View } from "react-native";
 
 import {
   AppText,
@@ -36,17 +36,33 @@ export function RecapScreen() {
   const displayName =
     recapQuery.data?.childDisplayName ?? familyQuery.data?.childDisplayName ?? "your little one";
 
+  /**
+   * The server route is id-parameterized in name only — it always serves the
+   * caller's current recap, so a real query result is used whenever it's
+   * present. The `mockRecaps` fallback only fires in mock mode; a live app
+   * that hasn't loaded yet falls through to the loading branch below instead
+   * of flashing fixture content.
+   */
   const recap = useMemo(() => {
-    if (recapQuery.data && (id === "latest" || id === recapQuery.data.id)) {
-      return recapQuery.data;
+    if (recapQuery.data) return recapQuery.data;
+    if (useMockData) {
+      if (id === "latest") return mockRecaps[0];
+      return mockRecaps.find((item) => item.id === id) ?? mockRecaps[0];
     }
-    if (id === "latest") return mockRecaps[0];
-    return mockRecaps.find((item) => item.id === id) ?? mockRecaps[0];
+    return null;
   }, [id, recapQuery.data]);
 
   const [privateWebLink, setPrivateWebLink] = useState(
-    `https://bumpatlas.app/recap/${recap.id}?t=mock-private-token`,
+    `https://bumpatlas.app/recap/${recap?.id ?? "pending"}?t=mock-private-token`,
   );
+
+  if (recapQuery.isLoading || !recap) {
+    return (
+      <SoftStackShell title="Weekly recap" closeIcon="x" onBack={() => router.back()} centered>
+        <ActivityIndicator color={theme.colors.primary} />
+      </SoftStackShell>
+    );
+  }
 
   if (!eligible) {
     return (
@@ -67,7 +83,7 @@ export function RecapScreen() {
   }
 
   async function shareRecap() {
-    if (sharing) return;
+    if (sharing || !recap) return;
     setSharing(true);
     const highlights = recap.highlights.map((line) => `· ${line}`).join("\n");
     const textFallback = [

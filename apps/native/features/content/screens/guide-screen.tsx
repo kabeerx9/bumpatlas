@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import {
   AppText,
@@ -19,6 +19,7 @@ import {
   useAppTheme,
 } from "@/design-system";
 import { mockGuides } from "@/features/mock/demo-data";
+import { useMockData } from "@/lib/api/client";
 import { useContentQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
@@ -66,9 +67,16 @@ export function GuideScreen() {
   const contentQuery = useContentQuery();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const guides: GuideCard[] = useMemo(
-    () =>
-      contentQuery.data?.items.map((item) => ({
+  /**
+   * The mock fallback only applies in mock mode. Content is unpublished by
+   * design in most live environments, so a live `{ items: [] }` must render
+   * as a genuine empty state rather than silently filling in with fixture
+   * articles — and the fallback must not flash real users fake content while
+   * `contentQuery` is still loading.
+   */
+  const guides: GuideCard[] = useMemo(() => {
+    if (contentQuery.data) {
+      return contentQuery.data.items.map((item) => ({
         id: item.id,
         slug: item.slug,
         title: item.title,
@@ -76,8 +84,10 @@ export function GuideScreen() {
         readMinutes: item.readingMinutes,
         bookmarked: item.bookmarked ?? false,
         category: item.stageTags?.[0] ? formatCategory(item.stageTags[0]) : "General",
-      })) ??
-      mockGuides.map((guide) => ({
+      }));
+    }
+    if (useMockData) {
+      return mockGuides.map((guide) => ({
         id: guide.id,
         slug: guide.slug,
         title: guide.title,
@@ -85,9 +95,10 @@ export function GuideScreen() {
         readMinutes: guide.readMinutes ?? 4,
         bookmarked: false,
         category: guide.category ?? "General",
-      })),
-    [contentQuery.data],
-  );
+      }));
+    }
+    return [];
+  }, [contentQuery.data]);
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -139,17 +150,40 @@ export function GuideScreen() {
         />
       </View>
 
-      <ChipRow
-        chips={[
-          { value: "__all__", label: `All ${guides.length}` },
-          ...categoryCounts.map(([category, count]) => ({
-            value: category,
-            label: `${category} ${count}`,
-          })),
-        ]}
-        value={selectedCategory ?? "__all__"}
-        onChange={(value) => setSelectedCategory(value === "__all__" ? null : value)}
-      />
+      {guides.length > 0 ? (
+        <ChipRow
+          chips={[
+            { value: "__all__", label: `All ${guides.length}` },
+            ...categoryCounts.map(([category, count]) => ({
+              value: category,
+              label: `${category} ${count}`,
+            })),
+          ]}
+          value={selectedCategory ?? "__all__"}
+          onChange={(value) => setSelectedCategory(value === "__all__" ? null : value)}
+        />
+      ) : null}
+
+      {contentQuery.isLoading && guides.length === 0 ? (
+        <View style={styles.emptyState}>
+          <ActivityIndicator color={theme.colors.primary} />
+        </View>
+      ) : null}
+
+      {!contentQuery.isLoading && guides.length === 0 ? (
+        <View style={[styles.gutter, styles.emptyState]}>
+          <View style={[styles.emptyIcon, { backgroundColor: theme.colors.surface }]}>
+            <Feather name="book-open" size={22} color={theme.colors.textMuted} />
+          </View>
+          <AppText variant="title" align="center">
+            Nothing published yet
+          </AppText>
+          <AppText variant="bodySmall" tone="secondary" align="center">
+            New reviewed reading for your stage lands here as soon as it&apos;s ready — check back
+            soon.
+          </AppText>
+        </View>
+      ) : null}
 
       {featured ? (
         <View style={styles.gutter}>
@@ -241,6 +275,19 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: "row",
     gap: spacing.sm,
+  },
+  emptyState: {
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.xl,
+  },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.xs,
   },
   heroBody: {
     marginTop: -spacing.xl,

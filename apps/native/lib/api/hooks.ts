@@ -2,18 +2,22 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type {
   Child,
+  DeleteAccountInput,
   EntitlementsResponse,
   FamilySummary,
   ListMilestonesResponse,
+  MeResponse,
   Memory,
   MilestoneDefinition,
   MilestoneObservation,
   Recap,
   StageResponse,
   TodayResponse,
+  UpdateAccountInput,
   UpsertMilestoneObservationInput,
 } from "@bumpatlas/contracts";
 
+import * as accountApi from "@/lib/api/account";
 import * as aiApi from "@/lib/api/ai";
 import * as billingApi from "@/lib/api/billing";
 import { useMockData } from "@/lib/api/client";
@@ -779,6 +783,25 @@ export function useCreateInviteMutation() {
   });
 }
 
+export function useInvitePreviewQuery(token: string) {
+  return useQuery({
+    queryKey: ["invites", token, "preview"] as const,
+    enabled: Boolean(token),
+    queryFn: () => {
+      if (useMockData) {
+        const family = mockFamily();
+        return Promise.resolve({
+          familyName: family.name,
+          inviterDisplayName: family.members[0]?.displayName ?? "A household member",
+          role: "CONTRIBUTOR" as const,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+      }
+      return familiesApi.getInvitePreview(token);
+    },
+  });
+}
+
 export function useAcceptInviteMutation() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -789,6 +812,60 @@ export function useAcceptInviteMutation() {
     onSuccess: async (family) => {
       queryClient.setQueryData(queryKeys.family, family);
       await queryClient.invalidateQueries({ queryKey: queryKeys.stage });
+    },
+  });
+}
+
+/**
+ * Mock mode edits the cached family summary in place rather than the static
+ * fixture, so a role change is visible immediately without a mock role-store.
+ */
+export function useUpdateMemberMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      memberId: string;
+      patch: Parameters<typeof familiesApi.updateMember>[1];
+    }) => {
+      if (useMockData) {
+        const current = queryClient.getQueryData<FamilySummary>(queryKeys.family) ?? mockFamily();
+        return {
+          ...current,
+          members: current.members.map((member) =>
+            member.id === input.memberId && input.patch.role
+              ? { ...member, role: input.patch.role }
+              : member,
+          ),
+        };
+      }
+      return familiesApi.updateMember(input.memberId, input.patch);
+    },
+    onSuccess: (family) => {
+      queryClient.setQueryData(queryKeys.family, family);
+    },
+  });
+}
+
+export function useRemoveMemberMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (memberId: string): Promise<FamilySummary> => {
+      if (useMockData) {
+        const current = queryClient.getQueryData<FamilySummary>(queryKeys.family) ?? mockFamily();
+        return {
+          ...current,
+          members: current.members.filter((member) => member.id !== memberId),
+        };
+      }
+      await familiesApi.removeMember(memberId);
+      // The route returns 204, so the client re-derives the new roster itself
+      // rather than refetching — mirrors the mock branch's shape.
+      const current = queryClient.getQueryData<FamilySummary>(queryKeys.family);
+      if (!current) return familiesApi.getCurrentFamily();
+      return { ...current, members: current.members.filter((member) => member.id !== memberId) };
+    },
+    onSuccess: (family) => {
+      queryClient.setQueryData(queryKeys.family, family);
     },
   });
 }
@@ -834,6 +911,45 @@ export function useCreateDataRequestMutation() {
         };
       }
       return dataRequestsApi.createDataRequest(input);
+    },
+  });
+}
+
+/** Mock mode echoes the patch back as the "current user" rather than persisting it anywhere. */
+function mockAccountResponse(patch: UpdateAccountInput): MeResponse {
+  const now = new Date().toISOString();
+  const name = [patch.firstName, patch.lastName].filter(Boolean).join(" ").trim();
+  return {
+    id: "user-mock",
+    clerkId: "clerk-mock",
+    email: "you@example.com",
+    name: name || null,
+    imageUrl: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export function useUpdateAccountMutation() {
+  return useMutation({
+    mutationFn: (input: UpdateAccountInput): Promise<MeResponse> =>
+      useMockData ? Promise.resolve(mockAccountResponse(input)) : accountApi.updateAccount(input),
+  });
+}
+
+/**
+ * Danger domain: account deletion. Mock mode never hits the server (there is
+ * nothing to delete), but still clears the cache so the UI behaves the same
+ * way it would after a real account teardown.
+ */
+export function useDeleteAccountMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: DeleteAccountInput) => {
+      if (!useMockData) await accountApi.deleteAccount(input);
+    },
+    onSuccess: () => {
+      queryClient.clear();
     },
   });
 }

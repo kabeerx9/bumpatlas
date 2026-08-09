@@ -4,11 +4,9 @@ import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
 import { AppText, Button, Surface, colors, radius, spacing } from "@/design-system";
-import { mockInvitePreview } from "@/features/mock/demo-data";
 import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
-import { useMockData } from "@/lib/api/client";
-import { useAcceptInviteMutation } from "@/lib/api/hooks";
+import { useAcceptInviteMutation, useInvitePreviewQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 type AcceptedFamily = {
@@ -20,6 +18,7 @@ export function InviteAcceptScreen() {
   const router = useRouter();
   const { token } = useLocalSearchParams<{ token: string }>();
   const { markPartnerJoined } = useMockUi();
+  const previewQuery = useInvitePreviewQuery(token ?? "");
   const acceptInvite = useAcceptInviteMutation();
   const [accepted, setAccepted] = useState(false);
   const [accepting, setAccepting] = useState(false);
@@ -55,7 +54,7 @@ export function InviteAcceptScreen() {
         <>
           <Button
             size="lg"
-            disabled={accepted || accepting || !token}
+            disabled={accepted || accepting || !token || previewQuery.isError}
             onPress={() => void handleAccept()}
           >
             {accepting ? "Accepting…" : "Accept invite"}
@@ -80,14 +79,22 @@ export function InviteAcceptScreen() {
             You&apos;re invited
           </AppText>
           <AppText variant="heading" weight="semibold" align="center">
-            {accepted && acceptedFamily ? `Welcome to ${acceptedFamily.name}` : "Join a household"}
+            {accepted && acceptedFamily
+              ? `Welcome to ${acceptedFamily.name}`
+              : previewQuery.data
+                ? `Join ${previewQuery.data.familyName}`
+                : "Join a household"}
           </AppText>
           <AppText variant="bodySmall" tone="secondary" align="center">
             {accepted && acceptedFamily
               ? `You can now help capture ${
                   acceptedFamily.childDisplayName ?? "their"
                 }'s moments and see the weekly recap.`
-              : "Accept below to join the household that sent you this invite. You'll see their name once you accept."}
+              : previewQuery.isError
+                ? "This invite link is invalid or has expired. Ask for a new one."
+                : previewQuery.data
+                  ? `${previewQuery.data.inviterDisplayName} invited you as a ${previewQuery.data.role.toLowerCase()}.`
+                  : "Accept below to join the household that sent you this invite."}
           </AppText>
         </View>
 
@@ -108,14 +115,12 @@ export function InviteAcceptScreen() {
             </AppText>
             <AppText weight="semibold">Single-use · adult 18+ account required</AppText>
           </View>
-          {useMockData ? (
+          {previewQuery.data ? (
             <View style={styles.detailRow}>
               <AppText variant="caption" tone="secondary">
-                Demo preview
+                Household
               </AppText>
-              <AppText weight="semibold">
-                {mockInvitePreview.householdName} · {mockInvitePreview.childName}
-              </AppText>
+              <AppText weight="semibold">{previewQuery.data.familyName}</AppText>
             </View>
           ) : null}
         </Surface>
