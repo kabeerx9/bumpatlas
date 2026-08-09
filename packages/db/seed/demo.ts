@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import prisma from "../src/index";
 import { attachDemoHousehold, daysAgo } from "../src/demo/attach-household";
 import { DEMO_HOUSEHOLDS, type DemoHousehold } from "../src/demo/data";
+import { assertSafeSeedTarget } from "./guard";
 
 /**
  * Demo data seed: four sign-in-able households with identical content.
@@ -20,17 +21,6 @@ import { DEMO_HOUSEHOLDS, type DemoHousehold } from "../src/demo/data";
 const WITH_CLERK = process.argv.includes("--with-clerk");
 /** Shared across all demo accounts. Dev instance only — never a real user's password. */
 const DEMO_PASSWORD = "BumpAtlasDemo!2026";
-
-function assertNotProduction(): void {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("Refusing to seed demo data with NODE_ENV=production.");
-  }
-
-  const url = process.env.DATABASE_URL ?? "";
-  if (/prod/i.test(url)) {
-    throw new Error("Refusing to seed demo data: DATABASE_URL looks like production.");
-  }
-}
 
 /**
  * Creates or reuses a Clerk user so the account can actually be signed into.
@@ -177,7 +167,7 @@ async function seedHousehold(household: DemoHousehold): Promise<boolean> {
 }
 
 async function main() {
-  assertNotProduction();
+  assertSafeSeedTarget();
 
   const milestones = await prisma.milestoneDefinition.count();
   const groups = await prisma.communityGroup.count();
