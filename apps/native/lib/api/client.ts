@@ -7,5 +7,3 @@ export const apiClient = createApiClient({
   baseUrl: env.EXPO_PUBLIC_SERVER_URL,
   getToken: getClerkAuthToken,
 });
-
-export const useMockData = env.EXPO_PUBLIC_USE_MOCK_DATA;

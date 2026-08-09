@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, borderWidth, colors, radius, shadows, spacing } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 
 type DraftQueuePanelProps = {
   onOpenDraft?: () => void;
@@ -10,7 +10,7 @@ type DraftQueuePanelProps = {
 
 export function DraftQueuePanel({ onOpenDraft }: DraftQueuePanelProps) {
   const { drafts, removeDraft, clearDrafts, isOffline, syncingDrafts, flushDraftQueue } =
-    useMockUi();
+    useAppState();
 
   if (drafts.length === 0) return null;
 

@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import {
@@ -13,14 +14,14 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { mockPregnancy } from "@/features/mock/mock-content";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { pregnancyContent } from "@/features/pregnancy/data/pregnancy-content";
 import {
   gestationalWeekFromDueDate,
   pregnancyWeekLabel,
   trimesterFromWeek,
 } from "@/features/pregnancy/lib/gestational-week";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useFamilyQuery, useStageQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 // Presentational only — a friendly "size of a ..." cue per week, not clinical data.
@@ -50,23 +51,37 @@ function sizeOfLabel(week: number) {
 export function PregnancyScreen() {
   const router = useRouter();
   const theme = useAppTheme();
-  const {
-    checklistDone,
-    toggleChecklistItem,
-    selectedMood,
-    setSelectedMood,
-    pregnancyConverted,
-    pregnancyChildName,
-    dueDateOverride,
-  } = useMockUi();
+  const stageQuery = useStageQuery();
+  const familyQuery = useFamilyQuery();
+  const [checklistDone, setChecklistDone] = useState<Record<string, boolean>>({});
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
 
-  const dueDate = dueDateOverride ?? mockPregnancy.dueDate;
-  const computedWeek = gestationalWeekFromDueDate(dueDate);
+  function toggleChecklistItem(id: string) {
+    setChecklistDone((current) => ({ ...current, [id]: !current[id] }));
+  }
+
+  // Conversion is real, server-driven state: once `convertPregnancyMutation`
+  // succeeds the stage flips to "postpartum" and the household gains a
+  // child, which this screen (still reachable via a stale route) reads back.
+  const pregnancyConverted =
+    stageQuery.data?.stageMode === "postpartum" && (familyQuery.data?.children.length ?? 0) > 0;
+  const pregnancyChildName = familyQuery.data?.childDisplayName ?? "your baby";
+  const dueDate = familyQuery.data?.dueDate ?? stageQuery.data?.dueDate ?? null;
+
+  const computedWeek = dueDate ? gestationalWeekFromDueDate(dueDate) : 0;
   const weekLabel = pregnancyWeekLabel(computedWeek);
   const trimester = trimesterFromWeek(computedWeek);
   const progress = Math.min(1, Math.max(0, computedWeek / 40));
 
-  const categories = Array.from(new Set(mockPregnancy.checklist.map((item) => item.category)));
+  const categories = Array.from(new Set(pregnancyContent.checklist.map((item) => item.category)));
+
+  if (stageQuery.isLoading || familyQuery.isLoading) {
+    return (
+      <SoftStackShell title="Pregnancy" onBack={() => router.back()} centered>
+        <AppText tone="secondary">Loading your pregnancy journal…</AppText>
+      </SoftStackShell>
+    );
+  }
 
   if (pregnancyConverted) {
     return (
@@ -84,6 +99,23 @@ export function PregnancyScreen() {
         </AppText>
         <Button size="lg" onPress={() => router.replace(appRoutes.journey)}>
           Open Journey
+        </Button>
+      </SoftStackShell>
+    );
+  }
+
+  if (!dueDate) {
+    return (
+      <SoftStackShell title="Pregnancy" onBack={() => router.back()} centered>
+        <Feather name="sunrise" size={28} color={colors.brand.honeyDeep} />
+        <AppText variant="heading" align="center">
+          No due date on file yet
+        </AppText>
+        <AppText variant="bodySmall" tone="secondary" align="center">
+          Finish stage setup to see your pregnancy week and journal.
+        </AppText>
+        <Button size="lg" onPress={() => router.push(appRoutes.stageSetup)}>
+          Finish setup
         </Button>
       </SoftStackShell>
     );
@@ -121,12 +153,12 @@ export function PregnancyScreen() {
 
       <Surface elevated radiusSize="lg" style={styles.card}>
         <Pill tone="lavender">This week&apos;s tip</Pill>
-        <AppText weight="semibold">{mockPregnancy.weeklyTip.title}</AppText>
+        <AppText weight="semibold">{pregnancyContent.weeklyTip.title}</AppText>
         <AppText variant="bodySmall" tone="secondary">
-          {mockPregnancy.weeklyTip.summary}
+          {pregnancyContent.weeklyTip.summary}
         </AppText>
         <AppText variant="caption" tone="tertiary">
-          {mockPregnancy.weeklyTip.reviewerName} · {mockPregnancy.weeklyTip.reviewedOn}
+          {pregnancyContent.weeklyTip.reviewerName} · {pregnancyContent.weeklyTip.reviewedOn}
         </AppText>
       </Surface>
 
@@ -135,7 +167,7 @@ export function PregnancyScreen() {
         <AppText variant="bodySmall" tone="secondary">
           Stage tips sample — full inventory ships with content ops.
         </AppText>
-        {mockPregnancy.weekCards.map((card) => (
+        {pregnancyContent.weekCards.map((card) => (
           <View key={card.week} style={styles.weekRow}>
             <Pill tone="mint">Week {card.week}</Pill>
             <AppText weight="semibold" style={styles.weekTitle}>
@@ -151,7 +183,7 @@ export function PregnancyScreen() {
       <Surface elevated radiusSize="lg" style={styles.card}>
         <AppText weight="semibold">Bump journal prompt</AppText>
         <AppText variant="bodySmall" tone="secondary">
-          {mockPregnancy.bumpPrompt}
+          {pregnancyContent.bumpPrompt}
         </AppText>
         <Button
           size="lg"
@@ -169,7 +201,7 @@ export function PregnancyScreen() {
           Optional reflection — not a clinical mood tracker.
         </AppText>
         <View style={styles.moodRow}>
-          {mockPregnancy.moodOptions.map((mood) => {
+          {pregnancyContent.moodOptions.map((mood) => {
             const active = selectedMood === mood.id;
             return (
               <Pressable
@@ -193,7 +225,7 @@ export function PregnancyScreen() {
       {categories.map((category) => (
         <Surface key={category} elevated radiusSize="lg" style={styles.card}>
           <Pill tone="mint">{category}</Pill>
-          {mockPregnancy.checklist
+          {pregnancyContent.checklist
             .filter((item) => item.category === category)
             .map((item) => {
               const done = checklistDone[item.id];

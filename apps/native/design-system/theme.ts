@@ -16,11 +16,26 @@ const themePreferenceListeners = new Set<() => void>();
 let colorSchemePreference: AppColorSchemePreference = defaultColorSchemePreference;
 let hasRequestedStoredPreference = false;
 
+/**
+ * Semantic surface. Feature code reads THIS, never raw hex.
+ *
+ * Two things changed shape in the Soft Atlas redesign, and both are load-bearing:
+ *
+ * 1. `primary` is honey with ink text in BOTH schemes. The source design has no
+ *    ink-filled button anywhere — the accent is the call to action. Any screen
+ *    that assumed `primary` was dark and paired it with white text will now be
+ *    unreadable, so `primaryText` moved to ink to match.
+ * 2. `backgroundGradient` is the real canvas. `background` is only the flat
+ *    fallback for surfaces that cannot host a gradient (nav theme, modals,
+ *    system chrome). Prefer `Screen` / `Atmosphere`, which render the gradient.
+ */
 export const appThemes = {
   light: {
     colorScheme: "light",
     colors: {
       background: colors.surface.app,
+      backgroundGradient: colors.gradient.canvas,
+      backgroundGradientBold: colors.gradient.canvasBold,
       surface: colors.surface.card,
       surfaceElevated: colors.surface.elevated,
       surfaceMuted: colors.surface.cool,
@@ -30,60 +45,65 @@ export const appThemes = {
       textSecondary: colors.text.secondary,
       textTertiary: colors.text.tertiary,
       textMuted: colors.text.muted,
+      textFaint: colors.text.faint,
       textInverse: colors.text.inverse,
-      brandText: colors.brand.terracotta,
+      brandText: colors.brand.honeyDeep,
       border: colors.border.hairline,
       borderStrong: colors.border.subtle,
-      // Primary action = ink pill, white text (reference CTA style).
-      primary: colors.brand.ink,
-      primaryPressed: "#3A342A",
-      primaryText: colors.text.inverse,
-      // Secondary / selected = honey fill, ink text.
+      // Primary action = honey pill, ink text. There is no ink button.
+      primary: colors.brand.honey,
+      primaryPressed: "#E3A82F",
+      primaryText: colors.text.primary,
+      // Secondary / selected chip = same honey fill.
       secondary: colors.brand.honey,
       secondaryText: colors.text.primary,
       accent: colors.brand.honeySoft,
-      accentText: colors.brand.terracotta,
+      accentText: colors.brand.honeyDeep,
       danger: colors.status.error,
       dangerSurface: "#FFFFFF",
       dangerBorder: colors.status.errorBorder,
-      warningSurface: "#FBF0DC",
-      warningBorder: "#EED9AC",
-      mintSurface: "rgba(217,161,63,0.14)",
-      mintBorder: "rgba(217,161,63,0.28)",
+      warningSurface: colors.brand.honeySoft,
+      warningBorder: "#F0D7A4",
+      mintSurface: colors.pastel.mint,
+      mintBorder: "rgba(126,149,131,0.28)",
     },
   },
   dark: {
     colorScheme: "dark",
     colors: {
-      background: "#1E1A12",
-      surface: "#2A251B",
-      surfaceElevated: "#332D21",
-      surfaceMuted: "#251F16",
-      surfaceWarm: "#2E271B",
+      background: "#211B18",
+      // Dark keeps the same three hues at ~8% luminance so the wash still
+      // reads as the same brand, just after hours.
+      backgroundGradient: ["#1D211E", "#231C17", "#241A1C"],
+      backgroundGradientBold: ["#1A1F1C", "#221B16", "#26191C"],
+      surface: "#2E2622",
+      surfaceElevated: "#38302B",
+      surfaceMuted: "#261F1B",
+      surfaceWarm: "#312822",
       surfaceInverse: colors.surface.card,
-      text: "#F7F1E2",
-      textSecondary: "rgba(247,241,226,0.72)",
-      textTertiary: "rgba(247,241,226,0.55)",
-      textMuted: "rgba(247,241,226,0.42)",
+      text: "#F7F0EA",
+      textSecondary: "rgba(247,240,234,0.74)",
+      textTertiary: "rgba(247,240,234,0.58)",
+      textMuted: "rgba(247,240,234,0.45)",
+      textFaint: "rgba(247,240,234,0.32)",
       textInverse: colors.text.primary,
       brandText: colors.brand.honey,
-      border: "rgba(255,255,255,0.12)",
-      borderStrong: "rgba(255,255,255,0.18)",
-      // Ink pills vanish on espresso — dark mode CTAs go honey with ink text.
+      border: "rgba(255,255,255,0.10)",
+      borderStrong: "rgba(255,255,255,0.16)",
       primary: colors.brand.honey,
-      primaryPressed: "#E3B45F",
+      primaryPressed: "#E3A82F",
       primaryText: colors.text.primary,
       secondary: colors.brand.honey,
       secondaryText: colors.text.primary,
-      accent: "rgba(242,200,120,0.16)",
+      accent: "rgba(244,185,66,0.16)",
       accentText: colors.brand.honey,
       danger: colors.status.errorBorder,
-      dangerSurface: "rgba(199,87,78,0.14)",
-      dangerBorder: "rgba(229,164,159,0.48)",
-      warningSurface: "rgba(192,138,44,0.16)",
-      warningBorder: "rgba(192,138,44,0.36)",
-      mintSurface: "rgba(242,200,120,0.14)",
-      mintBorder: "rgba(242,200,120,0.28)",
+      dangerSurface: "rgba(201,115,106,0.14)",
+      dangerBorder: "rgba(231,180,174,0.46)",
+      warningSurface: "rgba(244,185,66,0.14)",
+      warningBorder: "rgba(244,185,66,0.32)",
+      mintSurface: "rgba(207,227,214,0.14)",
+      mintBorder: "rgba(207,227,214,0.26)",
     },
   },
 } as const;

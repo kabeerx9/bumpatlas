@@ -20,18 +20,17 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { useCreateInviteMutation, useFamilyQuery } from "@/lib/api/hooks";
 
 export function InviteScreen() {
   const router = useRouter();
   const theme = useAppTheme();
-  const { markPartnerJoined, childDisplayName: mockChildDisplayName, householdName: mockHouseholdName } =
-    useMockUi();
+  const { markPartnerJoined } = useAppState();
   const familyQuery = useFamilyQuery();
-  const childDisplayName = familyQuery.data?.childDisplayName ?? mockChildDisplayName;
-  const householdName = familyQuery.data?.name ?? mockHouseholdName;
+  const childDisplayName = familyQuery.data?.childDisplayName ?? "your child";
+  const householdName = familyQuery.data?.name ?? "your household";
   const createInvite = useCreateInviteMutation();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);

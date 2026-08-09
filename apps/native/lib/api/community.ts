@@ -6,6 +6,7 @@ import {
   groupPostSchema,
   listGroupPostsResponseSchema,
   listGroupsResponseSchema,
+  postDetailSchema,
   reportInputSchema,
   type BlockInput,
   type CreateCommentInput,
@@ -47,8 +48,22 @@ export function createComment(postId: string, input: CreateCommentInput) {
   });
 }
 
-export function reactToPost(postId: string) {
-  return apiClient.requestVoid(`/api/v1/posts/${postId}/reactions`, { method: "POST" });
+/** `GET /api/v1/posts/:id` — post plus the first page of its comment thread. */
+export function getPostDetail(postId: string) {
+  return apiClient.requestJson(`/api/v1/posts/${postId}`, postDetailSchema);
+}
+
+/**
+ * Correction 5 (contracts): reaction semantics are PUT (add) / DELETE (remove),
+ * both 204. Native previously called the legacy `POST /reactions` toggle alias
+ * kept only until this migration landed — call the pair directly instead.
+ */
+export function setReaction(postId: string) {
+  return apiClient.requestVoid(`/api/v1/posts/${postId}/reaction`, { method: "PUT" });
+}
+
+export function removeReaction(postId: string) {
+  return apiClient.requestVoid(`/api/v1/posts/${postId}/reaction`, { method: "DELETE" });
 }
 
 export function createReport(input: ReportInput) {

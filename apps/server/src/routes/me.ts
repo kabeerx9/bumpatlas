@@ -1,12 +1,24 @@
 import { getAuth, clerkClient } from "@clerk/fastify";
 import { meResponseSchema } from "@bumpatlas/contracts/me";
-import type { FastifyInstance } from "fastify";
+import { env } from "@bumpatlas/env/server";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 
 import { getOrCreateUserByClerkId, mapClerkApiUser, serializeUser } from "@/services/user";
 
-export async function registerMeRoutes(fastify: FastifyInstance) {
+export type MeRouteDeps = {
+  getAuth: (request: FastifyRequest) => { userId: string | null | undefined };
+};
+
+const defaultDeps: MeRouteDeps = { getAuth };
+
+export async function registerMeRoutes(
+  fastify: FastifyInstance,
+  deps: Partial<MeRouteDeps> = {},
+) {
+  const { getAuth: getAuthFn } = { ...defaultDeps, ...deps };
+
   fastify.get("/api/me", async (request, reply) => {
-    const { userId } = getAuth(request);
+    const { userId } = getAuthFn(request);
 
     if (!userId) {
       return reply.code(401).send({ error: "Unauthorized" });
@@ -17,6 +29,10 @@ export async function registerMeRoutes(fastify: FastifyInstance) {
       return mapClerkApiUser(clerkUser);
     });
 
-    return meResponseSchema.parse(serializeUser(user));
+    // Same allowlist match `requireAuth` uses for `/api/v1/*` routes — kept
+    // independent so `/api/me` never needs the full auth-context machinery.
+    const isAdmin = env.ADMIN_USER_IDS.includes(userId);
+
+    return meResponseSchema.parse(serializeUser(user, isAdmin));
   });
 }

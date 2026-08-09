@@ -38,7 +38,7 @@ function RootStack() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="capture" options={{ presentation: "modal" }} />
         <Stack.Screen name="care" options={{ presentation: "modal" }} />
-        <Stack.Screen name="wellness-packs" />
+        <Stack.Screen name="wellness-packs" options={{ presentation: "modal" }} />
         <Stack.Screen name="memory/[id]" />
         <Stack.Screen name="milestone/[id]" />
         <Stack.Screen name="badges" />
@@ -53,8 +53,8 @@ function RootStack() {
         <Stack.Screen name="connect/report" options={{ presentation: "modal" }} />
         <Stack.Screen name="connect/blocked" />
         <Stack.Screen name="connect/groups" />
-        <Stack.Screen name="recap/[id]" options={{ presentation: "modal" }} />
-        <Stack.Screen name="export-data" />
+        <Stack.Screen name="recap/[id]" />
+        <Stack.Screen name="export-data" options={{ presentation: "modal" }} />
         <Stack.Screen name="notification-settings" />
         <Stack.Screen name="member-roles" />
         <Stack.Screen name="moderation" />

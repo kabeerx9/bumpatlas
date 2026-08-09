@@ -1,4 +1,5 @@
-export { apiClient, useMockData } from "./client";
+export { apiClient } from "./client";
+export * as accountApi from "./account";
 export * as memoriesApi from "./memories";
 export * as todayApi from "./today";
 export * as familiesApi from "./families";

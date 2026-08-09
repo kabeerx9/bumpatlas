@@ -4,6 +4,7 @@ import {
   createInviteInputSchema,
   createInviteResponseSchema,
   familySummarySchema,
+  invitePreviewSchema,
   stageResponseSchema,
   updateMemberInputSchema,
   type AcceptInviteInput,
@@ -35,6 +36,14 @@ export function createInvite(input: CreateInviteInput) {
       method: "POST",
       body: JSON.stringify(body),
     },
+  );
+}
+
+/** Requires a signed-in adult but not household membership — the recipient isn't a member yet. */
+export function getInvitePreview(token: string) {
+  return apiClient.requestJson(
+    `/api/v1/invites/${encodeURIComponent(token)}/preview`,
+    invitePreviewSchema,
   );
 }
 

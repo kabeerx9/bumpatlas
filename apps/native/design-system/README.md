@@ -1,61 +1,115 @@
-# Native Design System — "Warm Nursery Light"
+# Native Design System — "Soft Atlas"
 
-Visual foundation for **BumpAtlas**. Butter canvas, white cards, ink pill CTAs,
-honey selected states, pastel card-stack decks, floating bubble tab bar.
+Visual foundation for **BumpAtlas**. Source of truth is the Claude Design
+project `Bumpatlas.dc.html`; this document is its translation into RN tokens.
 
-## Import Surface
+Pastel gradient canvas, white cards, honey accent, Poppins display over Inter body.
+
+## Import surface
 
 ```ts
-import { AppText, Button, CardStack, Pill, Screen, Surface, colors, spacing, radius, useAppTheme } from "@/design-system";
+import {
+  AppText, Atmosphere, Button, CardStack, Pill, Screen, Surface,
+  colors, spacing, radius, shadows, useAppTheme,
+} from "@/design-system";
 ```
+
+## The four rules
+
+1. **The canvas is a gradient, never a flat fill.** `Screen` renders it. Mint
+   `#EEF5F1` → cream `#FCF1E7` → blush `#FDEAEE` on a 160° diagonal. Use
+   `<Screen tone="soft">` for full-bleed auth/onboarding, default `cream`
+   in-app. Only reach for `Screen background="..."` when a surface genuinely
+   cannot host a gradient.
+2. **Honey `#F4B942` is the only accent, and it is a fill.** Primary CTA,
+   selected chip, active toggle, progress ring, send button. If you need the
+   accent as *text on white*, use `theme.colors.brandText` (`honeyDeep`
+   `#A9741A`) — raw honey on white is ~1.9:1 and fails contrast.
+3. **There is no ink-filled button.** `theme.colors.primary` is honey with ink
+   text in both light and dark. (This changed in this redesign — see below.)
+4. **Poppins is display only, Inter is everything else.** `AppText` handles it:
+   `hero`/`heading`/`title`/`subhead` → Poppins; `body`/`bodySmall`/`caption`/
+   `label` → Inter. Never set `fontFamily` by hand.
 
 ## Palette
 
-- Canvas `colors.surface.app` #F4EDDA (butter) — every screen background.
-- Cards `colors.surface.card` white, radius `lg`(24) or `xl`(32), hairline border + `shadows.card`.
-- CTAs: `Button variant="primary"` = ink pill, white text (honey pill w/ ink text in dark mode). Full-round always.
-- Selected state (chips, toggles, active filter): honey `#F2C878` fill + ink text — `Pill tone="selected"`.
-- Accent washes: `colors.brand.honeySoft`, pastels `colors.pastel.{petal,mint,lemon,sky}`.
-- Never introduce blues/purples as accents. Never hardcode hex in feature screens — add to tokens first.
+| Role | Token | Value |
+|---|---|---|
+| Canvas | `colors.gradient.canvas` | `#EEF5F1 → #FCF1E7 → #FDEAEE` |
+| Card | `theme.colors.surface` | `#FFFFFF` |
+| Ink / display type | `colors.brand.ink` | `#2B231F` |
+| Accent fill | `colors.brand.honey` | `#F4B942` |
+| Accent text | `colors.brand.honeyDeep` | `#A9741A` |
+| Accent wash | `colors.brand.honeySoft` | `#FCEBC8` |
+| Body copy | `theme.colors.textSecondary` | `#6A5A51` |
+| Supporting line | `theme.colors.textTertiary` | `#8A7A72` |
+| Timestamps / counts | `theme.colors.textMuted` | `#9A8C85` |
+| Inactive tab, chevron | `theme.colors.textFaint` | `#C9BDB4` |
+| Divider | `colors.border.subtle` | `#F1E9DE` |
+| Destructive ("Sign out") | `theme.colors.danger` | `#C9736A` |
+| Pastels (avatars, decks) | `colors.pastel.*` | petal / mint / lemon / sky |
 
-## Type
+Never introduce blues or purples as accents. Never hardcode hex in a feature
+screen — add a token first.
 
-All Poppins. Display roles (hero/heading/title) render Poppins SemiBold via `AppText`
-(weight="medium" for a softer look). No serif anywhere anymore.
+## Shape & depth
 
-## Signature elements (use with restraint — one per screen max)
+Radii `md`16 (stat tiles) · `lg`18 (default card) · `xl`22 (hero media) ·
+`sheet`24 (tab bar, sheets) · `full` (every pill, avatar, icon button).
 
-1. **CardStack** — hero card resting on a fanned pastel deck. Use on each tab's single most
-   important card (e.g. Today's capture hero, Guide's daily read). Not on list rows.
-2. **Bubble tab bar** — already implemented in `app/(tabs)/_layout.tsx`. It floats: every
-   scrollable tab screen needs `contentContainerStyle={{ paddingBottom: 120 }}`.
+Shadows are near-invisible by design — separation comes from white-on-wash, not
+elevation. `shadows.soft` for chat bubbles and inputs, `shadows.card` for the
+one hero card on a screen, `shadows.tabBar` for the floating bar. Anything
+heavier stops looking like this app.
+
+## Type scale
+
+Measured off the 402pt iPhone frame in the source design, so these are device
+points: hero 26 · heading 22 · title 18 · subhead 15 · body 14 · bodySmall 13 ·
+caption 12 · label 11 (uppercase, +0.8 tracking). No negative tracking anywhere.
 
 ## Patterns
 
-- Screen root: `Screen` (butter bg comes from theme). Big friendly greeting/heading top-left,
-  circular `IconButton`s top-right (reference: bell + avatar).
-- Filter rows: horizontal `Pill`s, white neutral + honey selected, counts inline ("All 34").
-- Media cards: image top with radius, floating white time/count pill overlaid top-right,
-  title + one-line supporting text below, optional ink circular play/action button.
-- Empty states: pastel wash card + one plain sentence + one ink CTA. No sad emoji walls.
-- Motion: subtle only; respect `useRespectReduceMotion` where it exists.
+- **Screen header** — display title top-left with a one-line muted subtitle
+  under it; circular white `IconButton`s top-right (bell, avatar).
+- **Stat row** — three equal white `md`-radius tiles, emoji glyph, Poppins
+  number, muted caption label.
+- **Hero media card** — `xl` radius image with floating overlays: white status
+  pill top-left, white/honey value pill bottom-right, display title bottom-left.
+- **Filter row** — horizontal `Pill`s, white neutral + honey selected.
+- **Segmented toggle** — white `sheet`-radius container, 6pt padding, honey
+  `md`-radius fill on the active segment.
+- **Timeline** — 2pt `#F1E9DE` rail, honey dot with a 3pt white ring, white
+  card per entry.
+- **Chat** — inbound white bubble with a squared top-left corner, outbound
+  honey bubble with a squared top-right corner, both `lg`-radius elsewhere.
+- **Settings list** — one white `lg`-radius card, rows split by `border.subtle`
+  hairlines, faint chevrons.
+- **Tab bar** — white, `sheet` radius on the top corners only, floats with 8pt
+  side margin. Every scrollable tab screen needs
+  `contentContainerStyle={{ paddingBottom: layout.tabBarScrollPadding }}`.
 
-## Stock imagery (verified URLs — use `Image` with `uri`, add `?w=1200&q=80`)
+## Migration notes (from "Warm Nursery Light")
 
-- https://images.unsplash.com/photo-1522771930-78848d9293e8 — baby in teddy onesie (onboarding hero)
-- https://images.unsplash.com/photo-1519689680058-324335c77eba — baby on pool float, playful
-- https://images.unsplash.com/photo-1555252333-9f8e92e65df9 — newborn feet, soft white (auth)
-- https://images.unsplash.com/photo-1544126592-807ade215a0b — sleeping newborn (memories)
-- https://images.unsplash.com/photo-1546015720-b8b30df5aa27 — yawning baby + teddy (sleep/care)
-- https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4 — toddler + toys flat-lay (journey)
-- https://images.unsplash.com/photo-1492725764893-90b379c2b6e7 — parent lifting baby (connect)
-- https://images.unsplash.com/photo-1476703993599-0035a21b17a9 — parent + two kids couch (family)
-- https://images.unsplash.com/photo-1531983412531-1f49a365ffed — parent + child beach (wellness)
-- https://images.unsplash.com/photo-1457342813143-a1ae27448a82 — pregnant silhouette (pregnancy)
+Three changes are behavioural, not cosmetic — check any screen you touch:
+
+- **`primary` flipped from ink to honey, and `primaryText` from white to ink.**
+  Any screen that hardcoded white text over a `primary` background is now white
+  on honey. Use `theme.colors.primaryText`.
+- **`radius.lg` 24→18 and `radius.xl` 32→22.** Tightly-nested rounded corners
+  may need a pass.
+- **The type scale came down** (hero 34→26, heading 28→22). Layouts that were
+  sized around the old scale get roomier, not tighter.
+
+`Atmosphere` no longer renders positioned "blob" views — it renders a real
+`expo-linear-gradient`. Legacy tokens (`brand.peach*`, `brand.sage*`,
+`transport.*`, `discovery.*`, `brand.butter`) still exist so old call sites
+compile, but they resolve into the Soft Atlas palette. Prefer the named tokens.
 
 ## Rules
 
-- Use `useAppTheme()` semantic colors; both light and dark must look intentional.
+- Read `useAppTheme()` semantic colors; both schemes must look intentional.
 - Tabs: Today, Journey, Connect, Guide, Family.
-- Copy vocabulary: Capture, Care, Learn, Connect, Journey, soft weekly goals — never guilt streaks.
-- Keep accessibility: labels on icon buttons, `accessibilityRole`, min 44pt targets.
+- Copy vocabulary: Capture, Care, Learn, Connect, Journey, soft weekly goals —
+  never guilt streaks.
+- Accessibility: labels on icon buttons, `accessibilityRole`, min 44pt targets.

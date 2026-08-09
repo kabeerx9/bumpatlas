@@ -13,7 +13,7 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { useGroupsQuery } from "@/lib/api/hooks";
 
 const GROUP_TONES = [colors.pastel.petal, colors.pastel.mint, colors.pastel.lemon, colors.pastel.sky];
@@ -29,7 +29,7 @@ export function ConnectGroupsScreen() {
     commentsDailyLimit,
     accountAgeDays,
     linksAllowed,
-  } = useMockUi();
+  } = useAppState();
 
   const groupsQuery = useGroupsQuery();
   const groups = groupsQuery.data?.items ?? [];

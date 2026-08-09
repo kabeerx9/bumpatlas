@@ -4,14 +4,15 @@ import { Pressable, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppText, colors, radius, shadows, spacing } from "@/design-system";
-import { mockBadges } from "@/features/mock/mock-content";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
+import { useBadgesQuery } from "@/lib/api/hooks";
 
 /** Soft toast when a cosmetic badge is newly earned. */
 export function BadgeToast() {
   const insets = useSafeAreaInsets();
-  const { newlyEarnedBadgeId, clearNewlyEarnedBadge } = useMockUi();
-  const badge = mockBadges.find((item) => item.id === newlyEarnedBadgeId);
+  const { newlyEarnedBadgeId, clearNewlyEarnedBadge } = useAppState();
+  const badgesQuery = useBadgesQuery();
+  const badge = badgesQuery.data?.items.find((item) => item.id === newlyEarnedBadgeId);
 
   useEffect(() => {
     if (!newlyEarnedBadgeId) return;

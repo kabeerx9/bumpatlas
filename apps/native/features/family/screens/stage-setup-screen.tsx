@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import {
   AppText,
@@ -12,44 +12,70 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
+import { DateField } from "@/features/shared/components/date-field";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useStageQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 type Mode = "choose" | "pregnancy" | "parent";
+
+const TODAY = new Date();
+const DUE_DATE_MAX = new Date();
+DUE_DATE_MAX.setMonth(DUE_DATE_MAX.getMonth() + 10);
 
 /** Reachable after onboarding when stage is UNKNOWN — finishes profile setup. */
 export function StageSetupScreen() {
   const router = useRouter();
   const theme = useAppTheme();
-  const { applyOnboardingProfile, stageMode } = useMockUi();
+  const { applyOnboardingProfile } = useAppState();
+  const stageQuery = useStageQuery();
+  const stageMode = stageQuery.data?.stageMode ?? "unknown";
   const [mode, setMode] = useState<Mode>("choose");
   const [dueDate, setDueDate] = useState("");
   const [childName, setChildName] = useState("");
   const [childDob, setChildDob] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const canSavePregnancy = dueDate.trim().length > 0;
   const canSaveParent = childName.trim().length > 0 && childDob.trim().length > 0;
 
-  function savePregnancy() {
-    if (!canSavePregnancy) return;
-    applyOnboardingProfile({
-      role: "expecting",
-      dueDate: dueDate.trim(),
-      householdName: "Our household",
-    });
-    router.replace(appRoutes.home);
+  async function savePregnancy() {
+    if (!canSavePregnancy || saving) return;
+    setSaving(true);
+    try {
+      // `existingFamily: true` — the household was already created during
+      // onboarding (stage setup only runs post-onboarding); this must not
+      // call createFamily again and spawn a second household.
+      await applyOnboardingProfile({
+        role: "expecting",
+        dueDate: dueDate.trim(),
+        existingFamily: true,
+      });
+      router.replace(appRoutes.home);
+    } catch {
+      Alert.alert("Couldn’t save", "Check your connection and try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function saveParent() {
-    if (!canSaveParent) return;
-    applyOnboardingProfile({
-      role: "parent",
-      childName: childName.trim(),
-      childDob: childDob.trim(),
-      householdName: `${childName.trim()}'s household`,
-    });
-    router.replace(appRoutes.home);
+  async function saveParent() {
+    if (!canSaveParent || saving) return;
+    setSaving(true);
+    try {
+      await applyOnboardingProfile({
+        role: "parent",
+        childName: childName.trim(),
+        childDob: childDob.trim(),
+        existingFamily: true,
+      });
+      router.replace(appRoutes.home);
+    } catch {
+      Alert.alert("Couldn’t save", "Check your connection and try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -106,17 +132,20 @@ export function StageSetupScreen() {
 
       {mode === "pregnancy" ? (
         <>
-          <AppText weight="semibold">Due date</AppText>
-          <TextInput
+          <DateField
+            label="Due date"
             value={dueDate}
-            onChangeText={setDueDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={theme.colors.textMuted}
-            style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
+            onChange={setDueDate}
+            minimumDate={TODAY}
+            maximumDate={DUE_DATE_MAX}
             accessibilityLabel="Due date"
           />
-          <Button size="lg" disabled={!canSavePregnancy} onPress={savePregnancy}>
-            Save pregnancy stage
+          <Button
+            size="lg"
+            disabled={!canSavePregnancy || saving}
+            onPress={() => void savePregnancy()}
+          >
+            {saving ? "Saving…" : "Save pregnancy stage"}
           </Button>
         </>
       ) : null}
@@ -132,17 +161,19 @@ export function StageSetupScreen() {
             style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
             accessibilityLabel="Child name"
           />
-          <AppText weight="semibold">Date of birth</AppText>
-          <TextInput
+          <DateField
+            label="Date of birth"
             value={childDob}
-            onChangeText={setChildDob}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={theme.colors.textMuted}
-            style={[styles.input, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
+            onChange={setChildDob}
+            maximumDate={TODAY}
             accessibilityLabel="Child date of birth"
           />
-          <Button size="lg" disabled={!canSaveParent} onPress={saveParent}>
-            Save child stage
+          <Button
+            size="lg"
+            disabled={!canSaveParent || saving}
+            onPress={() => void saveParent()}
+          >
+            {saving ? "Saving…" : "Save child stage"}
           </Button>
         </>
       ) : null}

@@ -36,6 +36,7 @@ export function ExportDataScreen() {
   return (
     <SoftStackShell
       title="Export data"
+      closeIcon="x"
       onBack={() => router.back()}
       footer={
         <Button

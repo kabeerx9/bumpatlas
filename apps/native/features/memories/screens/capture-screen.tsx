@@ -16,13 +16,15 @@ import {
 } from "react-native";
 
 import { AppText, Button, IconButton, Pill, Surface, colors, radius, spacing, useAppTheme } from "@/design-system";
-import { mockMemoryPrompts } from "@/features/mock/demo-data";
-import { mockPregnancy } from "@/features/mock/mock-content";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { DateField } from "@/features/shared/components/date-field";
+import { formatShortDate } from "@/features/shared/lib/format-date";
+import { pregnancyContent } from "@/features/pregnancy/data/pregnancy-content";
 import { DraftQueuePanel } from "@/features/shared/components/draft-queue-panel";
 import { OfflineBanner } from "@/features/shared/components/offline-banner";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
-import { queryKeys, useEntitlementsQuery, useTodayQuery } from "@/lib/api/hooks";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
+import { queryKeys, useEntitlementsQuery, useFamilyQuery, useTodayQuery } from "@/lib/api/hooks";
+import { FEATURES } from "@/lib/features";
 import type { PreparedPhoto } from "@/lib/media/pick-and-prepare";
 import { pickAndPreparePhoto } from "@/lib/media/pick-and-prepare";
 import { saveMemoryWithOptionalUpload } from "@/lib/memories/save-memory";
@@ -30,15 +32,24 @@ import { appRoutes } from "@/navigation/routes";
 
 type PhotoState = "none" | "selected" | "failed" | "denied";
 
+const CAPTURE_PROMPTS = [
+  "What made today feel a little easier?",
+  "One small moment worth keeping",
+  "What surprised you today?",
+];
+
 const BACKDATE_OPTIONS = ["Today", "Yesterday", "2 days ago", "Pick a date…"];
+const TODAY = new Date();
 
 export function CaptureScreen() {
   const router = useRouter();
   const theme = useAppTheme();
   const queryClient = useQueryClient();
-  const { isOffline, saveDraft, completeCapture, stageMode } = useMockUi();
+  const { isOffline, saveDraft } = useAppState();
   const todayQuery = useTodayQuery();
+  const familyQuery = useFamilyQuery();
   const entitlementsQuery = useEntitlementsQuery();
+  const stageMode = familyQuery.data?.stageMode ?? "postpartum";
   const [localMediaBump, setLocalMediaBump] = useState(0);
   const mediaUploadsUsed = (todayQuery.data?.mediaUploadsUsed ?? 0) + localMediaBump;
   const mediaUploadsLimit =
@@ -52,13 +63,15 @@ export function CaptureScreen() {
   const [eventDate, setEventDate] = useState("Today");
   const [customDate, setCustomDate] = useState("");
   const [visibility, setVisibility] = useState<"household" | "private">("household");
-  const [awardedBadge, setAwardedBadge] = useState<string | null>(null);
   const [promptIndex, setPromptIndex] = useState(0);
 
   const mediaNearLimit = mediaUploadsUsed >= mediaUploadsLimit - 1;
   const mediaExhausted = mediaUploadsUsed >= mediaUploadsLimit;
-  const rotatingPrompt = mockMemoryPrompts[promptIndex % mockMemoryPrompts.length];
-  const prompt = stageMode === "pregnancy" ? mockPregnancy.bumpPrompt : rotatingPrompt;
+  const rotatingPrompt = CAPTURE_PROMPTS[promptIndex % CAPTURE_PROMPTS.length];
+  const prompt =
+    stageMode === "pregnancy"
+      ? pregnancyContent.bumpPrompt
+      : (todayQuery.data?.cards.capture.prompt ?? rotatingPrompt);
 
   async function runPick(source: "library" | "camera") {
     if (mediaExhausted || picking) return;
@@ -111,7 +124,8 @@ export function CaptureScreen() {
 
   async function saveMoment() {
     if (saving) return;
-    const resolvedDate = eventDate === "Pick a date…" ? customDate || "Custom date" : eventDate;
+    const resolvedDate =
+      eventDate === "Pick a date…" ? formatShortDate(customDate) || "Custom date" : eventDate;
     const visibilityValue = visibility === "private" ? "PRIVATE" : "HOUSEHOLD";
 
     if (isOffline) {
@@ -128,7 +142,7 @@ export function CaptureScreen() {
 
     setSaving(true);
     try {
-      const saved = await saveMemoryWithOptionalUpload({
+      await saveMemoryWithOptionalUpload({
         body: body.trim(),
         eventDate: eventDate === "Pick a date…" ? "Pick a date…" : eventDate,
         customDate,
@@ -140,16 +154,12 @@ export function CaptureScreen() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.memories }),
         queryClient.invalidateQueries({ queryKey: queryKeys.today }),
+        // A capture can be the "first memory" badge — refresh badges so the
+        // global celebration toast (app-state-provider) picks it up.
+        queryClient.invalidateQueries({ queryKey: queryKeys.badges }),
       ]);
 
-      const result = completeCapture({
-        body: body.trim(),
-        eventDate: saved.eventDateIso,
-        hasPhoto: photoState === "selected",
-        visibility: visibilityValue,
-      });
-      if (result.awardedBadgeId) setAwardedBadge(result.awardedBadgeId);
-      else router.back();
+      router.back();
     } catch {
       Alert.alert(
         "Couldn’t save",
@@ -205,18 +215,6 @@ export function CaptureScreen() {
           </Surface>
         ) : null}
 
-        {awardedBadge ? (
-          <Surface tone="lavender" style={styles.savedBanner} padding="md" bordered={false}>
-            <Feather name="award" size={16} color={theme.colors.accentText} />
-            <AppText variant="bodySmall">First Capture badge earned — no streak to protect</AppText>
-            <Pressable onPress={() => router.back()} hitSlop={8}>
-              <AppText variant="caption" weight="semibold" tone="brand">
-                Back to Today
-              </AppText>
-            </Pressable>
-          </Surface>
-        ) : null}
-
         <ScrollView
           style={styles.flex}
           contentContainerStyle={styles.body}
@@ -260,94 +258,96 @@ export function CaptureScreen() {
             })}
           </View>
           {eventDate === "Pick a date…" ? (
-            <TextInput
+            <DateField
+              label="Custom date"
               value={customDate}
-              onChangeText={setCustomDate}
-              placeholder="Jul 20, 2026"
-              placeholderTextColor={colors.text.muted}
-              style={styles.dateInput}
+              onChange={setCustomDate}
+              maximumDate={TODAY}
+              accessibilityLabel="Custom event date"
             />
           ) : null}
 
-          {photoState === "selected" && photo ? (
-            <View style={styles.photoPreview}>
-              <Image source={{ uri: photo.uri }} style={styles.photoImage} />
-              <View style={styles.photoMeta}>
-                <AppText weight="semibold">Photo added</AppText>
-                <AppText variant="caption" tone="secondary">
-                  Compressed · EXIF / GPS stripped
+          {FEATURES.photos ? (
+            photoState === "selected" && photo ? (
+              <View style={styles.photoPreview}>
+                <Image source={{ uri: photo.uri }} style={styles.photoImage} />
+                <View style={styles.photoMeta}>
+                  <AppText weight="semibold">Photo added</AppText>
+                  <AppText variant="caption" tone="secondary">
+                    Compressed · EXIF / GPS stripped
+                  </AppText>
+                  <AppText variant="caption" tone="secondary">
+                    Media uploads {mediaUploadsUsed}/{mediaUploadsLimit} this month
+                  </AppText>
+                  <Pressable
+                    onPress={() => {
+                      setPhoto(null);
+                      setPhotoState("none");
+                      setLocalMediaBump((count) => Math.max(0, count - 1));
+                    }}
+                    accessibilityLabel="Remove photo"
+                  >
+                    <AppText variant="caption" weight="semibold" tone="brand" style={styles.removePhotoSpacing}>
+                      Remove photo
+                    </AppText>
+                  </Pressable>
+                </View>
+              </View>
+            ) : photoState === "failed" || photoState === "denied" ? (
+              <View style={styles.failBox}>
+                <AppText weight="semibold">
+                  {photoState === "denied" ? "Photo permission needed" : "Photo didn’t prepare"}
+                </AppText>
+                <AppText variant="bodySmall" tone="secondary">
+                  Your note is safe. Retry the photo or save text only.
+                </AppText>
+                <View style={styles.failActions}>
+                  <Button size="sm" variant="ghost" onPress={pickPhoto}>
+                    Retry photo
+                  </Button>
+                  <Button size="sm" onPress={() => void saveMoment()}>
+                    Save text only
+                  </Button>
+                </View>
+              </View>
+            ) : (
+              <Pressable
+                style={styles.photoBox}
+                onPress={pickPhoto}
+                accessibilityLabel="Add a photo"
+                disabled={mediaExhausted || picking}
+              >
+                <View style={[styles.cameraCircle, { backgroundColor: theme.colors.primary }]}>
+                  <Feather name="camera" size={22} color={theme.colors.primaryText} />
+                </View>
+                <AppText weight="semibold">
+                  {mediaExhausted
+                    ? "Photo limit reached"
+                    : picking
+                      ? "Preparing photo…"
+                      : "Add a photo"}
                 </AppText>
                 <AppText variant="caption" tone="secondary">
-                  Media uploads {mediaUploadsUsed}/{mediaUploadsLimit} this month
+                  {mediaExhausted
+                    ? `Free tier: ${mediaUploadsLimit} uploads/month · text still saves`
+                    : mediaNearLimit
+                      ? `Almost at free media limit · ${mediaUploadsUsed}/${mediaUploadsLimit}`
+                      : "Optional — compressed & stripped of location data"}
                 </AppText>
-                <Pressable
-                  onPress={() => {
-                    setPhoto(null);
-                    setPhotoState("none");
-                    setLocalMediaBump((count) => Math.max(0, count - 1));
-                  }}
-                  accessibilityLabel="Remove photo"
-                >
-                  <AppText variant="caption" weight="semibold" tone="brand" style={styles.removePhotoSpacing}>
-                    Remove photo
-                  </AppText>
-                </Pressable>
-              </View>
-            </View>
-          ) : photoState === "failed" || photoState === "denied" ? (
-            <View style={styles.failBox}>
-              <AppText weight="semibold">
-                {photoState === "denied" ? "Photo permission needed" : "Photo didn’t prepare"}
-              </AppText>
-              <AppText variant="bodySmall" tone="secondary">
-                Your note is safe. Retry the photo or save text only.
-              </AppText>
-              <View style={styles.failActions}>
-                <Button size="sm" variant="ghost" onPress={pickPhoto}>
-                  Retry photo
-                </Button>
-                <Button size="sm" onPress={() => void saveMoment()}>
-                  Save text only
-                </Button>
-              </View>
-            </View>
-          ) : (
-            <Pressable
-              style={styles.photoBox}
-              onPress={pickPhoto}
-              accessibilityLabel="Add a photo"
-              disabled={mediaExhausted || picking}
-            >
-              <View style={[styles.cameraCircle, { backgroundColor: theme.colors.primary }]}>
-                <Feather name="camera" size={22} color={theme.colors.primaryText} />
-              </View>
-              <AppText weight="semibold">
-                {mediaExhausted
-                  ? "Photo limit reached"
-                  : picking
-                    ? "Preparing photo…"
-                    : "Add a photo"}
-              </AppText>
-              <AppText variant="caption" tone="secondary">
-                {mediaExhausted
-                  ? `Free tier: ${mediaUploadsLimit} uploads/month · text still saves`
-                  : mediaNearLimit
-                    ? `Almost at free media limit · ${mediaUploadsUsed}/${mediaUploadsLimit}`
-                    : "Optional — compressed & stripped of location data"}
-              </AppText>
-              {mediaNearLimit || mediaExhausted ? (
-                <Pressable
-                  onPress={() => router.push(appRoutes.paywall("media-quota"))}
-                  hitSlop={8}
-                  accessibilityLabel="View premium media quota"
-                >
-                  <AppText variant="caption" weight="semibold" tone="brand" style={styles.removePhotoSpacing}>
-                    View premium media options
-                  </AppText>
-                </Pressable>
-              ) : null}
-            </Pressable>
-          )}
+                {mediaNearLimit || mediaExhausted ? (
+                  <Pressable
+                    onPress={() => router.push(appRoutes.paywall("media-quota"))}
+                    hitSlop={8}
+                    accessibilityLabel="View premium media quota"
+                  >
+                    <AppText variant="caption" weight="semibold" tone="brand" style={styles.removePhotoSpacing}>
+                      View premium media options
+                    </AppText>
+                  </Pressable>
+                ) : null}
+              </Pressable>
+            )
+          ) : null}
 
           <AppText weight="semibold">Who can see this?</AppText>
           <View style={styles.dateRow}>
@@ -385,7 +385,7 @@ export function CaptureScreen() {
             {visibility === "private"
               ? "Only you — not shared with household or Connect."
               : "Visible to your household only — not Connect."}{" "}
-            Event date: {eventDate === "Pick a date…" ? customDate || "—" : eventDate}
+            Event date: {eventDate === "Pick a date…" ? formatShortDate(customDate) : eventDate}
           </AppText>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -424,14 +424,6 @@ const styles = StyleSheet.create({
   },
   promptLink: { color: colors.brand.honey },
   dateRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  dateInput: {
-    minHeight: 48,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface.card,
-    paddingHorizontal: spacing.lg,
-    color: colors.text.primary,
-    fontFamily: "Poppins_400Regular",
-  },
   photoBox: {
     minHeight: 160,
     borderRadius: radius.xl,

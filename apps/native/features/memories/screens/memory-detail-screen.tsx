@@ -13,6 +13,7 @@ import {
 
 import { AppText, Button, Pill, Surface, colors, radius, spacing, useAppTheme } from "@/design-system";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { formatShortDate } from "@/features/shared/lib/format-date";
 import {
   useDeleteMemoryMutation,
   useFamilyQuery,
@@ -257,7 +258,7 @@ export function MemoryDetailScreen() {
       </View>
 
           <AppText variant="caption" tone="secondary">
-            {memory.eventDate} · {memory.authorName} · for {childDisplayName}
+            {formatShortDate(memory.eventDate)} · {memory.authorName} · for {childDisplayName}
           </AppText>
 
           {mode === "view" ? (

@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from "react-native";
 
 import { spacing } from "@/design-system";
 import { OnboardingShell } from "@/features/onboarding/components/onboarding-shell";
@@ -13,7 +13,7 @@ import { ProfileStep } from "@/features/onboarding/components/steps/profile-step
 import { RoleStep, type OnboardingRole } from "@/features/onboarding/components/steps/role-step";
 import { WelcomeStep } from "@/features/onboarding/components/steps/welcome-step";
 import { useOnboarding } from "@/features/onboarding/providers/onboarding-provider";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { enablePushAndRegister } from "@/lib/notifications/push";
 import { appRoutes } from "@/navigation/routes";
 
@@ -32,11 +32,12 @@ const TOTAL_STEPS = ONBOARDING_STEPS.length;
 
 export function OnboardingScreen() {
   const { completeOnboarding } = useOnboarding();
-  const { applyOnboardingProfile } = useMockUi();
+  const { applyOnboardingProfile } = useAppState();
   const router = useRouter();
 
   const [stepIndex, setStepIndex] = useState(0);
   const step = ONBOARDING_STEPS[stepIndex];
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [attested, setAttested] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -97,11 +98,12 @@ export function OnboardingScreen() {
   ]);
 
   const continueLabel = useMemo(() => {
+    if (isSubmitting) return "Saving…";
     if (step === "invite") return "Invite partner";
     if (step === "notifications") return "Continue";
     if (step === "welcome") return "Continue";
     return "Save & Continue";
-  }, [step]);
+  }, [isSubmitting, step]);
 
   function goBack() {
     if (stepIndex > 0) {
@@ -116,20 +118,36 @@ export function OnboardingScreen() {
   }
 
   async function finishOnboarding(destination: "home" | "invite") {
-    await applyOnboardingProfile({
-      role,
-      dueDate,
-      childName,
-      childDob,
-      householdName: resolvedHouseholdName,
-      primaryGoal: goal,
-      notificationPrefs,
-    });
-    await completeOnboarding();
-    router.replace(destination === "invite" ? appRoutes.invite : appRoutes.home);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await applyOnboardingProfile({
+        role,
+        dueDate,
+        childName,
+        childDob,
+        householdName: resolvedHouseholdName,
+        primaryGoal: goal,
+        notificationPrefs,
+      });
+      await completeOnboarding();
+      router.replace(destination === "invite" ? appRoutes.invite : appRoutes.home);
+    } catch {
+      // Family/pregnancy/consent writes failed server-side — stay on this
+      // step rather than marking onboarding complete for a household that
+      // was never created.
+      Alert.alert(
+        "Couldn't finish setup",
+        "Check your connection and try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   async function handleContinue() {
+    if (isSubmitting) return;
+
     if (step === "invite") {
       await finishOnboarding("invite");
       return;
@@ -164,8 +182,8 @@ export function OnboardingScreen() {
     <OnboardingShell
       stepIndex={stepIndex + 1}
       totalSteps={TOTAL_STEPS}
-      canContinue={canContinue}
-      onBack={stepIndex > 0 ? goBack : undefined}
+      canContinue={canContinue && !isSubmitting}
+      onBack={stepIndex > 0 && !isSubmitting ? goBack : undefined}
       onContinue={() => void handleContinue()}
       continueLabel={continueLabel}
       secondaryLabel={step === "invite" ? "Skip for now" : undefined}

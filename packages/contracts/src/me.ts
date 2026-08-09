@@ -6,6 +6,15 @@ export const meResponseSchema = z.object({
   email: z.string().nullable(),
   name: z.string().nullable(),
   imageUrl: z.string().nullable(),
+  /**
+   * Whether this caller matches the server's `ADMIN_USER_IDS` allowlist
+   * (`requireAuth`'s `AuthContext.isAdmin`). Purely a UI signal — it drives
+   * whether the web app shows the Admin nav link and lets `/admin` render an
+   * immediate not-found instead of round-tripping to the metrics endpoint.
+   * The server-side 404 cloak on `/api/v1/admin/*` (`requireAdmin`) is the
+   * real boundary and does not depend on this field.
+   */
+  isAdmin: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });

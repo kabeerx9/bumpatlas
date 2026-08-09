@@ -10,13 +10,11 @@ import {
   View,
 } from "react-native";
 
+import { ApiError } from "@bumpatlas/contracts";
+
 import { AppText, Button, borderWidth, colors, radius, spacing, useAppTheme } from "@/design-system";
-import {
-  useDeleteAccountMutation,
-  useUpdateAccountMutation,
-} from "@/features/profile/mutations";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
-import { ApiError } from "@/lib/api";
+import { useDeleteAccountMutation, useUpdateAccountMutation } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
 function getErrorMessage(error: unknown, fallback: string) {

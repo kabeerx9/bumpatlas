@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
 import { AppText, borderWidth, radius, spacing, useAppTheme } from "@/design-system";
-import { mockLegalDocuments, type LegalDocId } from "@/features/mock/mock-content";
+import { legalDocuments, type LegalDocId } from "@/features/legal/data/legal-documents";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 
 export function LegalDocumentScreen() {
@@ -10,7 +10,7 @@ export function LegalDocumentScreen() {
   const theme = useAppTheme();
   const { doc } = useLocalSearchParams<{ doc: string }>();
   const docId = (doc ?? "privacy") as LegalDocId;
-  const document = mockLegalDocuments[docId] ?? mockLegalDocuments.privacy;
+  const document = legalDocuments[docId] ?? legalDocuments.privacy;
 
   return (
     <SoftStackShell title={document.title} onBack={() => router.back()}>

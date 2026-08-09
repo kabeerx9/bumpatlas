@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, Button, Pill, Surface, colors, radius, spacing } from "@/design-system";
-import { mockWellnessPacks } from "@/features/mock/mock-content";
+import { wellnessPacks } from "@/features/challenges/data/wellness-packs";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { appRoutes } from "@/navigation/routes";
 
@@ -15,13 +15,13 @@ export function WellnessPacksScreen() {
   const router = useRouter();
 
   return (
-    <SoftStackShell title="Wellness packs" onBack={() => router.back()}>
+    <SoftStackShell title="Wellness packs" closeIcon="x" onBack={() => router.back()}>
       <AppText variant="bodySmall" tone="secondary">
         Parent care only — not workouts. Skip anytime. Completing Care never takes away your
         memory progress.
       </AppText>
 
-      {mockWellnessPacks.map((pack) => (
+      {wellnessPacks.map((pack) => (
         <Surface key={pack.id} elevated radiusSize="xl" padding="none" style={styles.card}>
           <View style={styles.media}>
             <Image

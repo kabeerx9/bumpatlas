@@ -14,9 +14,11 @@ import {
 import { Input } from "@bumpatlas/ui/components/input";
 import { Label } from "@bumpatlas/ui/components/label";
 
+import { PageShell } from "@/components/page-shell";
 import { ApiError, deleteAccount, updateAccount } from "@/lib/api";
 
 export const Route = createFileRoute("/_auth/account")({
+  head: () => ({ meta: [{ title: "Account · BumpAtlas" }] }),
   component: AccountPage,
 });
 
@@ -77,10 +79,12 @@ function AccountPage() {
   const canDelete = deleteConfirmation === "DELETE";
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+    <PageShell className="flex max-w-2xl flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Account</h1>
-        <p className="text-muted-foreground">Update your profile or delete your account.</p>
+        <h1 className="font-display text-3xl text-foreground">Account</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Update your profile or delete your account.
+        </p>
       </div>
 
       <Card>
@@ -149,6 +153,6 @@ function AccountPage() {
           </Button>
         </CardFooter>
       </Card>
-    </div>
+    </PageShell>
   );
 }

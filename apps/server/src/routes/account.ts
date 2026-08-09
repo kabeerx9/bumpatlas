@@ -4,6 +4,7 @@ import {
   updateAccountInputSchema,
 } from "@bumpatlas/contracts/account";
 import { meResponseSchema } from "@bumpatlas/contracts/me";
+import { env } from "@bumpatlas/env/server";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
 import {
@@ -82,7 +83,8 @@ export async function registerAccountRoutes(
     }
 
     try {
-      const me = await updateAccount(userId, parsed.data, updateClerkUser);
+      const isAdmin = env.ADMIN_USER_IDS.includes(userId);
+      const me = await updateAccount(userId, parsed.data, updateClerkUser, isAdmin);
       return meResponseSchema.parse(me);
     } catch (error) {
       request.log.error({ err: error }, "Failed to update account");

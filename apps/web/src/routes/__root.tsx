@@ -2,8 +2,10 @@ import { Toaster } from "@bumpatlas/ui/components/sonner";
 import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
+import Footer from "@/components/footer";
 import Header from "@/components/header";
 import { ThemeProvider } from "@/components/theme-provider";
+import { MeProvider } from "@/context/me-context";
 
 import "../index.css";
 
@@ -14,11 +16,12 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
   head: () => ({
     meta: [
       {
-        title: "Fullstack Monorepo Starter",
+        title: "BumpAtlas",
       },
       {
         name: "description",
-        content: "A reusable TypeScript starter for web, native, and API projects.",
+        content:
+          "Capture one meaningful moment, take one small step for yourself, learn one relevant thing, and stay connected with your stage — in a few calm minutes a day.",
       },
     ],
     links: [
@@ -45,10 +48,13 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <div className="grid min-h-svh grid-rows-[auto_1fr]">
-          <Header />
-          <Outlet />
-        </div>
+        <MeProvider>
+          <div className="grid min-h-svh grid-rows-[auto_1fr_auto] bg-background">
+            <Header />
+            <Outlet />
+            <Footer />
+          </div>
+        </MeProvider>
         <Toaster richColors />
       </ThemeProvider>
       {showRouterDevtools ? <TanStackRouterDevtools position="bottom-left" /> : null}

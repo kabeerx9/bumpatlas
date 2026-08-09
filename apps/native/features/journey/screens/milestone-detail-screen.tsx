@@ -1,7 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
+
+import type { MilestoneStatus } from "@bumpatlas/contracts";
 
 import {
   AppText,
@@ -15,35 +17,58 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { mockMilestoneDetails } from "@/features/mock/mock-content";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useMilestonesQuery, useUpsertMilestoneObservationMutation } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
-type MilestoneStatus = "NOT_OBSERVED" | "EMERGING" | "OBSERVED" | "SKIPPED";
-
 const STATUSES: Array<{ id: MilestoneStatus; label: string }> = [
-  { id: "NOT_OBSERVED", label: "Not observed" },
-  { id: "EMERGING", label: "Emerging" },
-  { id: "OBSERVED", label: "Observed" },
-  { id: "SKIPPED", label: "Skipped" },
+  { id: "not_observed", label: "Not observed" },
+  { id: "emerging", label: "Emerging" },
+  { id: "observed", label: "Observed" },
+  { id: "skipped", label: "Skipped" },
 ];
 
 export function MilestoneDetailScreen() {
   const router = useRouter();
   const theme = useAppTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { milestoneStatuses, setMilestoneStatus } = useMockUi();
+  const milestonesQuery = useMilestonesQuery();
+  const upsertObservation = useUpsertMilestoneObservationMutation();
 
-  const milestone = useMemo(
-    () => mockMilestoneDetails.find((item) => item.id === id) ?? mockMilestoneDetails[0],
-    [id],
-  );
-
-  const currentStatus =
-    milestoneStatuses[milestone.id] ??
-    (milestone.status.toUpperCase().replace(" ", "_") as MilestoneStatus);
+  const definition = milestonesQuery.data?.definitions.find((item) => item.id === id);
+  const observation = milestonesQuery.data?.observations.find((item) => item.definitionId === id);
+  const childId = milestonesQuery.data?.childId ?? null;
+  const currentStatus: MilestoneStatus = observation?.status ?? "not_observed";
 
   const [linked, setLinked] = useState(false);
+
+  function recordStatus(status: MilestoneStatus) {
+    if (!definition || !childId) return;
+    upsertObservation.mutate({
+      definitionId: definition.id,
+      body: { childId, status, memoryId: observation?.memoryId ?? null },
+    });
+  }
+
+  if (milestonesQuery.isLoading) {
+    return (
+      <Screen contentStyle={styles.loadingScreen}>
+        <ActivityIndicator color={theme.colors.secondary} />
+      </Screen>
+    );
+  }
+
+  if (!definition) {
+    return (
+      <Screen contentStyle={styles.loadingScreen}>
+        <AppText variant="heading" align="center">
+          Milestone not found
+        </AppText>
+        <Button size="lg" onPress={() => router.back()} style={styles.notFoundCta}>
+          Back
+        </Button>
+      </Screen>
+    );
+  }
 
   return (
     <Screen padded={false} contentStyle={styles.screenFlex}>
@@ -59,17 +84,19 @@ export function MilestoneDetailScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={[styles.hero, { backgroundColor: colors.pastel.lemon }]}>
-          <View style={styles.agePillFloating}>
-            <AppText variant="caption" weight="semibold">
-              {milestone.window}
-            </AppText>
-          </View>
+          {definition.stageTags.length > 0 ? (
+            <View style={styles.agePillFloating}>
+              <AppText variant="caption" weight="semibold">
+                {definition.stageTags.join(", ")}
+              </AppText>
+            </View>
+          ) : null}
           <View style={styles.iconChip}>
             <Feather name="star" size={22} color={theme.colors.text} />
           </View>
-          <AppText variant="heading">{milestone.title}</AppText>
+          <AppText variant="heading">{definition.title}</AppText>
           <Pill tone="selected">
-            {STATUSES.find((s) => s.id === currentStatus)?.label ?? milestone.status}
+            {STATUSES.find((s) => s.id === currentStatus)?.label ?? currentStatus}
           </Pill>
         </View>
 
@@ -84,41 +111,43 @@ export function MilestoneDetailScreen() {
               return (
                 <Pressable
                   key={status.id}
-                  onPress={() => setMilestoneStatus(milestone.id, status.id)}
+                  onPress={() => recordStatus(status.id)}
+                  disabled={!childId || upsertObservation.isPending}
                   accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
+                  accessibilityState={{ selected: active, disabled: !childId }}
                 >
                   <Pill tone={active ? "selected" : "neutral"}>{status.label}</Pill>
                 </Pressable>
               );
             })}
           </View>
+          {!childId ? (
+            <AppText variant="caption" tone="secondary">
+              Observations unlock once a child is added to your household.
+            </AppText>
+          ) : null}
         </Surface>
 
         <Surface style={styles.card} radiusSize="xl">
           <AppText weight="semibold">What this means</AppText>
           <AppText variant="bodySmall" tone="secondary" style={styles.note}>
-            {milestone.note}
+            {definition.guidance}
           </AppText>
         </Surface>
 
-        {milestone.canLinkMemory ? (
-          <>
-            <Button
-              size="lg"
-              onPress={() => {
-                setLinked(true);
-                router.push(appRoutes.capture);
-              }}
-            >
-              Link a memory to this milestone
-            </Button>
-            {linked ? (
-              <AppText variant="caption" tone="secondary" align="center">
-                Opening Capture — you can attach a moment for this milestone.
-              </AppText>
-            ) : null}
-          </>
+        <Button
+          size="lg"
+          onPress={() => {
+            setLinked(true);
+            router.push(appRoutes.capture);
+          }}
+        >
+          Link a memory to this milestone
+        </Button>
+        {linked ? (
+          <AppText variant="caption" tone="secondary" align="center">
+            Opening Capture — you can attach a moment for this milestone.
+          </AppText>
         ) : null}
       </ScrollView>
     </Screen>
@@ -127,6 +156,8 @@ export function MilestoneDetailScreen() {
 
 const styles = StyleSheet.create({
   screenFlex: { flex: 1 },
+  loadingScreen: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md },
+  notFoundCta: { marginTop: spacing.lg, alignSelf: "stretch" },
   header: {
     paddingHorizontal: spacing.page,
     paddingTop: spacing.lg,

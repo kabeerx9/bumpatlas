@@ -41,7 +41,7 @@ export function TodayActionTile({
     >
       <View style={styles.top}>
         <View style={[styles.iconWrap, emphasized && styles.iconEmphasized]}>
-          <Feather name={icon} size={18} color={emphasized ? colors.text.inverse : colors.brand.honeyDeep} />
+          <Feather name={icon} size={18} color={emphasized ? colors.brand.ink : colors.brand.honeyDeep} />
         </View>
         {emphasized ? (
           <AppText variant="caption" weight="semibold" style={styles.focusChip}>
@@ -49,7 +49,7 @@ export function TodayActionTile({
           </AppText>
         ) : done ? (
           <View style={styles.done}>
-            <Feather name="check" size={11} color={colors.text.inverse} />
+            <Feather name="check" size={11} color={colors.brand.ink} />
           </View>
         ) : null}
       </View>

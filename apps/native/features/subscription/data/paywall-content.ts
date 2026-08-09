@@ -1,0 +1,36 @@
+/** Static paywall marketing copy — real content, no CMS endpoint yet. */
+export const paywallContent = {
+  monthlyPrice: "$6.99",
+  annualPrice: "$59",
+  foundingAnnualPrice: "$49",
+  foundingLabel: "Founding price · first 90 days",
+  freeForever: [
+    "Today loop — Capture, Care, Learn, Connect",
+    "Core journal with text and compressed photos",
+    "Household with 2 adults",
+    "Weekly standard recap",
+    "Stage group participation",
+    "5 AI messages per day",
+    "Export and delete your data",
+    "Safety content always free",
+  ],
+  premiumIncludes: [
+    "Higher media quota and original quality",
+    "Unlimited children and journals",
+    "Premium recap themes and “on this day”",
+    "30 AI messages per day",
+    "Up to 6 household seats",
+    "Premium guided wellness packs",
+    "Advanced search across your journal",
+  ],
+  contextualHeadlines: {
+    recap: "Unlock premium recap themes",
+    "ai-quota": "More calm answers when you need them",
+    "third-seat": "Room for everyone who helps",
+    "media-quota": "Keep every photo without worry",
+    wellness: "Unlock guided wellness packs",
+    search: "Search every moment in your journal",
+    "on-this-day": "Relive moments from this day last month",
+    default: "Premium for your whole household",
+  } as Record<string, string>,
+};

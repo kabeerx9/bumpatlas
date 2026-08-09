@@ -2,7 +2,6 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 import { registerPushToken } from "@/lib/api/notifications";
-import { useMockData } from "@/lib/api/client";
 
 export type PushPermissionStatus = "granted" | "denied" | "undetermined";
 
@@ -98,7 +97,7 @@ export async function getExpoPushToken(): Promise<string | null> {
 }
 
 /**
- * Request OS permission and register the token with the API when not in mock mode.
+ * Request OS permission and register the token with the API.
  * Safe no-op when native notifications are unavailable.
  */
 export async function enablePushAndRegister(): Promise<{
@@ -112,7 +111,7 @@ export async function enablePushAndRegister(): Promise<{
   }
 
   const token = await getExpoPushToken();
-  if (!token || useMockData) {
+  if (!token) {
     return { permission, token, registered: false };
   }
 

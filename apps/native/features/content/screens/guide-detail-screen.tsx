@@ -12,7 +12,7 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useBookmarkContentMutation, useContentDetailQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
@@ -40,7 +40,7 @@ export function GuideDetailScreen() {
   const router = useRouter();
   const theme = useAppTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { markLearnDone } = useMockUi();
+  const { markLearnDone } = useAppState();
   const guideQuery = useContentDetailQuery(id ?? "");
   const bookmarkMutation = useBookmarkContentMutation();
   const guide = guideQuery.data;
@@ -71,10 +71,28 @@ export function GuideDetailScreen() {
     router.back();
   }
 
-  if (guideQuery.isLoading || !guide) {
+  if (guideQuery.isLoading) {
     return (
       <SoftStackShell title="Guide" onBack={() => router.back()} centered>
         <ActivityIndicator color={theme.colors.primary} />
+      </SoftStackShell>
+    );
+  }
+
+  /** Query failed (unpublished, removed, or bad id) — a calm dead end, not an infinite spinner. */
+  if (!guide) {
+    return (
+      <SoftStackShell title="Guide" onBack={() => router.back()} centered>
+        <Feather name="book-open" size={28} color={theme.colors.textMuted} />
+        <AppText variant="heading" weight="semibold" align="center">
+          Article not available
+        </AppText>
+        <AppText variant="body" tone="secondary" align="center">
+          This guide may have been unpublished or the link is out of date.
+        </AppText>
+        <Button size="lg" variant="ghost" onPress={() => router.back()}>
+          Go back
+        </Button>
       </SoftStackShell>
     );
   }

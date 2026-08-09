@@ -1,12 +1,25 @@
+import { randomBytes } from "node:crypto";
+
 import prisma from "../index";
 import {
   DEMO_COMMUNITY_POSTS,
   DEMO_COMPLETIONS,
   DEMO_HOUSEHOLDS,
   DEMO_MEMORIES,
-  demoImageUrl,
+  DEMO_NEIGHBOURS,
+  DEMO_RECAPS,
   type DemoHousehold,
 } from "./data";
+import { DEMO_AVATARS, DEMO_IMAGES, demoImageUrl } from "./images";
+
+/**
+ * Clerk-id prefix for the local-only cohort voices.
+ *
+ * Doubles as the marker for "this group's demo conversation has been seeded" and as the
+ * handle teardown uses to find them again — they are the only rows that identify a seeded
+ * community identity, so the prefix is defined once rather than typed in three places.
+ */
+export const COHORT_CLERK_PREFIX = "demo_cohort_";
 
 /**
  * Populates a demo household around an existing user row.
@@ -66,6 +79,7 @@ export async function attachDemoHousehold(
       clerkId: input.coParent.clerkId,
       email: input.coParent.email,
       name: household.coParent.name,
+      imageUrl: demoImageUrl(DEMO_AVATARS[1]),
       timeZone: "Europe/London",
       isAdultAttested: true,
       onboardingCompletedAt: new Date(),
@@ -97,6 +111,14 @@ export async function attachDemoHousehold(
   await prisma.user.updateMany({
     where: { id: { in: [ownerUserId, coParent.id] } },
     data: { defaultFamilyId: family.id },
+  });
+
+  // Only fills a gap. The owner may be a real person signed in through Clerk, and
+  // overwriting their actual avatar with a stock photograph would be worse than an
+  // empty one — so this writes only where nothing is set.
+  await prisma.user.updateMany({
+    where: { id: ownerUserId, imageUrl: null },
+    data: { imageUrl: demoImageUrl(DEMO_AVATARS[0]) },
   });
 
   for (const userId of [ownerUserId, coParent.id]) {
@@ -157,7 +179,6 @@ export async function attachDemoHousehold(
     data: { activeChildId: youngest.id },
   });
 
-  let imageIndex = 0;
   for (const [index, memory] of DEMO_MEMORIES.entries()) {
     const child = children[memory.childIndex] ?? youngest;
     // Alternate authorship so the household timeline shows both parents.
@@ -172,23 +193,26 @@ export async function attachDemoHousehold(
         title: memory.body.split("\n")[0]!.slice(0, 120),
         body: memory.body,
         eventDate,
+        visibility: memory.isPrivate ? "PRIVATE" : "HOUSEHOLD",
         createdAt: eventDate,
       },
     });
 
-    if (memory.withImage) {
-      imageIndex += 1;
+    if (memory.image) {
+      const image = DEMO_IMAGES[memory.image];
       await prisma.mediaAsset.create({
         data: {
           familyId: family.id,
           uploaderUserId: authorId,
           memoryId: created.id,
           // An absolute URL, which the media serializer passes through outside production.
-          storageKey: demoImageUrl(`${household.key}-${family.id}-${imageIndex}`),
+          // `storageKey` is globally unique, so the family id keeps two households that
+          // picked the same catalogue photo from colliding on the constraint.
+          storageKey: `${demoImageUrl(memory.image)}#${family.id}-${index}`,
           contentType: "image/jpeg",
-          byteSize: 250_000,
-          width: 900,
-          height: 700,
+          byteSize: 180_000,
+          width: image.width,
+          height: image.height,
           status: "ATTACHED",
           createdAt: eventDate,
         },
@@ -239,12 +263,91 @@ export async function attachDemoHousehold(
     });
   }
 
+  await attachDemoRecaps({ familyId: family.id, childId: youngest.id });
+
   await attachDemoCommunity({ ownerUserId, householdKey: household.key });
 
   return { familyId: family.id, coParentUserId: coParent.id };
 }
 
-/** Joins a stage group and adds posts, so Connect is not an empty screen. */
+/** Monday of the week containing `date`, in UTC. Matches the generator's week boundary. */
+export function weekStartOf(date: Date): Date {
+  const monday = new Date(date);
+  // getUTCDay() is 0 for Sunday, which belongs to the week that started six days earlier.
+  const offset = (monday.getUTCDay() + 6) % 7;
+  monday.setUTCDate(monday.getUTCDate() - offset);
+  monday.setUTCHours(0, 0, 0, 0);
+  return monday;
+}
+
+/**
+ * Past weekly recaps.
+ *
+ * Counts are computed from the rows that were actually written rather than hardcoded: a
+ * recap claiming nine memories in a week the timeline shows four is the kind of demo bug
+ * that gets mistaken for a real aggregation fault.
+ */
+export async function attachDemoRecaps(input: {
+  familyId: string;
+  childId: string;
+}): Promise<void> {
+  for (const recap of DEMO_RECAPS) {
+    const weekStart = weekStartOf(daysAgo(recap.weeksAgo * 7));
+    const weekEnd = new Date(weekStart);
+    weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+
+    const memoryCount = await prisma.memoryEntry.count({
+      where: {
+        familyId: input.familyId,
+        deletedAt: null,
+        eventDate: { gte: weekStart, lt: weekEnd },
+      },
+    });
+
+    const completions = await prisma.challengeCompletion.findMany({
+      where: { familyId: input.familyId, planDate: { gte: weekStart, lt: weekEnd } },
+      select: { planDate: true, kind: true },
+    });
+
+    const distinctDays = (kind: "STORY" | "WELLNESS") =>
+      new Set(
+        completions.filter((c) => c.kind === kind).map((c) => c.planDate.toISOString()),
+      ).size;
+
+    const weekLabel = weekStart.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      timeZone: "UTC",
+    });
+
+    const data = {
+      weekLabel: `Week of ${weekLabel}`,
+      title: recap.title,
+      highlights: recap.highlights,
+      memoryCount,
+      storyDays: distinctDays("STORY"),
+      wellnessDays: distinctDays("WELLNESS"),
+      childId: input.childId,
+    };
+
+    // Upsert on the same (familyId, weekStart) key the generator uses, so a seeded recap and
+    // a later real generation converge on one row instead of racing to create two.
+    await prisma.weeklyRecap.upsert({
+      where: { familyId_weekStart: { familyId: input.familyId, weekStart } },
+      create: { familyId: input.familyId, weekStart, ...data },
+      update: data,
+    });
+  }
+}
+
+/**
+ * Joins a stage group and adds a conversation, so Connect is not an empty screen.
+ *
+ * The cohort's other voices are local-only users created here rather than the seeded
+ * households, because the households are attached independently and in any order — making
+ * one household's posts depend on another having been seeded first produced a feed whose
+ * contents varied with seeding order.
+ */
 export async function attachDemoCommunity(input: {
   ownerUserId: string;
   householdKey: string;
@@ -261,18 +364,96 @@ export async function attachDemoCommunity(input: {
     update: { status: "ACTIVE" },
   });
 
-  // Only the first household authors posts; the rest read the same conversation, which is
-  // what a real cohort looks like and exercises the block/report flows against someone else.
+  // Only the first household seeds the conversation; the rest join and read the same one,
+  // which is what a real cohort looks like and exercises the block and report flows against
+  // posts the reader did not write.
   if (input.householdKey !== DEMO_HOUSEHOLDS[0]!.key) return;
 
-  for (const [index, body] of DEMO_COMMUNITY_POSTS.entries()) {
-    await prisma.communityPost.create({
+  // Already seeded by an earlier household attach — joining is enough.
+  //
+  // Keyed on a cohort neighbour being present, not on the group having *any* post. Those are
+  // not the same test: a group carrying posts from an older seed format would satisfy the
+  // second one forever, leaving the feed permanently stuck on whatever was written first with
+  // no way to reseed short of deleting rows by hand.
+  const seeded = await prisma.communityGroupMember.count({
+    where: { groupId: group.id, user: { clerkId: { startsWith: COHORT_CLERK_PREFIX } } },
+  });
+  if (seeded > 0) return;
+
+  const authors = new Map<string, string>([["owner", input.ownerUserId]]);
+  for (const neighbour of DEMO_NEIGHBOURS) {
+    const suffix = randomBytes(4).toString("hex");
+    const user = await prisma.user.create({
       data: {
-        groupId: group.id,
-        authorUserId: input.ownerUserId,
-        body,
-        createdAt: daysAgo(index),
+        clerkId: `${COHORT_CLERK_PREFIX}${neighbour.key}_${suffix}`,
+        email: `${neighbour.key}-${suffix}@bumpatlas.example.com`,
+        name: neighbour.name,
+        imageUrl: demoImageUrl(DEMO_AVATARS[2]),
+        timeZone: "Europe/London",
+        isAdultAttested: true,
+        onboardingCompletedAt: daysAgo(120),
+        createdAt: daysAgo(120),
       },
     });
+    authors.set(neighbour.key, user.id);
+
+    await prisma.communityGroupMember.upsert({
+      where: { groupId_userId: { groupId: group.id, userId: user.id } },
+      create: { groupId: group.id, userId: user.id, status: "ACTIVE" },
+      update: { status: "ACTIVE" },
+    });
   }
+
+  for (const post of DEMO_COMMUNITY_POSTS) {
+    const createdAt = daysAgo(post.daysAgo);
+    const created = await prisma.communityPost.create({
+      data: {
+        groupId: group.id,
+        authorUserId: authors.get(post.author)!,
+        body: post.body,
+        createdAt,
+      },
+    });
+
+    for (const [index, comment] of post.comments.entries()) {
+      await prisma.communityComment.create({
+        data: {
+          postId: created.id,
+          authorUserId: authors.get(comment.author)!,
+          body: comment.body,
+          // Minutes after the post, so comment order is stable and reads as a conversation.
+          createdAt: new Date(createdAt.getTime() + (index + 1) * 37 * 60_000),
+        },
+      });
+    }
+
+    await prisma.communityReaction.createMany({
+      data: post.reactions.map((key) => ({
+        postId: created.id,
+        userId: authors.get(key)!,
+        createdAt,
+      })),
+      skipDuplicates: true,
+    });
+  }
+}
+
+/**
+ * Removes the seeded community conversation from every stage group.
+ *
+ * Community rows are group-scoped, not family-scoped, so deleting a demo family leaves the
+ * conversation behind — which is exactly how a re-seed ended up with a doubled feed. Deleting
+ * the cohort users cascades their posts, comments and reactions; the owner's own posts have to
+ * go explicitly, since the owner row itself survives.
+ */
+export async function removeDemoCommunity(ownerUserId: string): Promise<void> {
+  await prisma.user.deleteMany({
+    where: { clerkId: { startsWith: COHORT_CLERK_PREFIX } },
+  });
+
+  await prisma.communityPost.deleteMany({
+    where: { authorUserId: ownerUserId, group: { kind: "STAGE" } },
+  });
+
+  await prisma.communityComment.deleteMany({ where: { authorUserId: ownerUserId } });
 }

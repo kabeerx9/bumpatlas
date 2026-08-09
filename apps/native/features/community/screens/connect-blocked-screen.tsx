@@ -11,13 +11,13 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
-import { useMockUi } from "@/features/mock/mock-ui-context";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { useGroupPostsQuery } from "@/lib/api/hooks";
 
 export function ConnectBlockedScreen() {
   const router = useRouter();
   const theme = useAppTheme();
-  const { blockedAuthorIds, unblockAuthor, activeGroupId } = useMockUi();
+  const { blockedAuthorIds, unblockAuthor, activeGroupId } = useAppState();
   const groupPostsQuery = useGroupPostsQuery(activeGroupId);
 
   const posts = groupPostsQuery.data?.items ?? [];

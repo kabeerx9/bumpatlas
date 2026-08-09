@@ -2,7 +2,6 @@ import { env } from "@bumpatlas/env/native";
 import { Platform } from "react-native";
 
 import { getEntitlements } from "@/lib/api/billing";
-import { useMockData } from "@/lib/api/client";
 
 type CustomerInfo = {
   entitlements: { active: Record<string, unknown> };
@@ -109,14 +108,11 @@ export async function purchasePackage(pkg: PurchasesPackage): Promise<PurchaseRe
 export async function restorePurchases(): Promise<PurchaseResult> {
   const Purchases = getPurchases();
   if (!configured || !Purchases) {
-    if (useMockData) {
-      return {
-        status: "unavailable",
-        message:
-          "RevenueCat is not configured. Set EXPO_PUBLIC_REVENUECAT_API_KEY and rebuild the native app.",
-      };
-    }
-    return { status: "unavailable", message: "Purchases are not configured yet." };
+    return {
+      status: "unavailable",
+      message:
+        "RevenueCat is not configured. Set EXPO_PUBLIC_REVENUECAT_API_KEY and rebuild the native app.",
+    };
   }
 
   try {

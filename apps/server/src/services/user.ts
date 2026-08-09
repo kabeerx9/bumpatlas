@@ -87,19 +87,21 @@ export async function updateAccountFromClerk(
     userId: string,
     updateInput: { firstName?: string | null; lastName?: string | null },
   ) => Promise<Parameters<typeof mapClerkApiUser>[0]>,
+  isAdmin: boolean,
 ): Promise<MeResponse> {
   const clerkUser = await updateClerkUser(clerkId, input);
   const user = await upsertUserFromClerk(mapClerkApiUser(clerkUser));
-  return serializeUser(user);
+  return serializeUser(user, isAdmin);
 }
 
-export function serializeUser(user: User): MeResponse {
+export function serializeUser(user: User, isAdmin: boolean): MeResponse {
   return {
     id: user.id,
     clerkId: user.clerkId,
     email: user.email,
     name: user.name,
     imageUrl: user.imageUrl,
+    isAdmin,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };
