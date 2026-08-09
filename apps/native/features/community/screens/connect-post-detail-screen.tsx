@@ -22,6 +22,7 @@ import {
   useAppTheme,
 } from "@/design-system";
 import { useMockUi } from "@/features/mock/mock-ui-context";
+import { formatRelativeTime } from "@/features/shared/lib/format-date";
 import { useCreateCommentMutation, useGroupPostDetailQuery } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
@@ -133,7 +134,7 @@ export function ConnectPostDetailScreen() {
         {post.comments.map((item) => (
           <Surface key={item.id} radiusSize="md" style={styles.commentCard}>
             <AppText variant="caption" tone="secondary">
-              {item.authorName} · {item.createdAt}
+              {item.authorName} · {formatRelativeTime(item.createdAt)}
             </AppText>
             <AppText variant="bodySmall">{item.body}</AppText>
           </Surface>

@@ -50,21 +50,31 @@ export function ConnectScreen() {
     linksAllowed,
   } = useMockUi();
   const groupsQuery = useGroupsQuery();
-  const groupPostsQuery = useGroupPostsQuery(activeGroupId);
-  const reactMutation = useReactToPostMutation(activeGroupId);
+  // The stored id predates the server wiring and may be a mock id; resolve to a
+  // real group (the joined one first) so the posts query never asks for a
+  // group the server has never heard of.
+  const loadedGroups = groupsQuery.data?.items;
+  const resolvedGroupId = useMemo(() => {
+    if (!loadedGroups || loadedGroups.length === 0) return activeGroupId;
+    if (loadedGroups.some((group) => group.id === activeGroupId)) return activeGroupId;
+    const joined = loadedGroups.find((group) => group.joined);
+    return joined?.id ?? loadedGroups[0].id;
+  }, [loadedGroups, activeGroupId]);
+  const groupPostsQuery = useGroupPostsQuery(resolvedGroupId);
+  const reactMutation = useReactToPostMutation(resolvedGroupId);
   const blockMutation = useBlockUserMutation();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [rulesOpen, setRulesOpen] = useState(!connectRulesSeen && !communityRulesAccepted);
 
   const groups = groupsQuery.data?.items ?? [];
   const activeGroup = useMemo(() => {
-    const fromApi = groups.find((group) => group.id === activeGroupId);
+    const fromApi = groups.find((group) => group.id === resolvedGroupId);
     return {
-      id: activeGroupId,
+      id: resolvedGroupId,
       name: fromApi?.name ?? "Your stage group",
       memberCount: fromApi?.memberCount ?? 0,
     };
-  }, [activeGroupId, groups]);
+  }, [resolvedGroupId, groups]);
 
   const posts = groupPostsQuery.data?.items ?? [];
   const visiblePosts = useMemo(
@@ -207,7 +217,9 @@ export function ConnectScreen() {
                     commentCount={post.commentCount}
                     liked={post.reactedByMe ?? false}
                     onPress={() => router.push(appRoutes.connectPost(post.id))}
-                    onLikePress={() => reactMutation.mutate(post.id)}
+                    onLikePress={() =>
+                      reactMutation.mutate({ postId: post.id, reacted: post.reactedByMe ?? false })
+                    }
                     actions={
                       <>
                         <Pressable

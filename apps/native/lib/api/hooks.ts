@@ -297,16 +297,8 @@ export function useGroupPostDetailQuery(groupId: string, postId: string) {
         if (!found) throw new Error("Post not found");
         return found;
       }
-      const list = await communityApi.listGroupPosts(groupId);
-      const post = list.items.find((item) => item.id === postId);
-      if (!post) throw new Error("Post not found");
-      return { ...post, comments: [] as Array<{
-        id: string;
-        authorId: string;
-        authorName: string;
-        body: string;
-        createdAt: string;
-      }> };
+      const detail = await communityApi.getPostDetail(postId);
+      return { ...detail.post, comments: detail.comments.items };
     },
   });
 }
@@ -608,12 +600,23 @@ export function useCreateCommentMutation(groupId: string) {
   });
 }
 
+/**
+ * `reacted` is the post's *current* `reactedByMe` state, read off the query
+ * data by the caller — the client decides PUT (add) vs DELETE (remove) from
+ * that, since the reaction pair has no toggle semantics of its own.
+ */
 export function useReactToPostMutation(groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (postId: string) => {
-      if (!useMockData) await communityApi.reactToPost(postId);
-      return postId;
+    mutationFn: async (input: { postId: string; reacted: boolean }) => {
+      if (!useMockData) {
+        if (input.reacted) {
+          await communityApi.removeReaction(input.postId);
+        } else {
+          await communityApi.setReaction(input.postId);
+        }
+      }
+      return input.postId;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.groupPosts(groupId) });
