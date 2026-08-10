@@ -7,6 +7,6 @@
  */
 export const FEATURES = {
   photos: false,
-  /** Keep the real onboarding UI on-screen for local design and motion work. */
-  onboardingPreview: true,
+  /** Local-only override for onboarding design and motion work. Keep disabled in shipped builds. */
+  onboardingPreview: false,
 } as const;

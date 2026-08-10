@@ -13,9 +13,7 @@ type PrivacyStepProps = {
 
 const SUMMARY = [
   "Memories stay private to your household by default.",
-  "Connect is text-only — never auto-posts journal photos.",
-  "You can export or delete your data anytime from Family.",
-  "AI answers are educational, not medical advice.",
+  "You control sharing, export, and deletion from Family.",
 ];
 
 export function PrivacyStep({
@@ -30,8 +28,7 @@ export function PrivacyStep({
     <View style={styles.block}>
       <AppText variant="heading">Your privacy, in plain language</AppText>
       <AppText variant="body" tone="secondary" style={styles.lead}>
-        Community rules can wait until your first Connect visit — Terms and Privacy are required
-        now.
+        Your memories are private by default. Terms and Privacy are required to continue.
       </AppText>
 
       <View style={styles.summaryCard}>
@@ -108,14 +105,14 @@ export function PrivacyStep({
 }
 
 const styles = StyleSheet.create({
-  block: { gap: spacing.md },
-  lead: { maxWidth: 340, lineHeight: 24 },
+  block: { gap: spacing.sm },
+  lead: { maxWidth: 340, lineHeight: 21 },
   summaryCard: {
     borderRadius: radius.xl,
     backgroundColor: colors.brand.honeySoft,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
   },
   acceptRow: {
     flexDirection: "row",
@@ -123,7 +120,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderRadius: radius.lg,
     backgroundColor: colors.surface.card,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border.subtle,
     minHeight: 44,

@@ -13,71 +13,56 @@ export function InviteStep({ householdName, childName }: InviteStepProps) {
 
   return (
     <View style={styles.block}>
-      <View style={styles.hero}>
+      <View style={styles.headingRow}>
         <View style={styles.iconWrap}>
-          <Feather name="users" size={28} color={colors.text.inverse} />
+          <Feather name="users" size={18} color={colors.brand.ink} />
         </View>
-        <AppText variant="heading" tone="inverse" align="center">
-          Invite your partner
-        </AppText>
-        <AppText variant="bodySmall" style={styles.heroCopy} align="center">
-          Free includes 2 adults. They can capture moments and see {subject}&apos;s weekly recap in{" "}
-          {householdName || "your household"}.
-        </AppText>
+        <View style={styles.headingCopy}>
+          <AppText variant="heading">Make room for someone you trust</AppText>
+          <AppText variant="bodySmall" tone="secondary" style={styles.lead}>
+            Invite one adult to share {subject}&apos;s private story in {householdName || "your household"}.
+          </AppText>
+        </View>
       </View>
 
-      <View style={styles.perks}>
-        <View style={styles.perkRow}>
-          <Feather name="check" size={16} color={colors.brand.honeyDeep} />
-          <AppText variant="bodySmall">Shared journal — private to your household</AppText>
-        </View>
-        <View style={styles.perkRow}>
-          <Feather name="check" size={16} color={colors.brand.honeyDeep} />
-          <AppText variant="bodySmall">Less mental load — both of you can contribute</AppText>
-        </View>
-        <View style={styles.perkRow}>
-          <Feather name="check" size={16} color={colors.brand.honeyDeep} />
-          <AppText variant="bodySmall">Skip anytime — you can invite from Family later</AppText>
-        </View>
+      <View style={styles.trustCard}>
+        <TrustPoint>Private to your household</TrustPoint>
+        <TrustPoint>Both adults can add memories</TrustPoint>
       </View>
     </View>
   );
 }
 
+function TrustPoint({ children }: { children: string }) {
+  return (
+    <View style={styles.trustRow}>
+      <Feather name="check" size={15} color={colors.brand.honeyDeep} />
+      <AppText variant="bodySmall">{children}</AppText>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  block: { gap: spacing.lg },
-  hero: {
-    borderRadius: radius.xl,
-    backgroundColor: colors.brand.ink,
-    padding: spacing.xl,
-    gap: spacing.sm,
-    alignItems: "center",
-  },
+  block: { gap: spacing.md },
+  headingRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
+  headingCopy: { flex: 1, gap: spacing.xs },
+  lead: { lineHeight: 19 },
   iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.brand.honeySoft,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.xs,
   },
-  heroCopy: {
-    color: "rgba(255,255,255,0.88)",
-    lineHeight: 20,
-    maxWidth: 300,
-  },
-  perks: {
-    borderRadius: radius.xl,
+  trustCard: {
+    borderRadius: radius.lg,
     backgroundColor: colors.surface.card,
-    padding: spacing.lg,
-    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border.subtle,
   },
-  perkRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.sm,
-  },
+  trustRow: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: spacing.sm },
 });

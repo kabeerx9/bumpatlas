@@ -40,8 +40,7 @@ export function ProfileStep({
       <View style={styles.block}>
         <AppText variant="heading">You&apos;re joining a household</AppText>
         <AppText variant="body" tone="secondary" style={styles.lead}>
-          Your partner or family owner will share access. You can still personalize notifications
-          and start contributing once you&apos;re in.
+          Your family owner will share access, then you can add memories together.
         </AppText>
       </View>
     );
@@ -97,9 +96,9 @@ export function ProfileStep({
 }
 
 const styles = StyleSheet.create({
-  block: { gap: spacing.md },
-  lead: { maxWidth: 320, lineHeight: 24 },
-  field: { gap: spacing.sm, marginTop: spacing.md },
+  block: { gap: spacing.sm },
+  lead: { maxWidth: 320, lineHeight: 21 },
+  field: { gap: spacing.xs, marginTop: spacing.sm },
   input: {
     minHeight: 56,
     borderRadius: radius.lg,

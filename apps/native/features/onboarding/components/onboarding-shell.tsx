@@ -7,6 +7,7 @@ import { AppText, Button, Pill, colors, radius, spacing, useAppTheme } from "@/d
 
 type OnboardingShellProps = {
   children: ReactNode;
+  scene?: ReactNode;
   stepIndex: number;
   totalSteps: number;
   canContinue: boolean;
@@ -16,10 +17,12 @@ type OnboardingShellProps = {
   showManageProfile?: boolean;
   secondaryLabel?: string;
   onSecondary?: () => void;
+  progressLabel?: string;
 };
 
 export function OnboardingShell({
   children,
+  scene,
   stepIndex,
   totalSteps,
   canContinue,
@@ -29,6 +32,7 @@ export function OnboardingShell({
   showManageProfile = false,
   secondaryLabel,
   onSecondary,
+  progressLabel,
 }: OnboardingShellProps) {
   const theme = useAppTheme();
 
@@ -51,7 +55,7 @@ export function OnboardingShell({
           )}
 
           <Pill tone="selected">
-            Step {stepIndex} of {totalSteps}
+            {progressLabel ?? `Step ${stepIndex} of ${totalSteps}`}
           </Pill>
 
           {showManageProfile ? (
@@ -69,6 +73,8 @@ export function OnboardingShell({
           )}
         </View>
 
+        {scene ? <View style={styles.scene}>{scene}</View> : null}
+
         <View style={styles.body}>{children}</View>
 
         <View
@@ -84,7 +90,7 @@ export function OnboardingShell({
               </AppText>
             </Pressable>
           ) : null}
-          <Button disabled={!canContinue} onPress={onContinue} size="lg" style={styles.cta}>
+          <Button disabled={!canContinue} onPress={onContinue} size="md" style={styles.cta}>
             {continueLabel}
           </Button>
         </View>
@@ -98,7 +104,7 @@ const styles = StyleSheet.create({
   column: { flex: 1 },
   topBar: {
     paddingHorizontal: spacing.page,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.xs,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -129,12 +135,17 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     paddingHorizontal: spacing.page,
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.sm,
+    minHeight: 0,
+  },
+  scene: {
+    paddingHorizontal: spacing.page,
+    paddingTop: spacing.sm,
   },
   footer: {
     paddingHorizontal: spacing.page,
-    paddingBottom: spacing.xl,
-    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
     gap: spacing.sm,
   },

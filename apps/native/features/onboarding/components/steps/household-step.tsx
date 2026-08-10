@@ -14,8 +14,7 @@ export function HouseholdStep({ householdName, onChangeHouseholdName }: Househol
     <View style={styles.block}>
       <AppText variant="heading">Name your household</AppText>
       <AppText variant="body" tone="secondary" style={styles.lead}>
-        Optional — a shared space for memories, recaps, and the adults you invite. You can change
-        this later.
+        Optional — the shared name for your memories and invited caregivers.
       </AppText>
 
       <View style={styles.field}>
@@ -40,9 +39,9 @@ export function HouseholdStep({ householdName, onChangeHouseholdName }: Househol
 }
 
 const styles = StyleSheet.create({
-  block: { gap: spacing.md },
-  lead: { maxWidth: 320, lineHeight: 24 },
-  field: { gap: spacing.sm, marginTop: spacing.lg },
+  block: { gap: spacing.sm },
+  lead: { maxWidth: 320, lineHeight: 21 },
+  field: { gap: spacing.sm, marginTop: spacing.md },
   input: {
     minHeight: 56,
     borderRadius: radius.lg,

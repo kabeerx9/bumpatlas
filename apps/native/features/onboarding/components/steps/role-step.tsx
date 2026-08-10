@@ -41,7 +41,7 @@ export function RoleStep({ role, onSelect }: RoleStepProps) {
     <View style={styles.block}>
       <AppText variant="heading">Which best describes you?</AppText>
       <AppText variant="body" tone="secondary" style={styles.lead}>
-        We&apos;ll tailor Today, tips, and your stage group to match.
+        We&apos;ll shape your first page around this.
       </AppText>
 
       <View style={styles.list}>
@@ -53,6 +53,7 @@ export function RoleStep({ role, onSelect }: RoleStepProps) {
             icon={option.icon}
             selected={role === option.id}
             onPress={() => onSelect(option.id)}
+            compact
           />
         ))}
       </View>
@@ -61,7 +62,7 @@ export function RoleStep({ role, onSelect }: RoleStepProps) {
 }
 
 const styles = StyleSheet.create({
-  block: { gap: spacing.md },
-  lead: { maxWidth: 320, lineHeight: 24 },
-  list: { gap: spacing.sm, marginTop: spacing.sm },
+  block: { gap: spacing.sm },
+  lead: { maxWidth: 320, lineHeight: 21 },
+  list: { gap: 6, marginTop: spacing.xs },
 });

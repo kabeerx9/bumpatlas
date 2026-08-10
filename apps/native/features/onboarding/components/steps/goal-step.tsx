@@ -47,7 +47,7 @@ export function GoalStep({ goal, onSelect }: GoalStepProps) {
     <View style={styles.block}>
       <AppText variant="heading">What matters most right now?</AppText>
       <AppText variant="body" tone="secondary" style={styles.lead}>
-        Today will still show all four — we&apos;ll gently emphasize your pick first.
+        Today includes everything; this chapter simply opens first.
       </AppText>
 
       <View style={styles.list}>
@@ -59,6 +59,7 @@ export function GoalStep({ goal, onSelect }: GoalStepProps) {
             icon={option.icon}
             selected={goal === option.id}
             onPress={() => onSelect(option.id)}
+            compact
           />
         ))}
       </View>
@@ -67,7 +68,7 @@ export function GoalStep({ goal, onSelect }: GoalStepProps) {
 }
 
 const styles = StyleSheet.create({
-  block: { gap: spacing.md },
-  lead: { maxWidth: 320, lineHeight: 24 },
-  list: { gap: spacing.sm, marginTop: spacing.sm },
+  block: { gap: spacing.sm },
+  lead: { maxWidth: 320, lineHeight: 21 },
+  list: { gap: 6, marginTop: spacing.xs },
 });

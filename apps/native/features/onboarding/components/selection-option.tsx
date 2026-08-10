@@ -9,6 +9,7 @@ type SelectionOptionProps = {
   icon?: keyof typeof Feather.glyphMap;
   selected: boolean;
   onPress: () => void;
+  compact?: boolean;
 };
 
 export function SelectionOption({
@@ -17,6 +18,7 @@ export function SelectionOption({
   icon,
   selected,
   onPress,
+  compact = false,
 }: SelectionOptionProps) {
   const theme = useAppTheme();
 
@@ -27,6 +29,7 @@ export function SelectionOption({
       onPress={onPress}
       style={[
         styles.card,
+        compact && styles.cardCompact,
         {
           borderColor: selected ? colors.brand.honey : theme.colors.border,
           backgroundColor: selected ? colors.brand.honey : theme.colors.surface,
@@ -42,11 +45,12 @@ export function SelectionOption({
       {icon ? (
         <View
           style={[
-            styles.iconWrap,
+          styles.iconWrap,
+          compact && styles.iconWrapCompact,
             { backgroundColor: selected ? "rgba(33,29,21,0.12)" : colors.brand.honeySoft },
           ]}
         >
-          <Feather name={icon} size={18} color={colors.brand.ink} />
+          <Feather name={icon} size={compact ? 16 : 18} color={colors.brand.ink} />
         </View>
       ) : null}
 
@@ -79,6 +83,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     ...shadows.soft,
   },
+  cardCompact: {
+    minHeight: 48,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    gap: spacing.sm,
+  },
   check: {
     position: "absolute",
     top: 12,
@@ -96,6 +107,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+  },
+  iconWrapCompact: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   copy: {
     flex: 1,
