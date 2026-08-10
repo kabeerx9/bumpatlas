@@ -1,36 +1,11 @@
 import { useAuth } from "@clerk/expo";
 
 import { useOnboarding } from "@/features/onboarding/providers/onboarding-provider";
+import { deriveAppAccessState } from "@/hooks/app-access-state";
+import { FEATURES } from "@/lib/features";
 
-export type AppAccessState =
-  | "auth_loading"
-  | "guest"
-  | "onboarding_loading"
-  | "onboarding_required"
-  | "ready";
-
-export type AppAccessInput = {
-  isLoaded: boolean;
-  isSignedIn: boolean;
-  isOnboardingLoading: boolean;
-  isOnboardingComplete: boolean;
-};
-
-export function deriveAppAccessState(input: AppAccessInput): AppAccessState {
-  if (!input.isLoaded) {
-    return "auth_loading";
-  }
-
-  if (!input.isSignedIn) {
-    return "guest";
-  }
-
-  if (input.isOnboardingLoading) {
-    return "onboarding_loading";
-  }
-
-  return input.isOnboardingComplete ? "ready" : "onboarding_required";
-}
+export { deriveAppAccessState } from "@/hooks/app-access-state";
+export type { AppAccessInput, AppAccessState } from "@/hooks/app-access-state";
 
 export function useAppAccess() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -41,6 +16,7 @@ export function useAppAccess() {
     isSignedIn: signedIn,
     isOnboardingLoading,
     isOnboardingComplete,
+    forceOnboardingPreview: FEATURES.onboardingPreview,
   });
 
   return {

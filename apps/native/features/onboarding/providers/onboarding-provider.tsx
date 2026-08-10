@@ -11,6 +11,7 @@ import {
 } from "@/features/onboarding/storage/onboarding-storage";
 import * as familiesApi from "@/lib/api/families";
 import { queryKeys } from "@/lib/api/hooks";
+import { FEATURES } from "@/lib/features";
 
 type OnboardingContextValue = {
   isOnboardingLoading: boolean;
@@ -73,7 +74,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
    * app reinstall — after a server-side reset a stale "complete" flag would
    * otherwise strand a family-less user on Today forever.
    */
-  const shouldCheckServer = isLoaded && !!userId && localFlagLoaded;
+  const shouldCheckServer =
+    isLoaded && !!userId && localFlagLoaded && !FEATURES.onboardingPreview;
 
   const familyCheckQuery = useQuery({
     // Same key `useFamilyQuery` (lib/api/hooks.ts) uses for `GET

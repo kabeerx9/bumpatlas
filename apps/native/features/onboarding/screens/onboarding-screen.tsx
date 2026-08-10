@@ -15,6 +15,7 @@ import { WelcomeStep } from "@/features/onboarding/components/steps/welcome-step
 import { useOnboarding } from "@/features/onboarding/providers/onboarding-provider";
 import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { enablePushAndRegister } from "@/lib/notifications/push";
+import { FEATURES } from "@/lib/features";
 import { appRoutes } from "@/navigation/routes";
 
 const ONBOARDING_STEPS = [
@@ -99,6 +100,7 @@ export function OnboardingScreen() {
 
   const continueLabel = useMemo(() => {
     if (isSubmitting) return "Saving…";
+    if (step === "invite" && FEATURES.onboardingPreview) return "Restart preview";
     if (step === "invite") return "Invite partner";
     if (step === "notifications") return "Continue";
     if (step === "welcome") return "Continue";
@@ -119,6 +121,12 @@ export function OnboardingScreen() {
 
   async function finishOnboarding(destination: "home" | "invite") {
     if (isSubmitting) return;
+
+    if (FEATURES.onboardingPreview) {
+      setStepIndex(0);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await applyOnboardingProfile({
@@ -153,7 +161,7 @@ export function OnboardingScreen() {
       return;
     }
 
-    if (step === "notifications") {
+    if (step === "notifications" && !FEATURES.onboardingPreview) {
       // Request OS permission here so the production path is ready before home.
       // Denied is fine — prefs still save and can be enabled later in settings.
       void enablePushAndRegister();

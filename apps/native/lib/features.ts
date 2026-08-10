@@ -7,4 +7,6 @@
  */
 export const FEATURES = {
   photos: false,
+  /** Keep the real onboarding UI on-screen for local design and motion work. */
+  onboardingPreview: true,
 } as const;
