@@ -15,7 +15,6 @@ const tabIcons: Record<string, IconName> = {
   connect: "users",
   guide: "compass",
   family: "user",
-  testing: "maximize-2",
 };
 
 // Structural subset of @react-navigation/bottom-tabs' BottomTabBarProps —
@@ -118,7 +117,6 @@ export default function MainTabsLayout() {
       <Tabs.Screen name="connect" options={{ title: "Connect" }} />
       <Tabs.Screen name="guide" options={{ title: "Guide" }} />
       <Tabs.Screen name="family" options={{ title: "Family" }} />
-      <Tabs.Screen name="testing" options={{ title: "Testing" }} />
     </Tabs>
   );
 }
