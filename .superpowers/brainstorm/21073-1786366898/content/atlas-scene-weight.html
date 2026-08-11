@@ -1,0 +1,31 @@
+<style>
+  .intro{max-width:760px;margin-bottom:24px}.phone-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:start}
+  .choice{cursor:pointer}.phone{max-width:300px;margin:auto;background:#fbf7ef;border:8px solid #26352f;border-radius:38px;overflow:hidden;box-shadow:0 18px 50px rgba(35,45,40,.16);transition:.2s ease}.choice:hover .phone{transform:translateY(-4px)}.choice.selected .phone{box-shadow:0 0 0 4px #dfb35d,0 18px 50px rgba(35,45,40,.18)}
+  .status{height:24px;background:#eef2eb;display:flex;justify-content:center;align-items:center;font-size:9px;color:#607068}.scene{position:relative;overflow:hidden;background:linear-gradient(180deg,#e6efe7,#f8ebdb);transition:.2s}.scene.small{height:92px}.scene.medium{height:150px}.scene.large{height:225px}.sun{position:absolute;width:42px;height:42px;border-radius:50%;background:#f1c970;right:22px;top:20px}.hill{position:absolute;width:75%;height:90px;border-radius:50%;left:-12%;bottom:-42px;background:#aac5ae}.hill.two{left:43%;bottom:-52px;background:#d7bea1}.trail{position:absolute;width:75px;height:110px;border:9px solid rgba(255,250,238,.9);border-radius:50%;left:42%;bottom:-74px;transform:rotate(10deg)}.marker{position:absolute;left:47%;bottom:20px;width:20px;height:20px;border-radius:50% 50% 50% 0;background:#bd7768;transform:rotate(-45deg);box-shadow:0 4px 9px rgba(89,55,47,.25)}
+  .progress{position:absolute;left:18px;right:18px;bottom:10px;display:flex;gap:4px}.progress i{height:3px;flex:1;border-radius:4px;background:rgba(255,255,255,.62)}.progress i.on{background:#72543a}
+  .body{padding:18px 18px 14px}.eyebrow{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#987443;font-weight:700}.body h4{font:600 21px/1.15 Georgia,serif;margin:7px 0 5px;color:#25362f}.body p{font-size:11px;line-height:1.45;color:#6f766f;margin:0 0 14px}.option-row{display:flex;gap:7px;align-items:center;background:#fffdfa;border:1px solid #e9e0d4;border-radius:13px;padding:10px;margin-bottom:7px;font-size:10px;color:#3b453f}.dot{width:25px;height:25px;border-radius:50%;background:#f2d38e;display:grid;place-items:center}.footer{padding:10px 18px 16px}.button{background:#263d34;color:white;border-radius:13px;padding:11px;text-align:center;font-size:11px;font-weight:700}.caption{max-width:300px;margin:14px auto 0}.caption h3{font-size:16px;margin:0 0 5px}.caption p{font-size:13px;line-height:1.45;color:#716b64;margin:0}.rec{display:inline-flex;padding:4px 8px;border-radius:999px;background:#f1d190;color:#503d21;font-size:10px;font-weight:700;margin-bottom:6px}
+  @media(max-width:900px){.phone-grid{grid-template-columns:1fr}.choice{margin-bottom:20px}}
+</style>
+
+<div class="intro">
+  <div class="label">Growing landscape · composition</div>
+  <h2>How present should the living atlas feel?</h2>
+  <p class="subtitle">Same role step, three scene-to-form ratios. The scene persists and morphs; the form below stays native, legible, and immediately interactive.</p>
+</div>
+
+<div class="phone-grid">
+  <div class="choice" data-choice="subtle-band" onclick="toggleSelect(this)">
+    <div class="phone"><div class="status">9:41</div><div class="scene small"><div class="sun"></div><div class="hill"></div><div class="hill two"></div><div class="trail"></div><div class="marker"></div><div class="progress"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div></div><div class="body"><span class="eyebrow">Your path</span><h4>Which best describes you?</h4><p>We’ll shape Today around this stage.</p><div class="option-row"><span class="dot">♡</span>Expecting</div><div class="option-row"><span class="dot">☺</span>Parent</div><div class="option-row"><span class="dot">＋</span>Partner / caregiver</div></div><div class="footer"><div class="button">Continue</div></div></div>
+    <div class="caption"><h3>A · Subtle band</h3><p>Fast and utility-first. Safest for keyboards, but the atlas risks feeling like decorative header art.</p></div>
+  </div>
+
+  <div class="choice" data-choice="balanced-stage" onclick="toggleSelect(this)">
+    <div class="phone"><div class="status">9:41</div><div class="scene medium"><div class="sun"></div><div class="hill"></div><div class="hill two"></div><div class="trail"></div><div class="marker"></div><div class="progress"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div></div><div class="body"><span class="rec">Recommended</span><br><span class="eyebrow">Your path</span><h4>Which best describes you?</h4><p>We’ll shape Today around this stage.</p><div class="option-row"><span class="dot">♡</span>Expecting</div><div class="option-row"><span class="dot">☺</span>Parent</div><div class="option-row"><span class="dot">＋</span>Partner / caregiver</div></div><div class="footer"><div class="button">Continue</div></div></div>
+    <div class="caption"><h3>B · Balanced stage</h3><p>The atlas feels structural, while the question and choices remain above the fold on ordinary phones.</p></div>
+  </div>
+
+  <div class="choice" data-choice="immersive-world" onclick="toggleSelect(this)">
+    <div class="phone"><div class="status">9:41</div><div class="scene large"><div class="sun"></div><div class="hill"></div><div class="hill two"></div><div class="trail"></div><div class="marker"></div><div class="progress"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div></div><div class="body"><span class="eyebrow">Your path</span><h4>Which best describes you?</h4><p>We’ll shape Today around this stage.</p><div class="option-row"><span class="dot">♡</span>Expecting</div><div class="option-row"><span class="dot">☺</span>Parent</div><div class="option-row"><span class="dot">＋</span>Partner / caregiver</div></div><div class="footer"><div class="button">Continue</div></div></div>
+    <div class="caption"><h3>C · Immersive world</h3><p>Most emotional and cinematic. Costs scrolling, competes with form entry, and can make eight steps feel longer.</p></div>
+  </div>
+</div>

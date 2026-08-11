@@ -1,0 +1,65 @@
+<style>
+  .intro { max-width: 760px; margin-bottom: 24px; }
+  .direction-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+  .direction { cursor:pointer; border:1px solid #e3ddd2; border-radius:24px; overflow:hidden; background:#fffdfa; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+  .direction:hover { transform:translateY(-3px); box-shadow:0 15px 36px rgba(48,43,37,.10); }
+  .direction.selected { border-color:#c89444; box-shadow:0 0 0 3px rgba(200,148,68,.18),0 15px 36px rgba(48,43,37,.10); }
+  .scene { height:300px; padding:18px; display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden; }
+  .scene h4 { margin:0; color:#273831; font:600 18px/1.2 Georgia,serif; position:relative; z-index:2; }
+  .scene small { color:#68746d; position:relative; z-index:2; }
+  .copy { padding:17px 18px 20px; border-top:1px solid #ece7df; }
+  .copy h3 { margin:0 0 6px; font-size:17px; }
+  .copy p { margin:0; color:#706b63; font-size:13px; line-height:1.45; }
+  .badge { display:inline-flex; padding:5px 9px; border-radius:999px; background:#f0cf89; color:#4c3a1d; font-size:11px; font-weight:700; margin-bottom:10px; }
+  .landscape { background:linear-gradient(180deg,#ecf3ed 0%,#f8efe5 58%,#ead9be 100%); }
+  .sun { position:absolute; width:72px; height:72px; border-radius:50%; background:#f5cb72; right:18px; top:54px; box-shadow:0 0 0 12px rgba(245,203,114,.18); }
+  .hill { position:absolute; left:-20%; bottom:-25px; width:95%; height:155px; border-radius:50% 55% 0 0; background:#b8cdbd; transform:rotate(4deg); }
+  .hill.two { left:35%; bottom:-46px; width:90%; height:170px; background:#d5bfa2; transform:rotate(-4deg); }
+  .path { position:absolute; width:130px; height:210px; left:38%; bottom:-112px; border-radius:50%; border:18px solid rgba(255,250,237,.9); transform:rotate(7deg); }
+  .home { position:absolute; left:34%; bottom:50px; width:54px; height:45px; background:#fff9ef; border-radius:10px 10px 7px 7px; box-shadow:0 8px 18px rgba(70,58,45,.12); }
+  .home:before { content:""; position:absolute; left:5px; top:-22px; border-left:22px solid transparent; border-right:22px solid transparent; border-bottom:26px solid #c77f6d; }
+  .constellation { background:radial-gradient(circle at 25% 12%,#405d55,#20342f 65%,#172722); color:white; }
+  .constellation h4,.constellation small { color:#fffaf0; }
+  .stars { position:absolute; inset:0; opacity:.9; background-image:radial-gradient(circle,#f4d28d 1.5px,transparent 2px); background-size:37px 41px; }
+  .orbit { position:absolute; width:190px; height:190px; border:1px solid rgba(244,210,141,.45); border-radius:50%; left:50%; top:50%; transform:translate(-50%,-40%); }
+  .orbit:before,.orbit:after { content:""; position:absolute; width:13px; height:13px; border-radius:50%; background:#f4d28d; box-shadow:0 0 20px #f4d28d; }
+  .orbit:before { left:23px; top:23px; } .orbit:after { right:6px; bottom:52px; }
+  .paper { background:linear-gradient(145deg,#f7e7d9,#f9f2e6); }
+  .sheet { position:absolute; left:33px; right:33px; top:62px; bottom:34px; background:#fffdf8; border-radius:18px; box-shadow:0 16px 35px rgba(74,57,40,.12); transform:rotate(-2deg); }
+  .fold { position:absolute; inset:0; background:linear-gradient(110deg,transparent 46%,rgba(203,176,137,.22) 47%,transparent 49%),linear-gradient(15deg,transparent 58%,rgba(203,176,137,.18) 59%,transparent 61%); }
+  .route { position:absolute; left:68px; top:122px; width:125px; height:84px; border-left:3px dashed #b67866; border-bottom:3px dashed #b67866; border-radius:0 0 0 42px; transform:rotate(-8deg); }
+  .pin { position:absolute; width:24px; height:24px; border-radius:50% 50% 50% 0; background:#d49b52; transform:rotate(-45deg); right:70px; bottom:72px; }
+  @media (max-width:850px){.direction-grid{grid-template-columns:1fr}.scene{height:240px}}
+</style>
+
+<div class="intro">
+  <div class="label">Continuous atlas · visual spine</div>
+  <h2>What should remain alive across every step?</h2>
+  <p class="subtitle">The questions change, but this anchor stays mounted and absorbs each answer. Choose the metaphor that feels most like BumpAtlas—not just the prettiest card.</p>
+</div>
+
+<div class="direction-grid cards">
+  <div class="direction" data-choice="growing-landscape" onclick="toggleSelect(this)">
+    <div class="scene landscape">
+      <div><span class="badge">Recommended</span><h4>A world that grows</h4><small>Path → home → milestone → Today</small></div>
+      <div class="sun"></div><div class="hill"></div><div class="hill two"></div><div class="path"></div><div class="home"></div>
+    </div>
+    <div class="copy"><h3>A · Growing landscape</h3><p>Warm, storybook-like, and emotionally grounded. Each answer adds a meaningful landmark without feeling like a literal map app.</p></div>
+  </div>
+
+  <div class="direction" data-choice="quiet-constellation" onclick="toggleSelect(this)">
+    <div class="scene constellation">
+      <div><h4>A family constellation</h4><small>Points connect as the profile forms</small></div>
+      <div class="stars"></div><div class="orbit"></div>
+    </div>
+    <div class="copy"><h3>B · Quiet constellation</h3><p>Elegant and abstract, with beautiful connection moments. More premium, but cooler and less obviously connected to everyday parenting.</p></div>
+  </div>
+
+  <div class="direction" data-choice="folded-paper" onclick="toggleSelect(this)">
+    <div class="scene paper">
+      <div><h4>A map that unfolds</h4><small>Panels fold, reveal, and become cards</small></div>
+      <div class="sheet"><div class="fold"></div></div><div class="route"></div><div class="pin"></div>
+    </div>
+    <div class="copy"><h3>C · Folded paper atlas</h3><p>Tactile and brand-literal. Strong container morphs, though repeated paper folding could become decorative rather than meaningful.</p></div>
+  </div>
+</div>
