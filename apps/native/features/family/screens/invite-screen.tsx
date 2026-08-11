@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -20,6 +20,7 @@ import {
   spacing,
   useAppTheme,
 } from "@/design-system";
+import { createInviteDeliveryCoordinator } from "@/features/family/lib/invite-delivery";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
 import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { useCreateInviteMutation, useFamilyQuery } from "@/lib/api/hooks";
@@ -35,51 +36,52 @@ export function InviteScreen() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
-  const [linkLoading, setLinkLoading] = useState(true);
+  const [linkLoading, setLinkLoading] = useState(false);
   const [invite, setInvite] = useState<{
     token: string;
     inviteUrl: string;
     expiresAt: string;
   } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLinkLoading(true);
-    createInvite
-      .mutateAsync({ role: "CONTRIBUTOR" })
-      .then((result) => {
-        if (!cancelled) setInvite(result);
-      })
-      .catch(() => {
-        // Link generation retries when "Copy invite link" is pressed.
-      })
-      .finally(() => {
-        if (!cancelled) setLinkLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const inviteDeliveryRef = useRef<ReturnType<
+    typeof createInviteDeliveryCoordinator
+  > | null>(null);
+  if (!inviteDeliveryRef.current) {
+    inviteDeliveryRef.current = createInviteDeliveryCoordinator((input) =>
+      createInvite.mutateAsync(input),
+    );
+  }
 
   const inviteLink = invite?.inviteUrl ?? null;
 
   async function shareLink() {
-    if (!inviteLink) return;
-    await Share.share({
-      message: `Join our BumpAtlas household for ${childDisplayName}: ${inviteLink}`,
-    });
+    if (linkLoading || sending) return;
+    setLinkLoading(true);
+    try {
+      const prepared = await inviteDeliveryRef.current!.prepare({ kind: "link" });
+      setInvite(prepared.invite);
+      await Share.share({
+        message: `Join our BumpAtlas household for ${childDisplayName}: ${prepared.invite.inviteUrl}`,
+      });
+    } catch {
+      Alert.alert("Couldn’t create invite", "Check your connection and try again.");
+    } finally {
+      setLinkLoading(false);
+    }
   }
 
   async function handleSend() {
-    if (sending || email.trim().length === 0) return;
+    if (sending || linkLoading || email.trim().length === 0 || invite) return;
     setSending(true);
     try {
-      const result = await createInvite.mutateAsync({
-        role: "CONTRIBUTOR",
+      const prepared = await inviteDeliveryRef.current!.prepare({
+        kind: "email",
         email: email.trim(),
       });
-      setInvite(result);
+      if (prepared.delivery.kind !== "email") {
+        Alert.alert("Invite link already created", "Share the existing link instead.");
+        return;
+      }
+      setInvite(prepared.invite);
       setSent(true);
       markPartnerJoined();
     } catch {
@@ -106,7 +108,9 @@ export function InviteScreen() {
           ) : null}
           <Button
             size="lg"
-            disabled={email.trim().length === 0 || sending}
+            disabled={
+              email.trim().length === 0 || sending || linkLoading || Boolean(invite)
+            }
             onPress={() => void handleSend()}
           >
             {sending ? "Sending…" : "Send invite"}
@@ -148,7 +152,7 @@ export function InviteScreen() {
           </AppText>
         </Surface>
 
-        <Pressable onPress={() => void shareLink()} disabled={!inviteLink}>
+        <Pressable onPress={() => void shareLink()} disabled={linkLoading || sending}>
           <Surface tone="card" elevated radiusSize="xl" style={styles.linkCard}>
             <View style={styles.linkIcon}>
               <Feather name="link" size={18} color={colors.brand.honeyDeep} />
@@ -156,7 +160,9 @@ export function InviteScreen() {
             <View style={styles.linkCopy}>
               <AppText weight="semibold">Copy invite link</AppText>
               <AppText variant="caption" tone="secondary" numberOfLines={1}>
-                {linkLoading ? "Preparing your invite link…" : inviteLink ?? "Link unavailable"}
+                {linkLoading
+                  ? "Preparing your invite link…"
+                  : inviteLink ?? "Create a single-use invite link"}
               </AppText>
             </View>
             <Feather name="share-2" size={18} color={theme.colors.text} />

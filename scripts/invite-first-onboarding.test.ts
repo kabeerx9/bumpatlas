@@ -7,6 +7,7 @@ import {
   INVITE_ONBOARDING_CONSENTS,
   shouldSuppressInviteGlobalError,
 } from "../apps/native/features/family/lib/complete-invite-onboarding.ts";
+import { createInviteDeliveryCoordinator } from "../apps/native/features/family/lib/invite-delivery.ts";
 import { legalDocuments } from "../apps/native/features/legal/data/legal-documents.ts";
 import { isFamilyContextQueryKey } from "../apps/native/lib/api/family-context-cache.ts";
 import {
@@ -22,6 +23,36 @@ import {
 import { LEGAL_POLICY_EFFECTIVE_DATE } from "../apps/native/lib/legal-policy.ts";
 
 const FAMILY = { id: "family-1", name: "The Riveras" } as never;
+
+describe("invite delivery", () => {
+  it("creates only one seat-consuming invite when delivery actions overlap", async () => {
+    let createCount = 0;
+    const coordinator = createInviteDeliveryCoordinator(async () => {
+      createCount += 1;
+      return {
+        token: `invite-${createCount}`,
+        inviteUrl: `https://bumpatlas-web.vercel.app/invite/invite-${createCount}`,
+        expiresAt: "2026-08-18T00:00:00.000Z",
+      };
+    });
+
+    const [shared, emailed] = await Promise.all([
+      coordinator.prepare({ kind: "link" }),
+      coordinator.prepare({ kind: "email", email: "friend@example.com" }),
+    ]);
+    const retried = await coordinator.prepare({
+      kind: "email",
+      email: "friend@example.com",
+    });
+
+    assert.equal(createCount, 1);
+    assert.equal(shared.invite.token, "invite-1");
+    assert.equal(emailed.invite.token, "invite-1");
+    assert.equal(retried.invite.token, "invite-1");
+    assert.deepEqual(shared.delivery, { kind: "link" });
+    assert.deepEqual(emailed.delivery, { kind: "link" });
+  });
+});
 
 describe("invite acceptance readiness", () => {
   const ready = {
