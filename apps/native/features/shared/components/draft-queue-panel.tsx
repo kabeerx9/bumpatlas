@@ -41,7 +41,7 @@ export function DraftQueuePanel({ onOpenDraft }: DraftQueuePanelProps) {
             </AppText>
           </Pressable>
           <Pressable
-            onPress={() => removeDraft(draft.id)}
+            onPress={() => void removeDraft(draft.id)}
             style={styles.remove}
             accessibilityLabel="Remove draft"
           >
@@ -61,7 +61,12 @@ export function DraftQueuePanel({ onOpenDraft }: DraftQueuePanelProps) {
         </Pressable>
       ) : null}
       {drafts.length > 1 ? (
-        <Pressable onPress={clearDrafts} hitSlop={8} accessibilityLabel="Clear all drafts">
+        <Pressable
+          onPress={() => void clearDrafts()}
+          disabled={syncingDrafts}
+          hitSlop={8}
+          accessibilityLabel="Clear all drafts"
+        >
           <AppText variant="caption" weight="semibold" style={styles.clear}>
             Clear all drafts
           </AppText>

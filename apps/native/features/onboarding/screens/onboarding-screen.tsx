@@ -104,7 +104,6 @@ export function OnboardingScreen() {
       case "household":
         return true;
       case "profile":
-        if (role === "partner") return true;
         if (role === "expecting") return dueDate.trim().length > 0;
         return childName.trim().length > 0 && childDob.trim().length > 0;
       case "goal":

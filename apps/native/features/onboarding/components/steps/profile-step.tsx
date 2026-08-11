@@ -29,22 +29,10 @@ export function ProfileStep({
 }: ProfileStepProps) {
   const theme = useAppTheme();
   const expecting = role === "expecting";
-  const partner = role === "partner";
   const inputStyle = [
     styles.input,
     { borderColor: theme.colors.border, backgroundColor: theme.colors.surface, color: theme.colors.text },
   ];
-
-  if (partner) {
-    return (
-      <View style={styles.block}>
-        <AppText variant="heading">You&apos;re joining a household</AppText>
-        <AppText variant="body" tone="secondary" style={styles.lead}>
-          Your family owner will share access, then you can add memories together.
-        </AppText>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.block}>

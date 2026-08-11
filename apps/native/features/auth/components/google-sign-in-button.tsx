@@ -1,12 +1,12 @@
 import { useSSO } from "@clerk/expo";
 import * as AuthSession from "expo-auth-session";
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { AppText, borderWidth, radius, spacing, useAppTheme } from "@/design-system";
 import { appRoutes } from "@/navigation/routes";
 
-export function GoogleSignInButton() {
+export function GoogleSignInButton({ returnTo = appRoutes.home }: { returnTo?: Href }) {
   const { startSSOFlow } = useSSO();
   const router = useRouter();
   const theme = useAppTheme();
@@ -20,7 +20,7 @@ export function GoogleSignInButton() {
 
       if (createdSessionId && setActive) {
         await setActive({ session: createdSessionId });
-        router.replace(appRoutes.home);
+        router.replace(returnTo);
       }
     } catch (err) {
       console.error("Google sign-in failed:", err);

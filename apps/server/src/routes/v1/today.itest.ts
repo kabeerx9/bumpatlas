@@ -183,7 +183,7 @@ describe("GET /api/v1/today", () => {
       method: "POST",
       url: "/api/v1/media/upload-url",
       headers: asUser("clerk_owner"),
-      payload: { contentType: "image/jpeg", byteSize: 1024 },
+      payload: { familyId, contentType: "image/jpeg", byteSize: 1024 },
     });
 
     const response = await getToday(app, "clerk_owner");

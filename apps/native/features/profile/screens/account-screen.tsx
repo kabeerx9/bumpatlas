@@ -14,6 +14,7 @@ import { ApiError } from "@bumpatlas/contracts";
 
 import { AppText, Button, borderWidth, colors, radius, spacing, useAppTheme } from "@/design-system";
 import { SoftStackShell } from "@/features/shared/components/soft-stack-shell";
+import { useAppState } from "@/features/shared/providers/app-state-provider";
 import { useDeleteAccountMutation, useUpdateAccountMutation } from "@/lib/api/hooks";
 import { appRoutes } from "@/navigation/routes";
 
@@ -26,6 +27,7 @@ export function AccountScreen() {
   const { signOut } = useClerk();
   const router = useRouter();
   const theme = useAppTheme();
+  const { clearDrafts } = useAppState();
   const updateAccountMutation = useUpdateAccountMutation();
   const deleteAccountMutation = useDeleteAccountMutation();
   const [firstName, setFirstName] = useState("");
@@ -57,6 +59,13 @@ export function AccountScreen() {
   async function performDelete() {
     setDeleteError(null);
     try {
+      const cleared = await clearDrafts();
+      if (!cleared) {
+        setDeleteError(
+          "We couldn't remove this account's offline drafts from the device. Try deletion again.",
+        );
+        return;
+      }
       await deleteAccountMutation.mutateAsync({ confirmation: "DELETE" });
       await signOut();
       router.replace(appRoutes.auth.signIn);

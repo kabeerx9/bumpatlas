@@ -1,5 +1,5 @@
 import { useAuth, useSignUp } from "@clerk/expo";
-import { Link, useRouter } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import { Image, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,7 +15,10 @@ import {
   useAppTheme,
 } from "@/design-system";
 import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
-import { pushDecoratedUrl } from "@/features/auth/utils/navigation";
+import {
+  pushDecoratedUrl,
+  resolveAuthReturnTo,
+} from "@/features/auth/utils/navigation";
 import { appRoutes } from "@/navigation/routes";
 
 const COLLAGE_IMAGES = [
@@ -68,6 +71,10 @@ export function SignUpScreen() {
   const { signUp, errors, fetchStatus } = useSignUp();
   const { isSignedIn } = useAuth();
   const router = useRouter();
+  const { returnTo: returnToParam } = useLocalSearchParams<{
+    returnTo?: string | string[];
+  }>();
+  const returnTo = resolveAuthReturnTo(returnToParam);
   const theme = useAppTheme();
   const [emailAddress, setEmailAddress] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -95,7 +102,7 @@ export function SignUpScreen() {
       await signUp.finalize({
         navigate: ({ session, decorateUrl }) => {
           if (session?.currentTask) return;
-          pushDecoratedUrl(router, decorateUrl, appRoutes.home);
+          pushDecoratedUrl(router, decorateUrl, returnTo);
         },
       });
     } else {
@@ -234,13 +241,13 @@ export function SignUpScreen() {
           <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
         </View>
 
-        <GoogleSignInButton />
+        <GoogleSignInButton returnTo={returnTo} />
 
         <View style={styles.toggleRow}>
           <AppText variant="bodySmall" tone="secondary">
             Already have an Account?
           </AppText>
-          <Link href={appRoutes.auth.signIn}>
+          <Link href={appRoutes.auth.signInWithReturnTo(String(returnTo))}>
             <AppText variant="bodySmall" weight="semibold" style={styles.link}>
               Sign in
             </AppText>

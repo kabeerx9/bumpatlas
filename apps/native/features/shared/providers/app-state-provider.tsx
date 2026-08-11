@@ -9,22 +9,31 @@ import {
   type ReactNode,
 } from "react";
 
+import { useAuth } from "@clerk/expo";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { useOnboarding } from "@/features/onboarding/providers/onboarding-provider";
 import type { NotificationPrefKey } from "@/features/family/data/notification-categories";
 import { queryKeys, useBadgesQuery, useGroupsQuery } from "@/lib/api/hooks";
 import * as consentsApi from "@/lib/api/consents";
 import {
   clearMemoryDrafts,
   loadMemoryDrafts,
-  saveMemoryDrafts,
+  removeMemoryDraft,
+  upsertMemoryDraft,
   type PersistedMemoryDraft,
 } from "@/lib/drafts/memory-draft-store";
+import {
+  clearDraftQueueDurably,
+  commitDraftMutationDurably,
+} from "@/lib/drafts/clear-drafts";
+import { isDraftQueueReadyForOwner } from "@/lib/drafts/draft-owner";
 import { flushMemoryDrafts } from "@/lib/drafts/flush-drafts";
 import * as familiesApi from "@/lib/api/families";
 import { useConnectivity } from "@/lib/network/use-connectivity";
 import * as notificationsApi from "@/lib/api/notifications";
 import * as profilesApi from "@/lib/api/profiles";
+import { REQUIRED_ONBOARDING_CONSENTS } from "@/lib/legal-policy";
 
 type ConnectTodayMode = "group" | "alone";
 
@@ -32,6 +41,7 @@ export type PrimaryGoal = "memories" | "wellness" | "connect" | "learn";
 
 export type MemoryDraft = {
   id: string;
+  familyId: string;
   body: string;
   eventDate: string;
   createdAtLabel: string;
@@ -41,7 +51,7 @@ export type MemoryDraft = {
 };
 
 export type OnboardingProfileInput = {
-  role: "expecting" | "parent" | "partner" | null;
+  role: "expecting" | "parent" | null;
   dueDate?: string;
   childName?: string;
   childDob?: string;
@@ -73,18 +83,22 @@ type AppState = {
   dismissOfflineBanner: () => void;
 
   // Offline draft queue.
+  draftsHydrated: boolean;
+  draftHydrationFailed: boolean;
   drafts: MemoryDraft[];
   pendingDraft: boolean;
   syncingDrafts: boolean;
   saveDraft: (input: {
+    familyId: string;
     body: string;
     eventDate: string;
     hasPhoto: boolean;
     photoUri?: string | null;
     visibility?: "HOUSEHOLD" | "PRIVATE";
-  }) => void;
-  removeDraft: (id: string) => void;
-  clearDrafts: () => void;
+  }) => Promise<boolean>;
+  removeDraft: (id: string) => Promise<boolean>;
+  clearDrafts: () => Promise<boolean>;
+  retryDraftHydration: () => Promise<boolean>;
   flushDraftQueue: () => Promise<number>;
 
   // Community client-side state — throttling counters and moderation
@@ -141,6 +155,7 @@ const AppStateContext = createContext<AppState | null>(null);
 function toPersistedDraft(draft: MemoryDraft): PersistedMemoryDraft {
   return {
     id: draft.id,
+    familyId: draft.familyId,
     body: draft.body,
     eventDate: draft.eventDate,
     createdAtLabel: draft.createdAtLabel,
@@ -152,15 +167,22 @@ function toPersistedDraft(draft: MemoryDraft): PersistedMemoryDraft {
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
+  const { getToken, isSignedIn, userId } = useAuth();
+  const currentDraftOwner = isSignedIn === true && userId ? userId : null;
+  const { isOnboardingComplete, isOnboardingLoading } = useOnboarding();
   const queryClient = useQueryClient();
   const connectivity = useConnectivity();
-  const badgesQuery = useBadgesQuery();
-  const groupsQuery = useGroupsQuery();
+  const canReadHousehold =
+    isSignedIn === true && isOnboardingComplete && !isOnboardingLoading;
+  const badgesQuery = useBadgesQuery(canReadHousehold);
+  const groupsQuery = useGroupsQuery(canReadHousehold);
   const deviceOffline = connectivity.isOffline;
   const isOffline = deviceOffline;
 
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false);
   const [draftsHydrated, setDraftsHydrated] = useState(false);
+  const [draftHydrationFailed, setDraftHydrationFailed] = useState(false);
+  const [hydratedDraftOwner, setHydratedDraftOwner] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<MemoryDraft[]>([]);
   const [pendingDraft, setPendingDraft] = useState(false);
   const [syncingDrafts, setSyncingDrafts] = useState(false);
@@ -184,6 +206,27 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const wasOfflineRef = useRef(isOffline);
   const seenEarnedBadgeIdsRef = useRef<Set<string> | null>(null);
+  const clearingDraftsRef = useRef(false);
+  const draftOwnerRef = useRef(currentDraftOwner);
+  const draftSyncOwnerRef = useRef<string | null>(null);
+  draftOwnerRef.current = currentDraftOwner;
+
+  const draftQueueReady = isDraftQueueReadyForOwner(
+    currentDraftOwner,
+    hydratedDraftOwner,
+    draftsHydrated,
+  );
+  const currentDrafts = draftQueueReady ? drafts : [];
+  const currentDraftHydrationFailed = Boolean(
+    currentDraftOwner &&
+      hydratedDraftOwner === currentDraftOwner &&
+      draftHydrationFailed,
+  );
+  const currentDraftSyncing = Boolean(
+    currentDraftOwner &&
+      draftSyncOwnerRef.current === currentDraftOwner &&
+      syncingDrafts,
+  );
 
   // Default to the first joined stage group once real groups load, rather
   // than a hardcoded fixture id.
@@ -215,12 +258,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     seenEarnedBadgeIdsRef.current = currentlyEarned;
   }, [badgesQuery.data]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void loadMemoryDrafts().then((stored) => {
-      if (cancelled) return;
+  const retryDraftHydration = useCallback(async () => {
+    const ownerUserId = currentDraftOwner;
+    setDraftsHydrated(false);
+    setDraftHydrationFailed(false);
+    setHydratedDraftOwner(ownerUserId);
+    setDrafts([]);
+    setPendingDraft(false);
+    draftSyncOwnerRef.current = null;
+    setSyncingDrafts(false);
+
+    if (!ownerUserId) {
+      return true;
+    }
+
+    try {
+      const stored = await loadMemoryDrafts(ownerUserId);
+      if (draftOwnerRef.current !== ownerUserId) return false;
       const mapped: MemoryDraft[] = stored.map((draft) => ({
         id: draft.id,
+        familyId: draft.familyId,
         body: draft.body,
         eventDate: draft.eventDate,
         createdAtLabel: draft.createdAtLabel,
@@ -231,30 +288,45 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setDrafts(mapped);
       setPendingDraft(mapped.length > 0);
       setDraftsHydrated(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      return true;
+    } catch {
+      if (draftOwnerRef.current !== ownerUserId) return false;
+      // Unknown device state is not equivalent to an empty queue. Keep all
+      // tenant-switching paths blocked until retry or a strict clear succeeds.
+      setDraftHydrationFailed(true);
+      return false;
+    }
+  }, [currentDraftOwner]);
 
   useEffect(() => {
-    if (!draftsHydrated) return;
-    void saveMemoryDrafts(drafts.map(toPersistedDraft));
-  }, [drafts, draftsHydrated]);
+    void retryDraftHydration();
+  }, [retryDraftHydration]);
 
   const flushDraftQueue = useCallback(async () => {
-    if (syncingDrafts || drafts.length === 0 || isOffline) return 0;
+    const ownerUserId = currentDraftOwner;
+    if (
+      !ownerUserId ||
+      !draftQueueReady ||
+      !canReadHousehold ||
+      syncingDrafts ||
+      drafts.length === 0 ||
+      isOffline
+    ) {
+      return 0;
+    }
+    const ownerToken = await getToken();
+    if (!ownerToken || draftOwnerRef.current !== ownerUserId) return 0;
+
+    draftSyncOwnerRef.current = ownerUserId;
     setSyncingDrafts(true);
     try {
-      const flushed = await flushMemoryDrafts(drafts);
+      const flushed = await flushMemoryDrafts(ownerUserId, drafts, ownerToken);
+      if (draftOwnerRef.current !== ownerUserId) return 0;
       const flushedIds = new Set(flushed.map((item) => item.draftId));
-      // Drop synced drafts and any body-less stragglers (e.g. a photo-only
-      // draft queued before photos were stubbed out) that can never sync,
-      // so a single bad draft doesn't wedge the rest of the queue forever.
+      // Body-less/photo-only drafts stay visible until the user explicitly
+      // removes them; silently hiding them would bypass the tenant barrier.
       setDrafts((current) => {
-        const next = current.filter(
-          (draft) => !flushedIds.has(draft.id) && draft.body.trim().length > 0,
-        );
+        const next = current.filter((draft) => !flushedIds.has(draft.id));
         setPendingDraft(next.length > 0);
         return next;
       });
@@ -265,10 +337,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
 
       return flushed.length;
+    } catch {
+      // A failed durable removal leaves React state untouched, so household
+      // switching remains blocked and an idempotent retry can finish later.
+      return 0;
     } finally {
-      setSyncingDrafts(false);
+      if (draftSyncOwnerRef.current === ownerUserId) {
+        draftSyncOwnerRef.current = null;
+        setSyncingDrafts(false);
+      }
     }
-  }, [drafts, isOffline, queryClient, syncingDrafts]);
+  }, [
+    canReadHousehold,
+    currentDraftOwner,
+    draftQueueReady,
+    drafts,
+    getToken,
+    isOffline,
+    queryClient,
+    syncingDrafts,
+  ]);
 
   const flushDraftQueueRef = useRef(flushDraftQueue);
   flushDraftQueueRef.current = flushDraftQueue;
@@ -276,22 +364,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const cameOnline = wasOfflineRef.current && !isOffline;
     wasOfflineRef.current = isOffline;
-    if (!draftsHydrated || isOffline) return;
-    if (cameOnline || draftsHydrated) {
+    if (!draftQueueReady || !canReadHousehold || isOffline) return;
+    if (cameOnline || draftQueueReady) {
       void flushDraftQueueRef.current();
     }
-  }, [draftsHydrated, isOffline]);
+  }, [canReadHousehold, draftQueueReady, isOffline]);
 
   const saveDraft = useCallback(
-    (input: {
+    async (input: {
+      familyId: string;
       body: string;
       eventDate: string;
       hasPhoto: boolean;
       photoUri?: string | null;
       visibility?: "HOUSEHOLD" | "PRIVATE";
     }) => {
+      if (!currentDraftOwner || !draftQueueReady || !input.familyId.trim()) return false;
+      const ownerUserId = currentDraftOwner;
       const draft: MemoryDraft = {
         id: `draft-${Date.now()}`,
+        familyId: input.familyId,
         body: input.body,
         eventDate: input.eventDate,
         hasPhoto: input.hasPhoto,
@@ -299,25 +391,59 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         visibility: input.visibility ?? "HOUSEHOLD",
         createdAtLabel: "Just now",
       };
-      setDrafts((current) => [draft, ...current]);
-      setPendingDraft(true);
+      return commitDraftMutationDurably({
+        persist: async () => {
+          await upsertMemoryDraft(ownerUserId, toPersistedDraft(draft));
+        },
+        commit: () => {
+          if (draftOwnerRef.current !== ownerUserId) return false;
+          setDrafts((current) => [draft, ...current]);
+          setPendingDraft(true);
+          return true;
+        },
+      });
     },
-    [],
+    [currentDraftOwner, draftQueueReady],
   );
 
-  const removeDraft = useCallback((id: string) => {
-    setDrafts((current) => {
-      const next = current.filter((draft) => draft.id !== id);
-      setPendingDraft(next.length > 0);
-      return next;
+  const removeDraft = useCallback(async (id: string) => {
+    const ownerUserId = currentDraftOwner;
+    if (!ownerUserId || !draftQueueReady) return false;
+    return commitDraftMutationDurably({
+      persist: async () => {
+        await removeMemoryDraft(ownerUserId, id);
+      },
+      commit: () => {
+        if (draftOwnerRef.current !== ownerUserId) return;
+        setDrafts((current) => {
+          const next = current.filter((draft) => draft.id !== id);
+          setPendingDraft(next.length > 0);
+          return next;
+        });
+      },
     });
-  }, []);
+  }, [currentDraftOwner, draftQueueReady]);
 
-  const clearDrafts = useCallback(() => {
-    setDrafts([]);
-    setPendingDraft(false);
-    void clearMemoryDrafts();
-  }, []);
+  const clearDrafts = useCallback(async () => {
+    const ownerUserId = currentDraftOwner;
+    if (!ownerUserId) return false;
+    clearingDraftsRef.current = true;
+    try {
+      return await clearDraftQueueDurably({
+        clearPersisted: () => clearMemoryDrafts(ownerUserId),
+        commitCleared: () => {
+          if (draftOwnerRef.current !== ownerUserId) return;
+          setDrafts([]);
+          setPendingDraft(false);
+          setDraftHydrationFailed(false);
+          setHydratedDraftOwner(ownerUserId);
+          setDraftsHydrated(true);
+        },
+      });
+    } finally {
+      clearingDraftsRef.current = false;
+    }
+  }, [currentDraftOwner]);
 
   const markPartnerJoined = useCallback(() => {
     setConnectTodayMode("group");
@@ -364,9 +490,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
 
       if (!input.existingFamily) {
-        await consentsApi.createConsent({ type: "age_attestation", version: "mvp-1" });
-        await consentsApi.createConsent({ type: "terms", version: "mvp-1" });
-        await consentsApi.createConsent({ type: "privacy", version: "mvp-1" });
+        for (const consent of REQUIRED_ONBOARDING_CONSENTS) {
+          await consentsApi.createConsent(consent);
+        }
       }
 
       if (input.notificationPrefs) {
@@ -381,10 +507,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             ...input.notificationPrefs,
           },
         });
-      }
-
-      if (input.role === "partner") {
-        setConnectTodayMode("alone");
       }
 
       await queryClient.invalidateQueries({ queryKey: queryKeys.family });
@@ -402,12 +524,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       deviceOffline,
       offlineBannerDismissed,
       dismissOfflineBanner: () => setOfflineBannerDismissed(true),
-      drafts,
-      pendingDraft,
-      syncingDrafts,
+      draftsHydrated: draftQueueReady,
+      draftHydrationFailed: currentDraftHydrationFailed,
+      drafts: currentDrafts,
+      pendingDraft: draftQueueReady ? pendingDraft : false,
+      syncingDrafts: currentDraftSyncing,
       saveDraft,
       removeDraft,
       clearDrafts,
+      retryDraftHydration,
       flushDraftQueue,
       blockedAuthorIds,
       blockAuthor: (authorId) =>
@@ -455,8 +580,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       communityRulesAccepted,
       connectRulesSeen,
       connectTodayMode,
+      currentDraftHydrationFailed,
+      currentDraftSyncing,
+      currentDrafts,
       deviceOffline,
-      drafts,
+      draftQueueReady,
       flushDraftQueue,
       incrementCommentCount,
       incrementPostCount,
@@ -473,8 +601,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       postsUsedToday,
       primaryGoal,
       removeDraft,
+      retryDraftHydration,
       saveDraft,
-      syncingDrafts,
       weekSummaryConsent,
     ],
   );

@@ -63,6 +63,7 @@ describe("cursor pagination (correction 9)", () => {
 describe("memory targeting (corrections 26-28)", () => {
   it("accepts a child-targeted memory", () => {
     const parsed = createMemoryInputSchema.parse({
+      familyId: "family_1",
       body: "First long eye contact.",
       eventDate: "2026-07-29",
       childId: "child_1",
@@ -74,6 +75,7 @@ describe("memory targeting (corrections 26-28)", () => {
 
   it("accepts a pregnancy-targeted memory", () => {
     const parsed = createMemoryInputSchema.parse({
+      familyId: "family_1",
       body: "Kick during the night.",
       eventDate: "2026-07-29",
       pregnancyId: "preg_1",
@@ -85,6 +87,7 @@ describe("memory targeting (corrections 26-28)", () => {
   it("rejects a memory targeting both a child and a pregnancy", () => {
     assert.throws(() =>
       createMemoryInputSchema.parse({
+        familyId: "family_1",
         body: "x",
         eventDate: "2026-07-29",
         childId: "child_1",

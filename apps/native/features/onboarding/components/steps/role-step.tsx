@@ -2,8 +2,9 @@ import { StyleSheet, View } from "react-native";
 
 import { AppText, spacing } from "@/design-system";
 import { SelectionOption } from "@/features/onboarding/components/selection-option";
+import type { OnboardingRole } from "@/features/onboarding/lib/onboarding-role";
 
-export type OnboardingRole = "expecting" | "parent" | "partner";
+export type { OnboardingRole } from "@/features/onboarding/lib/onboarding-role";
 
 type RoleStepProps = {
   role: OnboardingRole | null;
@@ -27,12 +28,6 @@ const OPTIONS: Array<{
     label: "Parent",
     description: "Journal and care for your child",
     icon: "smile",
-  },
-  {
-    id: "partner",
-    label: "Partner / caregiver",
-    description: "Joining an existing household",
-    icon: "users",
   },
 ];
 

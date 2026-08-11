@@ -13,13 +13,19 @@ import type {
   UpsertMilestoneObservationInput,
 } from "@bumpatlas/contracts";
 
+import {
+  completeInviteOnboarding,
+  shouldSuppressInviteGlobalError,
+} from "@/features/family/lib/complete-invite-onboarding";
 import * as accountApi from "@/lib/api/account";
 import * as aiApi from "@/lib/api/ai";
 import * as billingApi from "@/lib/api/billing";
 import * as communityApi from "@/lib/api/community";
+import * as consentsApi from "@/lib/api/consents";
 import * as contentApi from "@/lib/api/content";
 import * as dataRequestsApi from "@/lib/api/data-requests";
 import * as familiesApi from "@/lib/api/families";
+import { handleApiError } from "@/lib/api/errors";
 import * as memoriesApi from "@/lib/api/memories";
 import * as milestonesApi from "@/lib/api/milestones";
 import * as moderationApi from "@/lib/api/moderation";
@@ -27,6 +33,8 @@ import * as notificationsApi from "@/lib/api/notifications";
 import * as profilesApi from "@/lib/api/profiles";
 import * as recapsApi from "@/lib/api/recaps";
 import * as todayApi from "@/lib/api/today";
+import { resetFamilyContextCache } from "@/lib/api/family-context-cache";
+import { appRoutes } from "@/navigation/routes";
 
 export const queryKeys = {
   today: ["today"] as const,
@@ -90,9 +98,10 @@ export function useEntitlementsQuery() {
   });
 }
 
-export function useGroupsQuery() {
+export function useGroupsQuery(enabled = true) {
   return useQuery({
     queryKey: queryKeys.groups,
+    enabled,
     queryFn: () => communityApi.listGroups(),
   });
 }
@@ -152,9 +161,10 @@ export function useNotificationPreferencesQuery() {
   });
 }
 
-export function useBadgesQuery() {
+export function useBadgesQuery(enabled = true) {
   return useQuery({
     queryKey: queryKeys.badges,
+    enabled,
     queryFn: () => todayApi.listBadges(),
   });
 }
@@ -352,15 +362,28 @@ export function useInvitePreviewQuery(token: string) {
   });
 }
 
-export function useAcceptInviteMutation() {
+export function useCompleteInviteOnboardingMutation(
+  completeOnboarding: () => Promise<void>,
+) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: Parameters<typeof familiesApi.acceptInvite>[0]) => {
-      return familiesApi.acceptInvite(input);
-    },
-    onSuccess: async (family) => {
-      queryClient.setQueryData(queryKeys.family, family);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.stage });
+    mutationFn: async (input: { token: string }) =>
+      completeInviteOnboarding(input, {
+        syncAccount: accountApi.getMe,
+        createConsent: consentsApi.createConsent,
+        acceptInvite: familiesApi.acceptInvite,
+        adoptFamily: (family) => resetFamilyContextCache(queryClient, family),
+        completeOnboarding,
+      }),
+    // Email mismatch is handled in-place so the user can switch accounts. A
+    // session expiry or unrelated authorization failure still follows the
+    // global cache-clear/redirect policy.
+    onError: (error, variables) => {
+      if (!shouldSuppressInviteGlobalError(error)) {
+        handleApiError(error, {
+          returnTo: String(appRoutes.inviteAccept(variables.token)),
+        });
+      }
     },
   });
 }

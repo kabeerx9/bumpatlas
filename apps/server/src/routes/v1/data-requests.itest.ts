@@ -221,12 +221,12 @@ describe("export processor", () => {
 
   it("includes household content the requester can already read", async () => {
     const app = await createApp();
-    await onboard(app, "clerk_owner");
+    const familyId = await onboard(app, "clerk_owner");
     await app.inject({
       method: "POST",
       url: "/api/v1/memories",
       headers: asUser("clerk_owner"),
-      payload: { body: "First long eye contact", eventDate: "2026-07-29" },
+      payload: { familyId, body: "First long eye contact", eventDate: "2026-07-29" },
     });
     await requestExport(app, "clerk_owner");
 
@@ -244,7 +244,7 @@ describe("export processor", () => {
 
   it("includes a co-parent's memories, since they are shared family content", async () => {
     const app = await createApp();
-    await onboard(app, "clerk_owner");
+    const familyId = await onboard(app, "clerk_owner");
     const invite = await app.inject({
       method: "POST",
       url: "/api/v1/families/current/invites",
@@ -266,7 +266,7 @@ describe("export processor", () => {
       method: "POST",
       url: "/api/v1/memories",
       headers: asUser("clerk_partner"),
-      payload: { body: "Partner's memory", eventDate: "2026-07-29" },
+      payload: { familyId, body: "Partner's memory", eventDate: "2026-07-29" },
     });
     await requestExport(app, "clerk_owner");
 
@@ -420,7 +420,7 @@ describe("export processor", () => {
 describe("deletion processor", () => {
   it("removes devices and memberships but keeps household memories", async () => {
     const app = await createApp();
-    await onboard(app, "clerk_owner");
+    const familyId = await onboard(app, "clerk_owner");
     const invite = await app.inject({
       method: "POST",
       url: "/api/v1/families/current/invites",
@@ -442,7 +442,11 @@ describe("deletion processor", () => {
       method: "POST",
       url: "/api/v1/memories",
       headers: asUser("clerk_leaver"),
-      payload: { body: "Their contribution to the household", eventDate: "2026-07-29" },
+      payload: {
+        familyId,
+        body: "Their contribution to the household",
+        eventDate: "2026-07-29",
+      },
     });
 
     const leaver = await prisma.user.findUniqueOrThrow({ where: { clerkId: "clerk_leaver" } });
@@ -544,7 +548,7 @@ describe("cron authentication", () => {
 
   it("purges expired invites and stale pending uploads", async () => {
     const app = await createApp();
-    await onboard(app, "clerk_owner");
+    const familyId = await onboard(app, "clerk_owner");
     await app.inject({
       method: "POST",
       url: "/api/v1/families/current/invites",
@@ -555,7 +559,7 @@ describe("cron authentication", () => {
       method: "POST",
       url: "/api/v1/media/upload-url",
       headers: asUser("clerk_owner"),
-      payload: { contentType: "image/jpeg", byteSize: 1024 },
+      payload: { familyId, contentType: "image/jpeg", byteSize: 1024 },
     });
 
     await prisma.familyInvite.updateMany({

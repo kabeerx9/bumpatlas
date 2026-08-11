@@ -59,6 +59,14 @@ const REDACTED_LOG_PATHS = [
   'res.headers["set-cookie"]',
 ];
 
+const INVITE_TOKEN_IN_URL =
+  /(\/api\/v1\/invites\/)[^/?#]+(\/(?:preview|accept)(?=$|[?#]))/g;
+
+/** Bearer invite credentials live in the path, outside Pino's field redactor. */
+export function redactSensitiveRequestUrl(url: string | undefined): string | undefined {
+  return url?.replace(INVITE_TOKEN_IN_URL, "$1[redacted]$2");
+}
+
 /**
  * 1 MiB. Memories are text — media goes to object storage through a signed URL,
  * never through this process — so anything larger is a mistake or an attack, and
@@ -71,6 +79,17 @@ export function buildApp() {
     logger: {
       level: env.NODE_ENV === "test" ? "silent" : "info",
       redact: { paths: REDACTED_LOG_PATHS, censor: "[redacted]" },
+      serializers: {
+        req(request) {
+          return {
+            method: request.method,
+            url: redactSensitiveRequestUrl(request.url),
+            host: request.headers.host,
+            remoteAddress: request.ip,
+            remotePort: request.socket.remotePort,
+          };
+        },
+      },
     },
     bodyLimit: BODY_LIMIT_BYTES,
     // Generated, never taken from a client header: a caller-supplied request ID

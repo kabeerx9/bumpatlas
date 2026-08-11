@@ -39,7 +39,7 @@ export function createInvite(input: CreateInviteInput) {
   );
 }
 
-/** Requires a signed-in adult but not household membership — the recipient isn't a member yet. */
+/** Public possession-based preview; the response contract is intentionally minimal. */
 export function getInvitePreview(token: string) {
   return apiClient.requestJson(
     `/api/v1/invites/${encodeURIComponent(token)}/preview`,
@@ -48,11 +48,11 @@ export function getInvitePreview(token: string) {
 }
 
 export function acceptInvite(input: AcceptInviteInput) {
-  const body = acceptInviteInputSchema.parse(input);
+  const parsed = acceptInviteInputSchema.parse(input);
   return apiClient.requestJson(
-    `/api/v1/invites/${encodeURIComponent(body.token)}/accept`,
+    `/api/v1/invites/${encodeURIComponent(parsed.token)}/accept`,
     familySummarySchema,
-    { method: "POST", body: JSON.stringify({}) },
+    { method: "POST" },
   );
 }
 

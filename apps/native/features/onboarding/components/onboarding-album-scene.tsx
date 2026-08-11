@@ -26,7 +26,6 @@ const ARTIFACTS = {
   unselected: require("../../../assets/onboarding/expecting-keepsake.png"),
   expecting: require("../../../assets/onboarding/expecting-keepsake.png"),
   parent: require("../../../assets/onboarding/parent-keepsake.png"),
-  caregiver: require("../../../assets/onboarding/caregiver-keepsake.png"),
 } satisfies Record<ArtifactKey, number>;
 
 const STAGE_VALUE: Record<AlbumStage, number> = {

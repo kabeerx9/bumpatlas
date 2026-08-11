@@ -1,5 +1,4 @@
 import {
-  acceptInviteInputSchema,
   createFamilyInputSchema,
   createInviteInputSchema,
   createInviteResponseSchema,
@@ -9,12 +8,14 @@ import {
   stageResponseSchema,
   updateMemberInputSchema,
 } from "@bumpatlas/contracts/v1";
+import { clerkClient } from "@clerk/fastify";
 import type { FastifyInstance } from "fastify";
 
 import { requireAuth } from "@/middleware/require-auth";
 import {
   requireCurrentFamily,
   requireCurrentFamilyWithPermission,
+  requireFamilyMember,
 } from "@/middleware/require-family-member";
 import { invalidInput } from "@/services/errors";
 import {
@@ -31,20 +32,34 @@ import {
   readIdempotencyKey,
   recordIdempotencyTx,
 } from "@/services/idempotency";
-import { acceptInvite, createInvite, previewInvite } from "@/services/invite";
+import {
+  acceptInvite,
+  createInvite,
+  hashInviteToken,
+  inviteNeedsVerifiedEmail,
+  previewInvite,
+} from "@/services/invite";
 import { maybeCompleteOnboarding } from "@/services/preference";
 import { listChildren, resolveStageForUser, serializeChild } from "@/services/profile";
 import { trackProductEvent } from "@/services/product-event";
+import { listVerifiedClerkEmails } from "@/services/user";
 
 export type FamilyRouteDeps = {
   requireAuth: typeof requireAuth;
+  getVerifiedEmails: (clerkUserId: string) => Promise<string[]>;
+};
+
+const defaultFamilyRouteDeps: FamilyRouteDeps = {
+  requireAuth,
+  getVerifiedEmails: async (clerkUserId) =>
+    listVerifiedClerkEmails(await clerkClient.users.getUser(clerkUserId)),
 };
 
 export async function registerFamilyRoutes(
   fastify: FastifyInstance,
   deps: Partial<FamilyRouteDeps> = {},
 ) {
-  const d = { requireAuth, ...deps };
+  const d = { ...defaultFamilyRouteDeps, ...deps };
 
   fastify.post("/api/v1/families", async (request, reply) => {
     const auth = await d.requireAuth(request, reply);
@@ -194,15 +209,13 @@ export async function registerFamilyRoutes(
   });
 
   /**
-   * Preview requires a signed-in adult but *not* household membership — the whole
-   * point is that the recipient is not a member yet.
+   * Public possession-based preview. The service returns a strict allowlist and
+   * deliberately excludes child/member detail; household access still requires
+   * authenticated acceptance below.
    */
   fastify.get<{ Params: { token: string } }>(
     "/api/v1/invites/:token/preview",
     async (request, reply) => {
-      const auth = await d.requireAuth(request, reply);
-      if (!auth) return;
-
       const preview = await previewInvite(request.params.token);
 
       return reply.send(invitePreviewSchema.parse(preview));
@@ -215,35 +228,84 @@ export async function registerFamilyRoutes(
       const auth = await d.requireAuth(request, reply);
       if (!auth) return;
 
-      // Token comes from the path; the body form is accepted only for compatibility
-      // and must agree with it.
-      const bodyToken = acceptInviteInputSchema.partial().safeParse(request.body ?? {});
       const token = request.params.token;
 
-      if (bodyToken.success && bodyToken.data.token && bodyToken.data.token !== token) {
-        return reply
-          .code(400)
-          .send({ error: { code: "INVALID_INPUT", message: "Token mismatch.", requestId: request.id } });
-      }
-
       const routeKey = "POST /api/v1/invites/:token/accept";
-      const idempotencyKey = readIdempotencyKey(request);
+      // A single-use token is already the natural operation identity. Hash it so
+      // response-loss retries are safe without persisting the bearer token itself.
+      const idempotencyKey = hashInviteToken(token);
       const requestHash = hashRequest({ token });
 
-      if (idempotencyKey) {
-        const replay = await findReplay(auth.userId, routeKey, idempotencyKey, requestHash);
+      const sendReplay = async (replay: { statusCode: number; body: unknown }) => {
+        const familyId = String(replay.body);
+        // Idempotency is not authorization. A removed member must not recover
+        // household data by replaying an old successful acceptance.
+        await requireFamilyMember(auth, familyId);
 
-        if (replay) {
-          const summary = await getFamilySummary({
-            userId: auth.userId,
-            familyId: String(replay.body),
-            timeZone: request.timeZone,
-          });
-          return reply.code(replay.statusCode).send(familySummarySchema.parse(summary));
-        }
+        // The membership and replay record commit together, while onboarding
+        // completion is intentionally post-transaction. Re-run that idempotent
+        // projection so a process/response loss in between self-heals on retry.
+        await maybeCompleteOnboarding({ userId: auth.userId, familyId });
+
+        const summary = await getFamilySummary({
+          userId: auth.userId,
+          familyId,
+          timeZone: request.timeZone,
+        });
+        return reply.code(replay.statusCode).send(familySummarySchema.parse(summary));
+      };
+
+      const existingReplay = await findReplay(
+        auth.userId,
+        routeKey,
+        idempotencyKey,
+        requestHash,
+      );
+
+      if (existingReplay) {
+        return sendReplay(existingReplay);
       }
 
-      const { familyId } = await acceptInvite({ token, userId: auth.userId });
+      // Email-locked invites are an authorization boundary. Resolve the current
+      // verified Clerk addresses for this attempt; the local profile mirror can
+      // be stale after an address is removed or before verification completes.
+      // Unbound invites skip that external dependency and latency entirely.
+      const verifiedEmails = (await inviteNeedsVerifiedEmail(token))
+        ? await d.getVerifiedEmails(auth.clerkUserId)
+        : [];
+
+      let familyId: string;
+      try {
+        ({ familyId } = await acceptInvite({
+          token,
+          userId: auth.userId,
+          verifiedEmails,
+          idempotency: (tx, responseFamilyId) =>
+            recordIdempotencyTx(tx, {
+              userId: auth.userId,
+              routeKey,
+              idempotencyKey,
+              requestHash,
+              statusCode: 200,
+              responseJson: responseFamilyId,
+            }),
+        }));
+      } catch (error) {
+        // Two same-user retries can both miss the first read. One then waits on
+        // the invite row lock and observes the consumed invite. Re-reading the
+        // record after any failure distinguishes that response-loss race from a
+        // genuinely expired/different-user token.
+        const winningReplay = await findReplay(
+          auth.userId,
+          routeKey,
+          idempotencyKey,
+          requestHash,
+        );
+        if (winningReplay) {
+          return sendReplay(winningReplay);
+        }
+        throw error;
+      }
 
       await maybeCompleteOnboarding({ userId: auth.userId, familyId });
 

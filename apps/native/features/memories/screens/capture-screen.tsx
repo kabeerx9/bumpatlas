@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActionSheetIOS,
   Alert,
@@ -60,6 +60,8 @@ export function CaptureScreen() {
   const [picking, setPicking] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedLocally, setSavedLocally] = useState(false);
+  const saveInFlightRef = useRef(false);
+  const savedLocallyRef = useRef(false);
   const [eventDate, setEventDate] = useState("Today");
   const [customDate, setCustomDate] = useState("");
   const [visibility, setVisibility] = useState<"household" | "private">("household");
@@ -123,26 +125,45 @@ export function CaptureScreen() {
   }
 
   async function saveMoment() {
-    if (saving) return;
-    const resolvedDate =
-      eventDate === "Pick a date…" ? formatShortDate(customDate) || "Custom date" : eventDate;
-    const visibilityValue = visibility === "private" ? "PRIVATE" : "HOUSEHOLD";
-
-    if (isOffline) {
-      saveDraft({
-        body: body.trim(),
-        eventDate: resolvedDate,
-        hasPhoto: photoState === "selected",
-        photoUri: photo?.uri ?? null,
-        visibility: visibilityValue,
-      });
-      setSavedLocally(true);
-      return;
-    }
-
+    if (saveInFlightRef.current || savedLocallyRef.current) return;
+    saveInFlightRef.current = true;
     setSaving(true);
     try {
+      const familyId = familyQuery.data?.id;
+      if (!familyId) {
+        Alert.alert(
+          "Household unavailable",
+          "Reconnect once so BumpAtlas can verify which household should receive this memory.",
+        );
+        return;
+      }
+      const resolvedDate =
+        eventDate === "Pick a date…" ? formatShortDate(customDate) || "Custom date" : eventDate;
+      const visibilityValue = visibility === "private" ? "PRIVATE" : "HOUSEHOLD";
+
+      if (isOffline) {
+        const saved = await saveDraft({
+          familyId,
+          body: body.trim(),
+          eventDate: resolvedDate,
+          hasPhoto: photoState === "selected",
+          photoUri: photo?.uri ?? null,
+          visibility: visibilityValue,
+        });
+        if (!saved) {
+          Alert.alert(
+            "Couldn’t save draft",
+            "The local draft queue is not ready. Try again before leaving this screen.",
+          );
+          return;
+        }
+        savedLocallyRef.current = true;
+        setSavedLocally(true);
+        return;
+      }
+
       await saveMemoryWithOptionalUpload({
+        familyId,
         body: body.trim(),
         eventDate: eventDate === "Pick a date…" ? "Pick a date…" : eventDate,
         customDate,
@@ -166,6 +187,7 @@ export function CaptureScreen() {
         "Your note is still here. Check your connection and try again, or save a draft offline.",
       );
     } finally {
+      saveInFlightRef.current = false;
       setSaving(false);
     }
   }
@@ -181,10 +203,10 @@ export function CaptureScreen() {
         <>
           <Button
             size="lg"
-            disabled={body.trim().length === 0 || saving || picking}
+            disabled={body.trim().length === 0 || saving || picking || savedLocally}
             onPress={() => void saveMoment()}
           >
-            {isOffline ? "Save draft locally" : saving ? "Saving…" : "Save moment"}
+            {saving ? "Saving…" : isOffline ? "Save draft locally" : "Save moment"}
           </Button>
           {savedLocally ? (
             <Button size="lg" variant="ghost" onPress={() => router.back()}>

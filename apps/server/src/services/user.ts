@@ -10,17 +10,35 @@ export type UserProfileInput = {
   imageUrl?: string | null;
 };
 
-export function mapClerkApiUser(user: {
+type ClerkEmailAddressLike = {
+  id: string;
+  emailAddress: string;
+  verification: { status: string } | null;
+};
+
+type ClerkApiUserLike = {
   id: string;
   firstName: string | null;
   lastName: string | null;
   imageUrl: string;
-  emailAddresses: Array<{ id: string; emailAddress: string }>;
+  emailAddresses: ClerkEmailAddressLike[];
   primaryEmailAddressId: string | null;
-}): UserProfileInput {
+};
+
+/** Current Clerk-verified addresses, normalized for authorization comparisons. */
+export function listVerifiedClerkEmails(user: Pick<ClerkApiUserLike, "emailAddresses">): string[] {
+  return user.emailAddresses
+    .filter((entry) => entry.verification?.status === "verified")
+    .map((entry) => entry.emailAddress.trim().toLowerCase());
+}
+
+export function mapClerkApiUser(user: ClerkApiUserLike): UserProfileInput {
+  const verifiedAddresses = user.emailAddresses.filter(
+    (entry) => entry.verification?.status === "verified",
+  );
   const primaryEmail =
-    user.emailAddresses.find((entry) => entry.id === user.primaryEmailAddressId)?.emailAddress ??
-    user.emailAddresses[0]?.emailAddress;
+    verifiedAddresses.find((entry) => entry.id === user.primaryEmailAddressId)?.emailAddress ??
+    verifiedAddresses[0]?.emailAddress;
 
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || null;
 
@@ -33,9 +51,12 @@ export function mapClerkApiUser(user: {
 }
 
 export function mapClerkUser(user: UserJSON): UserProfileInput {
+  const verifiedAddresses = user.email_addresses.filter(
+    (entry) => entry.verification?.status === "verified",
+  );
   const primaryEmail =
-    user.email_addresses.find((entry) => entry.id === user.primary_email_address_id)?.email_address ??
-    user.email_addresses[0]?.email_address;
+    verifiedAddresses.find((entry) => entry.id === user.primary_email_address_id)?.email_address ??
+    verifiedAddresses[0]?.email_address;
 
   const name = [user.first_name, user.last_name].filter(Boolean).join(" ") || null;
 
@@ -68,12 +89,15 @@ export async function getOrCreateUserByClerkId(
   clerkId: string,
   syncFromClerk: () => Promise<UserProfileInput>,
 ): Promise<User> {
-  const existing = await prisma.user.findUnique({ where: { clerkId } });
-  if (existing) {
-    return existing;
+  const profile = await syncFromClerk();
+  if (profile.clerkId !== clerkId) {
+    throw new Error("Clerk identity response did not match the authenticated user.");
   }
 
-  return upsertUserFromClerk(await syncFromClerk());
+  // `/api/me` is an explicit identity synchronization endpoint, so refresh even
+  // an existing mirror. A non-null cached email is not proof that Clerk still
+  // considers that address verified or attached to this account.
+  return upsertUserFromClerk(profile);
 }
 
 export async function deleteUserByClerkId(clerkId: string): Promise<void> {

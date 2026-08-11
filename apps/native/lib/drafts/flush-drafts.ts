@@ -4,7 +4,7 @@ import { resolveEventDateIso } from "@/lib/memories/event-date";
 
 export type FlushableDraft = Pick<
   PersistedMemoryDraft,
-  "id" | "body" | "eventDate" | "hasPhoto" | "visibility" | "photoUri"
+  "id" | "familyId" | "body" | "eventDate" | "hasPhoto" | "visibility" | "photoUri"
 >;
 
 export type FlushedDraftResult = {
@@ -17,7 +17,11 @@ export type FlushedDraftResult = {
 };
 
 /** Upload queued offline drafts: POSTs each draft then removes it from persistence. */
-export async function flushMemoryDrafts(drafts: FlushableDraft[]): Promise<FlushedDraftResult[]> {
+export async function flushMemoryDrafts(
+  ownerUserId: string,
+  drafts: FlushableDraft[],
+  ownerAuthToken: string,
+): Promise<FlushedDraftResult[]> {
   const flushed: FlushedDraftResult[] = [];
 
   for (const draft of drafts) {
@@ -28,15 +32,17 @@ export async function flushMemoryDrafts(drafts: FlushableDraft[]): Promise<Flush
     // Photos attached offline need a dedicated media retry; text syncs first.
     const memory = await createMemory(
       {
+        familyId: draft.familyId,
         body: draft.body,
         eventDate: eventDateIso,
         visibility,
         mediaStorageKey: null,
       },
       `draft-${draft.id}`,
+      ownerAuthToken,
     );
 
-    await removeMemoryDraft(draft.id);
+    await removeMemoryDraft(ownerUserId, draft.id);
     flushed.push({
       draftId: draft.id,
       memoryId: memory.id,

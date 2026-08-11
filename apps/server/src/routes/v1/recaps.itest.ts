@@ -68,7 +68,7 @@ function thisWeekDates(count: number): string[] {
   });
 }
 
-async function addMemories(app: App, clerkId: string, titles: string[]) {
+async function addMemories(app: App, clerkId: string, familyId: string, titles: string[]) {
   const dates = thisWeekDates(titles.length);
 
   for (const [index, title] of titles.entries()) {
@@ -76,7 +76,7 @@ async function addMemories(app: App, clerkId: string, titles: string[]) {
       method: "POST",
       url: "/api/v1/memories",
       headers: asUser(clerkId),
-      payload: { body: title, eventDate: dates[index] },
+      payload: { familyId, body: title, eventDate: dates[index] },
     });
   }
 }
@@ -87,8 +87,8 @@ after(disconnectDatabase);
 describe("GET /api/v1/recaps/current", () => {
   it("generates on demand when cron has not run", async () => {
     const app = await createApp();
-    await onboard(app, "clerk_owner");
-    await addMemories(app, "clerk_owner", ["First smile", "Park stroll", "Funny hiccups"]);
+    const familyId = await onboard(app, "clerk_owner");
+    await addMemories(app, "clerk_owner", familyId, ["First smile", "Park stroll", "Funny hiccups"]);
 
     const response = await app.inject({
       method: "GET",
@@ -106,8 +106,8 @@ describe("GET /api/v1/recaps/current", () => {
 
   it("is idempotent — repeated reads reuse one row", async () => {
     const app = await createApp();
-    await onboard(app, "clerk_owner");
-    await addMemories(app, "clerk_owner", ["One", "Two", "Three"]);
+    const familyId = await onboard(app, "clerk_owner");
+    await addMemories(app, "clerk_owner", familyId, ["One", "Two", "Three"]);
 
     const first = await app.inject({
       method: "GET",
@@ -127,8 +127,8 @@ describe("GET /api/v1/recaps/current", () => {
 
   it("reports ineligible for a quiet week without failing", async () => {
     const app = await createApp();
-    await onboard(app, "clerk_owner");
-    await addMemories(app, "clerk_owner", ["Only one"]);
+    const familyId = await onboard(app, "clerk_owner");
+    await addMemories(app, "clerk_owner", familyId, ["Only one"]);
 
     const response = await app.inject({
       method: "GET",
@@ -143,7 +143,7 @@ describe("GET /api/v1/recaps/current", () => {
 
   it("draws from every child's memories without ranking siblings", async () => {
     const app = await createApp();
-    await onboard(app, "clerk_owner");
+    const familyId = await onboard(app, "clerk_owner");
     const elder = await app.inject({
       method: "POST",
       url: "/api/v1/children",
@@ -156,9 +156,14 @@ describe("GET /api/v1/recaps/current", () => {
       method: "POST",
       url: "/api/v1/memories",
       headers: asUser("clerk_owner"),
-      payload: { body: "About elder", eventDate: dates[0], childId: elder.json().id },
+      payload: {
+        familyId,
+        body: "About elder",
+        eventDate: dates[0],
+        childId: elder.json().id,
+      },
     });
-    await addMemories(app, "clerk_owner", ["About baby", "Household moment"]);
+    await addMemories(app, "clerk_owner", familyId, ["About baby", "Household moment"]);
 
     const response = await app.inject({
       method: "GET",
@@ -191,8 +196,12 @@ describe("GET /api/v1/recaps/current", () => {
   it("never returns another household's recap", async () => {
     const app = await createApp();
     await onboard(app, "clerk_a", "Ada");
-    await onboard(app, "clerk_b", "Bea");
-    await addMemories(app, "clerk_b", ["Their first smile", "Their walk", "Their bath"]);
+    const otherFamilyId = await onboard(app, "clerk_b", "Bea");
+    await addMemories(app, "clerk_b", otherFamilyId, [
+      "Their first smile",
+      "Their walk",
+      "Their bath",
+    ]);
 
     const response = await app.inject({
       method: "GET",
@@ -208,8 +217,12 @@ describe("GET /api/v1/recaps/current", () => {
 
 describe("recap sharing", () => {
   async function shareable(app: App) {
-    await onboard(app, "clerk_owner");
-    await addMemories(app, "clerk_owner", ["First smile", "Park stroll", "Funny hiccups"]);
+    const familyId = await onboard(app, "clerk_owner");
+    await addMemories(app, "clerk_owner", familyId, [
+      "First smile",
+      "Park stroll",
+      "Funny hiccups",
+    ]);
 
     const link = await app.inject({
       method: "POST",

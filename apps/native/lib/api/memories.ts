@@ -25,12 +25,19 @@ export function getMemory(id: string) {
   return apiClient.requestJson(`/api/v1/memories/${id}`, memorySchema);
 }
 
-export function createMemory(input: CreateMemoryInput, idempotencyKey?: string) {
+export function createMemory(
+  input: CreateMemoryInput,
+  idempotencyKey?: string,
+  authToken?: string,
+) {
   const body = createMemoryInputSchema.parse(input);
   return apiClient.requestJson("/api/v1/memories", memorySchema, {
     method: "POST",
     body: JSON.stringify(body),
-    headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+    headers: {
+      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    },
   });
 }
 

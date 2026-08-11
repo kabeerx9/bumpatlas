@@ -3,11 +3,13 @@ import {
   adminMetricsResponseSchema,
   createApiClient,
   deleteAccountInputSchema,
+  invitePreviewSchema,
   meResponseSchema,
   updateAccountInputSchema,
   type AdminMetricsRange,
   type AdminMetricsResponse,
   type DeleteAccountInput,
+  type InvitePreview,
   type MeResponse,
   type UpdateAccountInput,
 } from "@bumpatlas/contracts";
@@ -19,6 +21,7 @@ export type {
   AdminMetricsRange,
   AdminMetricsResponse,
   DeleteAccountInput,
+  InvitePreview,
   MeResponse,
   UpdateAccountInput,
 };
@@ -40,6 +43,14 @@ export function getAdminMetrics(range: AdminMetricsRange = "30d") {
 
 export function getMe() {
   return api.requestJson("/api/me", meResponseSchema);
+}
+
+/** Public, possession-based household invite preview. */
+export function getInvitePreview(token: string) {
+  return api.requestJson(
+    `/api/v1/invites/${encodeURIComponent(token)}/preview`,
+    invitePreviewSchema,
+  );
 }
 
 export function updateAccount(input: UpdateAccountInput) {

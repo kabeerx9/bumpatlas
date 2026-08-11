@@ -9,6 +9,7 @@ import {
   groupPostSchema,
   listBadgesResponseSchema,
   listModerationQueueResponseSchema,
+  mediaUploadUrlInputSchema,
   notificationPreferencesSchema,
   reportInputSchema,
   todayResponseSchema,
@@ -84,12 +85,39 @@ describe("listBadgesResponseSchema", () => {
 describe("createMemoryInputSchema", () => {
   it("accepts household memory create payloads", () => {
     const payload = {
+      familyId: "family-1",
       body: "Ava smiled at the window light.",
       eventDate: "2026-07-29",
       visibility: "HOUSEHOLD" as const,
       mediaStorageKey: null,
     };
-    assert.equal(createMemoryInputSchema.parse(payload).visibility, "HOUSEHOLD");
+    const parsed = createMemoryInputSchema.parse(payload);
+    assert.equal(parsed.familyId, "family-1");
+    assert.equal(parsed.visibility, "HOUSEHOLD");
+  });
+
+  it("requires an explicit household target", () => {
+    assert.throws(() =>
+      createMemoryInputSchema.parse({
+        body: "A memory with an ambiguous destination.",
+        eventDate: "2026-07-29",
+      }),
+    );
+  });
+});
+
+describe("mediaUploadUrlInputSchema", () => {
+  it("requires and preserves the explicit household target", () => {
+    const parsed = mediaUploadUrlInputSchema.parse({
+      familyId: "family-1",
+      contentType: "image/jpeg",
+      byteSize: 1024,
+    });
+
+    assert.equal(parsed.familyId, "family-1");
+    assert.throws(() =>
+      mediaUploadUrlInputSchema.parse({ contentType: "image/jpeg", byteSize: 1024 }),
+    );
   });
 });
 

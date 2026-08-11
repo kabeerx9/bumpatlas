@@ -1,8 +1,10 @@
+import { LEGAL_POLICY_EFFECTIVE_DATE } from "../../../lib/legal-policy";
+
 /** Static legal copy (privacy policy, terms, community rules) — real content, no CMS endpoint yet. */
 export const legalDocuments = {
   privacy: {
     title: "Privacy Policy",
-    updated: "March 1, 2026",
+    updated: LEGAL_POLICY_EFFECTIVE_DATE,
     sections: [
       {
         heading: "What we collect",
@@ -24,7 +26,7 @@ export const legalDocuments = {
   },
   terms: {
     title: "Terms of Service",
-    updated: "March 1, 2026",
+    updated: LEGAL_POLICY_EFFECTIVE_DATE,
     sections: [
       {
         heading: "Adults only",
@@ -46,7 +48,7 @@ export const legalDocuments = {
   },
   community: {
     title: "Community Rules",
-    updated: "March 1, 2026",
+    updated: LEGAL_POLICY_EFFECTIVE_DATE,
     sections: [
       {
         heading: "Text only",

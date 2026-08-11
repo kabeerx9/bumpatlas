@@ -54,18 +54,26 @@ const addChild = (app: App, clerkId: string, displayName: string, dateOfBirth: s
     payload: { displayName, dateOfBirth },
   });
 
-const createMemory = (
+const createMemory = async (
   app: App,
   clerkId: string,
   payload: Record<string, unknown>,
   headers: Record<string, string> = {},
-) =>
-  app.inject({
+) => {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { clerkId },
+    select: { defaultFamilyId: true },
+  });
+  if (!user.defaultFamilyId) {
+    throw new Error(`Test user ${clerkId} has no default household.`);
+  }
+  return app.inject({
     method: "POST",
     url: "/api/v1/memories",
     headers: { ...asUser(clerkId), ...headers },
-    payload: { eventDate: "2026-07-29", ...payload },
+    payload: { familyId: user.defaultFamilyId, eventDate: "2026-07-29", ...payload },
   });
+};
 
 beforeEach(resetDatabase);
 after(disconnectDatabase);
@@ -84,6 +92,23 @@ describe("POST /api/v1/memories", () => {
     assert.equal(body.title, "First long eye contact");
     assert.equal(body.eventDate, "2026-07-29");
     assert.equal(body.visibility, "HOUSEHOLD");
+    await app.close();
+  });
+
+  it("requires an explicit household target even when the caller has a default", async () => {
+    const app = await createApp();
+    await onboard(app, "clerk_owner");
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/memories",
+      headers: asUser("clerk_owner"),
+      payload: { body: "Ambiguous destination", eventDate: "2026-07-29" },
+    });
+
+    assert.equal(response.statusCode, 400);
+    assert.equal(response.json().error.code, "INVALID_INPUT");
+    assert.equal(await prisma.memoryEntry.count(), 0);
     await app.close();
   });
 
@@ -203,6 +228,178 @@ describe("POST /api/v1/memories", () => {
     await app.close();
   });
 
+  it("writes an explicitly targeted draft to its original household", async () => {
+    const app = await createApp();
+    const originalFamilyId = await onboard(app, "clerk_dual_member");
+    const currentFamilyId = await onboard(app, "clerk_other_owner");
+    const dualMember = await prisma.user.findUniqueOrThrow({
+      where: { clerkId: "clerk_dual_member" },
+    });
+    await prisma.familyMember.create({
+      data: {
+        familyId: currentFamilyId,
+        userId: dualMember.id,
+        role: "CONTRIBUTOR",
+      },
+    });
+    await prisma.user.update({
+      where: { id: dualMember.id },
+      data: { defaultFamilyId: currentFamilyId },
+    });
+
+    const response = await createMemory(app, "clerk_dual_member", {
+      familyId: originalFamilyId,
+      body: "Queued while the first household was active",
+    });
+
+    assert.equal(response.statusCode, 201);
+    const stored = await prisma.memoryEntry.findUniqueOrThrow({
+      where: { id: response.json().id },
+    });
+    assert.equal(stored.familyId, originalFamilyId);
+    assert.notEqual(stored.familyId, currentFamilyId);
+    await app.close();
+  });
+
+  it("never falls back to the current household for an unauthorized explicit target", async () => {
+    const app = await createApp();
+    const forbiddenFamilyId = await onboard(app, "clerk_first_owner");
+    const currentFamilyId = await onboard(app, "clerk_second_owner");
+
+    const response = await createMemory(app, "clerk_second_owner", {
+      familyId: forbiddenFamilyId,
+      body: "Must not land in the current household",
+    });
+
+    assert.equal(response.statusCode, 404);
+    assert.equal(response.json().error.code, "FAMILY_NOT_FOUND");
+    assert.equal(
+      await prisma.memoryEntry.count({ where: { familyId: currentFamilyId } }),
+      0,
+    );
+    assert.equal(await prisma.memoryEntry.count(), 0);
+    await app.close();
+  });
+
+  it("checks contribution permission on the explicitly targeted household", async () => {
+    const app = await createApp();
+    const targetFamilyId = await onboard(app, "clerk_target_owner");
+    const currentFamilyId = await onboard(app, "clerk_dual_viewer");
+    const dualMember = await prisma.user.findUniqueOrThrow({
+      where: { clerkId: "clerk_dual_viewer" },
+    });
+    await prisma.familyMember.create({
+      data: {
+        familyId: targetFamilyId,
+        userId: dualMember.id,
+        role: "VIEWER",
+      },
+    });
+
+    const response = await createMemory(app, "clerk_dual_viewer", {
+      familyId: targetFamilyId,
+      body: "Viewer must not write to the target",
+    });
+
+    assert.equal(response.statusCode, 403);
+    assert.equal(response.json().error.code, "FORBIDDEN");
+    assert.equal(
+      await prisma.memoryEntry.count({ where: { familyId: currentFamilyId } }),
+      0,
+    );
+    assert.equal(await prisma.memoryEntry.count(), 0);
+    await app.close();
+  });
+
+  it("replays a draft against its original household after the default changes", async () => {
+    const app = await createApp();
+    const originalFamilyId = await onboard(app, "clerk_replay_member");
+    const first = await createMemory(
+      app,
+      "clerk_replay_member",
+      { familyId: originalFamilyId, body: "Retry stays with its origin" },
+      { "idempotency-key": "draft-family-bound" },
+    );
+    const newDefaultFamilyId = await onboard(app, "clerk_replay_other_owner");
+    const replayMember = await prisma.user.findUniqueOrThrow({
+      where: { clerkId: "clerk_replay_member" },
+    });
+    await prisma.familyMember.create({
+      data: {
+        familyId: newDefaultFamilyId,
+        userId: replayMember.id,
+        role: "CONTRIBUTOR",
+      },
+    });
+    await prisma.user.update({
+      where: { id: replayMember.id },
+      data: { defaultFamilyId: newDefaultFamilyId },
+    });
+
+    const replay = await createMemory(
+      app,
+      "clerk_replay_member",
+      { familyId: originalFamilyId, body: "Retry stays with its origin" },
+      { "idempotency-key": "draft-family-bound" },
+    );
+
+    assert.equal(first.statusCode, 201);
+    assert.equal(replay.statusCode, 201);
+    assert.equal(replay.json().id, first.json().id);
+    assert.equal(
+      await prisma.memoryEntry.count({ where: { familyId: originalFamilyId } }),
+      1,
+    );
+    assert.equal(
+      await prisma.memoryEntry.count({ where: { familyId: newDefaultFamilyId } }),
+      0,
+    );
+    await app.close();
+  });
+
+  it("rejects one idempotency key reused for a different household", async () => {
+    const app = await createApp();
+    const firstFamilyId = await onboard(app, "clerk_keyed_member");
+    const secondFamilyId = await onboard(app, "clerk_keyed_other_owner");
+    const keyedMember = await prisma.user.findUniqueOrThrow({
+      where: { clerkId: "clerk_keyed_member" },
+    });
+    await prisma.familyMember.create({
+      data: {
+        familyId: secondFamilyId,
+        userId: keyedMember.id,
+        role: "CONTRIBUTOR",
+      },
+    });
+    const headers = { "idempotency-key": "same-key-different-family" };
+
+    const first = await createMemory(
+      app,
+      "clerk_keyed_member",
+      { familyId: firstFamilyId, body: "Family-bound request" },
+      headers,
+    );
+    const conflict = await createMemory(
+      app,
+      "clerk_keyed_member",
+      { familyId: secondFamilyId, body: "Family-bound request" },
+      headers,
+    );
+
+    assert.equal(first.statusCode, 201);
+    assert.equal(conflict.statusCode, 409);
+    assert.equal(conflict.json().error.code, "IDEMPOTENCY_CONFLICT");
+    assert.equal(
+      await prisma.memoryEntry.count({ where: { familyId: firstFamilyId } }),
+      1,
+    );
+    assert.equal(
+      await prisma.memoryEntry.count({ where: { familyId: secondFamilyId } }),
+      0,
+    );
+    await app.close();
+  });
+
   it("does not duplicate a memory when an offline draft retries", async () => {
     const app = await createApp();
     await onboard(app, "clerk_owner");
@@ -236,13 +433,25 @@ describe("POST /api/v1/memories", () => {
 });
 
 describe("media", () => {
-  const requestUploadUrl = (app: App, clerkId: string, byteSize = 1024) =>
-    app.inject({
+  const requestUploadUrl = async (
+    app: App,
+    clerkId: string,
+    byteSize = 1024,
+    familyId?: string,
+  ) => {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { clerkId },
+      select: { defaultFamilyId: true },
+    });
+    const targetFamilyId = familyId ?? user.defaultFamilyId;
+    if (!targetFamilyId) throw new Error(`Test user ${clerkId} has no upload household.`);
+    return app.inject({
       method: "POST",
       url: "/api/v1/media/upload-url",
       headers: asUser(clerkId),
-      payload: { contentType: "image/jpeg", byteSize },
+      payload: { familyId: targetFamilyId, contentType: "image/jpeg", byteSize },
     });
+  };
 
   it("issues a signed upload URL and records a pending asset", async () => {
     const app = await createApp();
@@ -264,16 +473,56 @@ describe("media", () => {
 
   it("rejects an unsupported content type", async () => {
     const app = await createApp();
-    await onboard(app, "clerk_owner");
+    const familyId = await onboard(app, "clerk_owner");
 
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/media/upload-url",
       headers: asUser("clerk_owner"),
-      payload: { contentType: "application/x-msdownload", byteSize: 1024 },
+      payload: { familyId, contentType: "application/x-msdownload", byteSize: 1024 },
     });
 
     assert.equal(response.statusCode, 400);
+    await app.close();
+  });
+
+  it("uploads and attaches media to an explicit non-default household", async () => {
+    const app = await createApp();
+    const originalFamilyId = await onboard(app, "clerk_media_member");
+    const currentFamilyId = await onboard(app, "clerk_media_other_owner");
+    const mediaMember = await prisma.user.findUniqueOrThrow({
+      where: { clerkId: "clerk_media_member" },
+    });
+    await prisma.familyMember.create({
+      data: {
+        familyId: currentFamilyId,
+        userId: mediaMember.id,
+        role: "CONTRIBUTOR",
+      },
+    });
+    await prisma.user.update({
+      where: { id: mediaMember.id },
+      data: { defaultFamilyId: currentFamilyId },
+    });
+
+    const upload = await requestUploadUrl(
+      app,
+      "clerk_media_member",
+      1024,
+      originalFamilyId,
+    );
+    const memory = await createMemory(app, "clerk_media_member", {
+      familyId: originalFamilyId,
+      body: "Photo stays with its original household",
+      mediaStorageKey: upload.json().storageKey,
+    });
+
+    assert.equal(upload.statusCode, 201);
+    assert.equal(memory.statusCode, 201);
+    const asset = await prisma.mediaAsset.findFirstOrThrow();
+    assert.equal(asset.familyId, originalFamilyId);
+    assert.notEqual(asset.familyId, currentFamilyId);
+    assert.equal(asset.status, "ATTACHED");
     await app.close();
   });
 
@@ -610,12 +859,12 @@ describe("memory mutation", () => {
 
   it("soft-deletes, revokes media, and removes the object", async () => {
     const app = await createApp();
-    await onboard(app, "clerk_owner");
+    const familyId = await onboard(app, "clerk_owner");
     const upload = await app.inject({
       method: "POST",
       url: "/api/v1/media/upload-url",
       headers: asUser("clerk_owner"),
-      payload: { contentType: "image/jpeg", byteSize: 2048 },
+      payload: { familyId, contentType: "image/jpeg", byteSize: 2048 },
     });
     const memory = await createMemory(app, "clerk_owner", {
       body: "To delete",

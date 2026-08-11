@@ -22,7 +22,7 @@ export const ALBUM_LAYER_ORDER = {
   thread: 3,
   content: 4,
 } as const;
-export type ArtifactKey = "unselected" | "expecting" | "parent" | "caregiver";
+export type ArtifactKey = "unselected" | "expecting" | "parent";
 export type ChapterKey = OnboardingGoal | null;
 
 export type AlbumSceneInput = {
@@ -87,7 +87,6 @@ function formatDate(value: string) {
 }
 
 function resolveArtifact(role: OnboardingRole | null): ArtifactKey {
-  if (role === "partner") return "caregiver";
   return role ?? "unselected";
 }
 
@@ -113,7 +112,6 @@ function resolveProfileLabel(input: AlbumSceneInput) {
     return name || (birthDate ? `Born ${birthDate}` : "Your child’s keepsake");
   }
 
-  if (input.role === "partner") return "Joining a household";
   return "Choose your first keepsake";
 }
 

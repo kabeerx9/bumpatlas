@@ -12,9 +12,10 @@ import type { FastifyInstance } from "fastify";
 import { requireAuth } from "@/middleware/require-auth";
 import {
   requireCurrentFamily,
-  requireCurrentFamilyWithPermission,
+  requireFamilyMember,
 } from "@/middleware/require-family-member";
 import { invalidInput } from "@/services/errors";
+import { requirePermission } from "@/services/family";
 import {
   findReplay,
   hashRequest,
@@ -53,7 +54,8 @@ export async function registerMemoryRoutes(
       return reply.code(400).send(invalidInput(parsed.error, request.id));
     }
 
-    const family = await requireCurrentFamilyWithPermission(auth, "canContribute");
+    const family = await requireFamilyMember(auth, parsed.data.familyId);
+    requirePermission(family.role, "canContribute");
 
     const response = await createUploadUrl({
       familyId: family.familyId,
@@ -75,7 +77,8 @@ export async function registerMemoryRoutes(
       return reply.code(400).send(invalidInput(parsed.error, request.id));
     }
 
-    const family = await requireCurrentFamilyWithPermission(auth, "canContribute");
+    const family = await requireFamilyMember(auth, parsed.data.familyId);
+    requirePermission(family.role, "canContribute");
     const signer = await d.getSigner();
 
     const routeKey = "POST /api/v1/memories";

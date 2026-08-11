@@ -40,11 +40,13 @@ export function createApiClient(options: ApiClientOptions) {
   const fetchFn = options.fetchImpl ?? fetch;
 
   async function request(path: string, init?: RequestInit): Promise<Response> {
-    const token = await options.getToken();
     const headers = new Headers(init?.headers);
 
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
+    if (!headers.has("Authorization")) {
+      const token = await options.getToken();
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
     }
 
     if (init?.body && !headers.has("Content-Type")) {

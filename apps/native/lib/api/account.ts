@@ -8,6 +8,11 @@ import {
 
 import { apiClient } from "./client";
 
+/** Hydrates the server's just-in-time Clerk user mirror (including email). */
+export function getMe() {
+  return apiClient.requestJson("/api/me", meResponseSchema);
+}
+
 /**
  * `/api/account` (not `/api/v1`) — the account routes predate the v1 API and
  * still return the legacy string-or-object error envelope, but they run

@@ -7,6 +7,7 @@ import {
   nextAlbumDirection,
   resolveOnboardingCompletion,
 } from "../apps/native/features/onboarding/lib/album-scene-model.ts";
+import { CREATOR_ONBOARDING_ROLES } from "../apps/native/features/onboarding/lib/onboarding-role.ts";
 import * as albumSceneModel from "../apps/native/features/onboarding/lib/album-scene-model.ts";
 
 describe("living memory album scene model", () => {
@@ -86,7 +87,9 @@ describe("living memory album scene model", () => {
     );
   });
 
-  it("selects role-specific artifacts without inventing profile copy", () => {
+  it("keeps household creation limited to expecting and parent roles", () => {
+    assert.deepEqual(CREATOR_ONBOARDING_ROLES, ["expecting", "parent"]);
+
     const parent = deriveAlbumSceneModel({
       stage: "role",
       direction: "back",
@@ -97,21 +100,8 @@ describe("living memory album scene model", () => {
       dueDate: "",
       goal: null,
     });
-    const caregiver = deriveAlbumSceneModel({
-      stage: "role",
-      direction: "back",
-      role: "partner",
-      householdName: "",
-      childName: "",
-      childDob: "",
-      dueDate: "",
-      goal: null,
-    });
-
     assert.equal(parent.artifact, "parent");
     assert.equal(parent.profileLabel, "Mila");
-    assert.equal(caregiver.artifact, "caregiver");
-    assert.equal(caregiver.profileLabel, "Joining a household");
   });
 
   it("derives direction from the old and new step index", () => {

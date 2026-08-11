@@ -3,7 +3,41 @@ import { describe, it } from "node:test";
 
 import { meResponseSchema } from "@bumpatlas/contracts/me";
 
-import { serializeUser } from "./user";
+import {
+  listVerifiedClerkEmails,
+  mapClerkApiUser,
+  serializeUser,
+} from "./user";
+
+describe("Clerk email authority", () => {
+  const clerkUser = {
+    id: "clerk_123",
+    firstName: "Ada",
+    lastName: "Lovelace",
+    imageUrl: "https://example.com/avatar.png",
+    primaryEmailAddressId: "email_unverified",
+    emailAddresses: [
+      {
+        id: "email_unverified",
+        emailAddress: "unverified@example.com",
+        verification: { status: "unverified" },
+      },
+      {
+        id: "email_verified",
+        emailAddress: "Verified@Example.com",
+        verification: { status: "verified" },
+      },
+    ],
+  };
+
+  it("returns only current verified addresses for authorization", () => {
+    assert.deepEqual(listVerifiedClerkEmails(clerkUser), ["verified@example.com"]);
+  });
+
+  it("never mirrors an unverified primary address", () => {
+    assert.equal(mapClerkApiUser(clerkUser).email, "Verified@Example.com");
+  });
+});
 
 describe("serializeUser", () => {
   it("returns an ISO-string payload that matches the me contract", () => {

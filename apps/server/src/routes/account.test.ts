@@ -21,7 +21,13 @@ const sampleClerkUser = {
   firstName: "Ada",
   lastName: "Lovelace",
   imageUrl: "https://example.com/avatar.png",
-  emailAddresses: [{ id: "email_1", emailAddress: "user@example.com" }],
+  emailAddresses: [
+    {
+      id: "email_1",
+      emailAddress: "user@example.com",
+      verification: { status: "verified" },
+    },
+  ],
   primaryEmailAddressId: "email_1",
 };
 

@@ -1,5 +1,5 @@
 import { useSignIn } from "@clerk/expo";
-import { Link, useRouter } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import {
   Image,
@@ -23,7 +23,10 @@ import {
   useAppTheme,
 } from "@/design-system";
 import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
-import { pushDecoratedUrl } from "@/features/auth/utils/navigation";
+import {
+  pushDecoratedUrl,
+  resolveAuthReturnTo,
+} from "@/features/auth/utils/navigation";
 import { appRoutes } from "@/navigation/routes";
 
 const COLLAGE_IMAGES = [
@@ -75,6 +78,10 @@ const collageStyles = StyleSheet.create({
 export function SignInScreen() {
   const { signIn, errors, fetchStatus } = useSignIn();
   const router = useRouter();
+  const { returnTo: returnToParam } = useLocalSearchParams<{
+    returnTo?: string | string[];
+  }>();
+  const returnTo = resolveAuthReturnTo(returnToParam);
   const theme = useAppTheme();
   const [emailAddress, setEmailAddress] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -117,7 +124,7 @@ export function SignInScreen() {
       await signIn.finalize({
         navigate: ({ session, decorateUrl }) => {
           if (session?.currentTask) return;
-          pushDecoratedUrl(router, decorateUrl, appRoutes.home);
+          pushDecoratedUrl(router, decorateUrl, returnTo);
         },
       });
     } else if (signIn.status === "needs_second_factor" || signIn.status === "needs_client_trust") {
@@ -149,7 +156,7 @@ export function SignInScreen() {
       await signIn.finalize({
         navigate: ({ session, decorateUrl }) => {
           if (session?.currentTask) return;
-          pushDecoratedUrl(router, decorateUrl, appRoutes.home);
+          pushDecoratedUrl(router, decorateUrl, returnTo);
         },
       });
     } else {
@@ -293,13 +300,13 @@ export function SignInScreen() {
           <View style={[styles.dividerLine, { backgroundColor: theme.colors.border }]} />
         </View>
 
-        <GoogleSignInButton />
+        <GoogleSignInButton returnTo={returnTo} />
 
         <View style={styles.toggleRow}>
           <AppText variant="bodySmall" tone="secondary">
             Don’t have an Account?
           </AppText>
-          <Link href={appRoutes.auth.signUp}>
+          <Link href={appRoutes.auth.signUpWithReturnTo(String(returnTo))}>
             <AppText variant="bodySmall" weight="semibold" style={styles.link}>
               Sign up
             </AppText>

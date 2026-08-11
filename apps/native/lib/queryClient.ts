@@ -11,7 +11,7 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
-      onError: handleApiError,
+      onError: (error) => handleApiError(error),
     },
   },
 });

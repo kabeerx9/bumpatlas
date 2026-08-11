@@ -1,6 +1,6 @@
 import prisma from "@bumpatlas/db";
 import type { CreateInviteResponse, InvitePreview } from "@bumpatlas/contracts/v1";
-import type { FamilyMemberRole } from "@bumpatlas/db/types";
+import type { FamilyMemberRole, Prisma } from "@bumpatlas/db/types";
 import { env } from "@bumpatlas/env/server";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
@@ -128,24 +128,46 @@ export async function previewInvite(token: string): Promise<InvitePreview> {
   };
 }
 
+/**
+ * Advisory preflight used to avoid an identity-provider round trip for the
+ * common unbound invite. Acceptance still locks and re-validates the invite;
+ * a race can only fail closed because an empty address list never authorizes
+ * an email-bound token.
+ */
+export async function inviteNeedsVerifiedEmail(token: string): Promise<boolean> {
+  const invite = await prisma.familyInvite.findUnique({
+    where: { tokenHash: hashInviteToken(token) },
+    select: { email: true, acceptedAt: true, expiresAt: true },
+  });
+
+  return Boolean(
+    invite?.email &&
+      !invite.acceptedAt &&
+      invite.expiresAt.getTime() > Date.now(),
+  );
+}
+
 /** `410 INVITE_EXPIRED` for both used and expired: neither can be made to work again. */
 function assertInviteUsable(acceptedAt: Date | null, expiresAt: Date): void {
-  if (acceptedAt) {
-    throw new ServiceError(410, "INVITE_EXPIRED", "This invite has already been used.");
-  }
-
-  if (expiresAt.getTime() <= Date.now()) {
-    throw new ServiceError(410, "INVITE_EXPIRED", "This invite link has expired.");
+  if (acceptedAt || expiresAt.getTime() <= Date.now()) {
+    // Public preview must not disclose whether the recipient accepted the link.
+    throw new ServiceError(
+      410,
+      "INVITE_EXPIRED",
+      "This invite is expired or no longer available.",
+    );
   }
 }
 
 export async function acceptInvite(input: {
   token: string;
   userId: string;
+  verifiedEmails: readonly string[];
+  idempotency?: (tx: Prisma.TransactionClient, familyId: string) => Promise<unknown>;
 }): Promise<{ familyId: string; role: FamilyMemberRole }> {
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: input.userId },
-    select: { id: true, email: true, isAdultAttested: true },
+    select: { id: true, isAdultAttested: true },
   });
 
   if (!user.isAdultAttested) {
@@ -178,9 +200,11 @@ export async function acceptInvite(input: {
     assertInviteUsable(invite.acceptedAt, invite.expiresAt);
 
     if (invite.email) {
-      const accountEmail = user.email?.trim().toLowerCase() ?? "";
+      const matchesVerifiedAddress = input.verifiedEmails.some((email) =>
+        constantTimeEquals(email.trim().toLowerCase(), invite.email ?? ""),
+      );
 
-      if (!constantTimeEquals(accountEmail, invite.email)) {
+      if (!matchesVerifiedAddress) {
         // Says nothing about which address it was issued to.
         throw new ServiceError(
           403,
@@ -188,6 +212,31 @@ export async function acceptInvite(input: {
           "This invite was sent to a different email address.",
         );
       }
+    }
+
+    // Different invite tokens have different row locks. Locking the recipient
+    // serializes the shared (user, family) membership/default-family boundary,
+    // so two concurrent tokens cannot both observe an absent/removed membership
+    // and consume themselves with ordering-dependent roles.
+    await tx.$queryRawUnsafe(
+      `SELECT id FROM ${table("User")} WHERE id = $1 FOR UPDATE`,
+      user.id,
+    );
+
+    const existingMembership = await tx.familyMember.findUnique({
+      where: { familyId_userId: { familyId: invite.familyId, userId: user.id } },
+      select: { status: true },
+    });
+
+    // An invite grants access; it is not an alternate role-management endpoint.
+    // Reapplying its offered role to an active member would let a contributor
+    // self-promote, or even let the owner accidentally demote themselves.
+    if (existingMembership?.status === "ACTIVE") {
+      throw new ServiceError(
+        409,
+        "ALREADY_FAMILY_MEMBER",
+        "You are already an active member of this household.",
+      );
     }
 
     // Upsert, not create: rejoining a household you previously left reactivates the
@@ -227,6 +276,12 @@ export async function acceptInvite(input: {
       targetId: invite.id,
       metadata: { role: invite.role },
     });
+
+    if (input.idempotency) {
+      // Last in the transaction: a replay record must never claim that an invite
+      // was accepted if any membership/audit/default-family write rolled back.
+      await input.idempotency(tx, invite.familyId);
+    }
 
     return { familyId: invite.familyId, role: invite.role };
   });

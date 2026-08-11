@@ -39,6 +39,25 @@ describe("createApiClient", () => {
     assert.equal(authHeader, "Bearer token-123");
   });
 
+  it("preserves an explicitly captured Authorization header", async () => {
+    let authHeader: string | null = null;
+
+    const client = createApiClient({
+      baseUrl: "https://api.example.com",
+      getToken: async () => "new-session-token",
+      fetchImpl: createMockFetch(({ init }) => {
+        authHeader = new Headers(init?.headers).get("Authorization");
+        return Response.json({ ok: true });
+      }),
+    });
+
+    await client.requestJson("/resource", z.object({ ok: z.boolean() }), {
+      headers: { Authorization: "Bearer captured-owner-token" },
+    });
+
+    assert.equal(authHeader, "Bearer captured-owner-token");
+  });
+
   it("omits Authorization when no token exists", async () => {
     let authHeader: string | null = "present";
 
@@ -166,6 +185,7 @@ describe("createApiClient", () => {
       email: null,
       name: "Ada",
       imageUrl: null,
+      isAdmin: false,
       createdAt: "2026-06-14T12:00:00.000Z",
       updatedAt: "2026-06-14T12:30:00.000Z",
     };

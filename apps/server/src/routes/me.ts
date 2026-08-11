@@ -7,15 +7,21 @@ import { getOrCreateUserByClerkId, mapClerkApiUser, serializeUser } from "@/serv
 
 export type MeRouteDeps = {
   getAuth: (request: FastifyRequest) => { userId: string | null | undefined };
+  getClerkUser: (
+    userId: string,
+  ) => Promise<Parameters<typeof mapClerkApiUser>[0]>;
 };
 
-const defaultDeps: MeRouteDeps = { getAuth };
+const defaultDeps: MeRouteDeps = {
+  getAuth,
+  getClerkUser: (userId) => clerkClient.users.getUser(userId),
+};
 
 export async function registerMeRoutes(
   fastify: FastifyInstance,
   deps: Partial<MeRouteDeps> = {},
 ) {
-  const { getAuth: getAuthFn } = { ...defaultDeps, ...deps };
+  const { getAuth: getAuthFn, getClerkUser } = { ...defaultDeps, ...deps };
 
   fastify.get("/api/me", async (request, reply) => {
     const { userId } = getAuthFn(request);
@@ -25,7 +31,7 @@ export async function registerMeRoutes(
     }
 
     const user = await getOrCreateUserByClerkId(userId, async () => {
-      const clerkUser = await clerkClient.users.getUser(userId);
+      const clerkUser = await getClerkUser(userId);
       return mapClerkApiUser(clerkUser);
     });
 

@@ -7,7 +7,10 @@ import { appRoutes } from "@/navigation/routes";
 let handlingAuthError = false;
 
 /** Route to session-expired / no-access on API authz failures. */
-export function handleApiError(error: unknown): void {
+export function handleApiError(
+  error: unknown,
+  context: { returnTo?: string } = {},
+): void {
   if (!(error instanceof ApiError)) return;
   if (handlingAuthError) return;
 
@@ -21,7 +24,11 @@ export function handleApiError(error: unknown): void {
     } catch {
       // ignore cache clear failures during boot
     }
-    router.replace(appRoutes.sessionExpired);
+    router.replace(
+      context.returnTo
+        ? appRoutes.sessionExpiredWithReturnTo(context.returnTo)
+        : appRoutes.sessionExpired,
+    );
     setTimeout(() => {
       handlingAuthError = false;
     }, 1500);

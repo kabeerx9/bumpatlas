@@ -54,6 +54,11 @@ export type ListMemoriesQuery = z.infer<typeof listMemoriesQuerySchema>;
 
 export const createMemoryInputSchema = z
   .object({
+    /**
+     * The write target is explicit because a user's default household can
+     * change on another device while an offline request is queued.
+     */
+    familyId: z.string().min(1),
     body: z.string().trim().min(1).max(4000),
     eventDate: z.string().min(1),
     visibility: visibilitySchema.default("HOUSEHOLD"),
@@ -78,6 +83,7 @@ export const updateMemoryInputSchema = z
 export type UpdateMemoryInput = z.infer<typeof updateMemoryInputSchema>;
 
 export const mediaUploadUrlInputSchema = z.object({
+  familyId: z.string().min(1),
   contentType: z.string().min(1),
   byteSize: z.number().int().positive().max(20_000_000),
 });

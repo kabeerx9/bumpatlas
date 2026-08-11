@@ -7,6 +7,7 @@ import type { PreparedPhoto } from "@/lib/media/pick-and-prepare";
 import { resolveEventDateIso } from "@/lib/memories/event-date";
 
 export type SaveMemoryInput = {
+  familyId: string;
   body: string;
   /** Chip label or free-text; normalized to ISO before API write. */
   eventDate: string;
@@ -31,6 +32,7 @@ export async function saveMemoryWithOptionalUpload(
   let mediaStorageKey: string | null = null;
   if (input.photo) {
     const signed = await getMediaUploadUrl({
+      familyId: input.familyId,
       contentType: input.photo.contentType,
       byteSize: input.photo.byteSize,
     });
@@ -45,6 +47,7 @@ export async function saveMemoryWithOptionalUpload(
 
   const memory = await createMemory(
     {
+      familyId: input.familyId,
       body: input.body,
       eventDate: eventDateIso,
       visibility: input.visibility,

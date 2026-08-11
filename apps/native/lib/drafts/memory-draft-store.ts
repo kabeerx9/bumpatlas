@@ -1,12 +1,14 @@
 import * as FileSystem from "expo-file-system/legacy";
 
-const DRAFTS_FILE = `${FileSystem.documentDirectory ?? ""}bumpatlas-memory-drafts-v1.json`;
+import { draftOwnerFileName } from "@/lib/drafts/draft-owner";
+import { parsePersistedDraftQueue } from "@/lib/drafts/parse-draft-queue";
+import { createSerializedDraftPersistence } from "@/lib/drafts/serialized-draft-persistence";
 
 const memoryFallback = new Map<string, string>();
-const MEMORY_KEY = "drafts";
 
 export type PersistedMemoryDraft = {
   id: string;
+  familyId: string;
   body: string;
   eventDate: string;
   createdAtLabel: string;
@@ -17,67 +19,92 @@ export type PersistedMemoryDraft = {
   visibility: "HOUSEHOLD" | "PRIVATE";
 };
 
-async function readRaw(): Promise<string | null> {
-  try {
-    if (!FileSystem.documentDirectory) {
-      return memoryFallback.get(MEMORY_KEY) ?? null;
-    }
-    const info = await FileSystem.getInfoAsync(DRAFTS_FILE);
-    if (!info.exists) return memoryFallback.get(MEMORY_KEY) ?? null;
-    return await FileSystem.readAsStringAsync(DRAFTS_FILE);
-  } catch {
-    return memoryFallback.get(MEMORY_KEY) ?? null;
-  }
+function isFamilyTargetedDraft(value: unknown): value is PersistedMemoryDraft {
+  if (!value || typeof value !== "object") return false;
+  const draft = value as Record<string, unknown>;
+  return (
+    typeof draft.id === "string" &&
+    typeof draft.familyId === "string" &&
+    draft.familyId.trim().length > 0
+  );
 }
 
-async function writeRaw(raw: string): Promise<void> {
-  memoryFallback.set(MEMORY_KEY, raw);
-  try {
-    if (!FileSystem.documentDirectory) return;
-    await FileSystem.writeAsStringAsync(DRAFTS_FILE, raw);
-  } catch {
-    // Memory fallback already holds the latest queue.
-  }
+type DraftPersistence = {
+  load: () => Promise<PersistedMemoryDraft[]>;
+  save: (drafts: PersistedMemoryDraft[]) => Promise<void>;
+  upsert: (draft: PersistedMemoryDraft) => Promise<PersistedMemoryDraft[]>;
+  remove: (id: string) => Promise<PersistedMemoryDraft[]>;
+  clear: () => Promise<void>;
+};
+
+const ownerPersistence = new Map<string, DraftPersistence>();
+
+function persistenceFor(ownerUserId: string): DraftPersistence {
+  const existing = ownerPersistence.get(ownerUserId);
+  if (existing) return existing;
+
+  const filePath = `${FileSystem.documentDirectory ?? ""}${draftOwnerFileName(ownerUserId)}`;
+  const persistence = createSerializedDraftPersistence<PersistedMemoryDraft>({
+    read: async () => {
+      let raw: string | null;
+      if (!FileSystem.documentDirectory) {
+        raw = memoryFallback.get(ownerUserId) ?? null;
+      } else {
+        const info = await FileSystem.getInfoAsync(filePath);
+        raw = info.exists
+          ? await FileSystem.readAsStringAsync(filePath)
+          : (memoryFallback.get(ownerUserId) ?? null);
+      }
+      return parsePersistedDraftQueue<PersistedMemoryDraft>(raw, isFamilyTargetedDraft);
+    },
+    write: async (drafts) => {
+      const raw = JSON.stringify(drafts);
+      if (!FileSystem.documentDirectory) {
+        memoryFallback.set(ownerUserId, raw);
+        return;
+      }
+      // A memory-only success can resurrect an older disk queue on restart.
+      await FileSystem.writeAsStringAsync(filePath, raw);
+      memoryFallback.set(ownerUserId, raw);
+    },
+    clear: async () => {
+      if (FileSystem.documentDirectory) {
+        await FileSystem.deleteAsync(filePath, { idempotent: true });
+      }
+      memoryFallback.delete(ownerUserId);
+    },
+  });
+  ownerPersistence.set(ownerUserId, persistence);
+  return persistence;
 }
 
-export async function loadMemoryDrafts(): Promise<PersistedMemoryDraft[]> {
-  try {
-    const raw = await readRaw();
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as PersistedMemoryDraft[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+export function loadMemoryDrafts(
+  ownerUserId: string,
+): Promise<PersistedMemoryDraft[]> {
+  return persistenceFor(ownerUserId).load();
 }
 
-export async function saveMemoryDrafts(drafts: PersistedMemoryDraft[]): Promise<void> {
-  await writeRaw(JSON.stringify(drafts));
+export function saveMemoryDrafts(
+  ownerUserId: string,
+  drafts: PersistedMemoryDraft[],
+): Promise<void> {
+  return persistenceFor(ownerUserId).save(drafts);
 }
 
 export async function upsertMemoryDraft(
+  ownerUserId: string,
   draft: PersistedMemoryDraft,
 ): Promise<PersistedMemoryDraft[]> {
-  const current = await loadMemoryDrafts();
-  const next = [draft, ...current.filter((item) => item.id !== draft.id)];
-  await saveMemoryDrafts(next);
-  return next;
+  return persistenceFor(ownerUserId).upsert(draft);
 }
 
-export async function removeMemoryDraft(id: string): Promise<PersistedMemoryDraft[]> {
-  const current = await loadMemoryDrafts();
-  const next = current.filter((item) => item.id !== id);
-  await saveMemoryDrafts(next);
-  return next;
+export function removeMemoryDraft(
+  ownerUserId: string,
+  id: string,
+): Promise<PersistedMemoryDraft[]> {
+  return persistenceFor(ownerUserId).remove(id);
 }
 
-export async function clearMemoryDrafts(): Promise<void> {
-  memoryFallback.delete(MEMORY_KEY);
-  try {
-    if (!FileSystem.documentDirectory) return;
-    const info = await FileSystem.getInfoAsync(DRAFTS_FILE);
-    if (info.exists) await FileSystem.deleteAsync(DRAFTS_FILE, { idempotent: true });
-  } catch {
-    // ignore
-  }
+export function clearMemoryDrafts(ownerUserId: string): Promise<void> {
+  return persistenceFor(ownerUserId).clear();
 }

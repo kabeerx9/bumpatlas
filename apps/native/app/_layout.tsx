@@ -10,6 +10,8 @@ function RootStack() {
   const {
     accessState,
     canAccessAuth,
+    canAccessInviteAccept,
+    canAccessLegal,
     canAccessMainApp,
     canAccessOnboarding,
   } = useAppAccess();
@@ -48,7 +50,6 @@ function RootStack() {
         <Stack.Screen name="connect-compose" options={{ presentation: "modal" }} />
         <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
         <Stack.Screen name="invite" options={{ presentation: "modal" }} />
-        <Stack.Screen name="invite/[token]" />
         <Stack.Screen name="connect/post/[id]" />
         <Stack.Screen name="connect/report" options={{ presentation: "modal" }} />
         <Stack.Screen name="connect/blocked" />
@@ -58,9 +59,6 @@ function RootStack() {
         <Stack.Screen name="notification-settings" />
         <Stack.Screen name="member-roles" />
         <Stack.Screen name="moderation" />
-        <Stack.Screen name="legal/[doc]" />
-        <Stack.Screen name="session-expired" />
-        <Stack.Screen name="no-access" />
         <Stack.Screen name="assistant" options={{ presentation: "modal" }} />
         <Stack.Screen name="account" />
         <Stack.Screen name="stage-setup" options={{ presentation: "modal" }} />
@@ -76,6 +74,16 @@ function RootStack() {
         <Stack.Screen name="(onboarding)" />
       </Stack.Protected>
 
+      <Stack.Protected guard={canAccessInviteAccept}>
+        <Stack.Screen name="invite/[token]" />
+      </Stack.Protected>
+
+      <Stack.Protected guard={canAccessLegal}>
+        <Stack.Screen name="legal/[doc]" />
+      </Stack.Protected>
+
+      <Stack.Screen name="session-expired" />
+      <Stack.Screen name="no-access" />
       <Stack.Screen name="sso-callback" />
     </Stack>
   );

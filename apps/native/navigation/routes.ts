@@ -35,13 +35,15 @@ export const appRoutes = {
     return `/paywall?source=${encodeURIComponent(source)}` as Href;
   },
   invite: "/invite" as Href,
-  inviteAccept: (token: string) => `/invite/${token}` as Href,
+  inviteAccept: (token: string) => `/invite/${encodeURIComponent(token)}` as Href,
   exportData: "/export-data" as Href,
   notificationSettings: "/notification-settings" as Href,
   memberRoles: "/member-roles" as Href,
   moderation: "/moderation" as Href,
   legal: (doc: "privacy" | "terms" | "community") => `/legal/${doc}` as Href,
   sessionExpired: "/session-expired" as Href,
+  sessionExpiredWithReturnTo: (returnTo: string) =>
+    `/session-expired?returnTo=${encodeURIComponent(returnTo)}` as Href,
   noAccess: "/no-access" as Href,
   account: "/account" as Href,
   stageSetup: "/stage-setup" as Href,
@@ -50,6 +52,10 @@ export const appRoutes = {
   auth: {
     signIn: "/sign-in" as Href,
     signUp: "/sign-up" as Href,
+    signInWithReturnTo: (returnTo: string) =>
+      `/sign-in?returnTo=${encodeURIComponent(returnTo)}` as Href,
+    signUpWithReturnTo: (returnTo: string) =>
+      `/sign-up?returnTo=${encodeURIComponent(returnTo)}` as Href,
   },
   onboarding: "/(onboarding)" as Href,
   ssoCallback: "/sso-callback" as Href,

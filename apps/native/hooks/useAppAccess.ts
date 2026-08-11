@@ -1,11 +1,21 @@
 import { useAuth } from "@clerk/expo";
 
 import { useOnboarding } from "@/features/onboarding/providers/onboarding-provider";
-import { deriveAppAccessState } from "@/hooks/app-access-state";
+import {
+  deriveAppAccessCapabilities,
+  deriveAppAccessState,
+} from "@/hooks/app-access-state";
 import { FEATURES } from "@/lib/features";
 
-export { deriveAppAccessState } from "@/hooks/app-access-state";
-export type { AppAccessInput, AppAccessState } from "@/hooks/app-access-state";
+export {
+  deriveAppAccessCapabilities,
+  deriveAppAccessState,
+} from "@/hooks/app-access-state";
+export type {
+  AppAccessCapabilities,
+  AppAccessInput,
+  AppAccessState,
+} from "@/hooks/app-access-state";
 
 export function useAppAccess() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -18,12 +28,11 @@ export function useAppAccess() {
     isOnboardingComplete,
     forceOnboardingPreview: FEATURES.onboardingPreview,
   });
+  const capabilities = deriveAppAccessCapabilities(accessState);
 
   return {
     accessState,
     canAccessAppShell: accessState === "ready",
-    canAccessMainApp: accessState === "ready",
-    canAccessAuth: accessState === "guest",
-    canAccessOnboarding: accessState === "onboarding_required",
+    ...capabilities,
   };
 }
